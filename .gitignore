@@ -1,0 +1,48 @@
+# Build output
+/bin/
+/dist/
+# Anchored: a bare `diagrammer` would also match the cmd/diagrammer source
+# directory and silently drop it from the repository.
+/diagrammer
+*.exe
+
+# Go test and coverage
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace: local to one machine, never shared
+go.work
+go.work.sum
+
+# Generated diagrams and code graphs. A code graph of a large repository runs
+# to hundreds of megabytes, so outputs default to ignored and anything meant
+# to be kept must be added deliberately.
+/out/
+/tmp/
+*.codegraph.json
+*.architecture.json
+*.sequence.json
+*.lifecycle.json
+*.dataflow.json
+*.workflow.json
+*.dropped.json
+*.diagram.html
+
+# Test fixtures are kept, their rendered output is not
+/testdata/**/got/
+
+# macOS
+.DS_Store
+
+# Editors
+.idea/
+*.swp
+*~
+
+# Environment and secrets: never committed
+.env
+.env.*
+*.pem
+*.key
