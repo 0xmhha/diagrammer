@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0xmhha/diagrammer/internal/command"
 	"github.com/0xmhha/diagrammer/internal/schema"
 	"github.com/0xmhha/diagrammer/internal/validate"
 )
@@ -19,7 +20,11 @@ func TestRun(t *testing.T) {
 		name string
 		args []string
 		// wantOut is a substring expected on stdout when the command succeeds.
+		// Stdout carries the product, so only a document appears there.
 		wantOut string
+		// wantErrOut is a substring expected on stderr. Stderr carries the
+		// commentary: what was read, what was written, what could not be done.
+		wantErrOut string
 		// wantErr is a substring expected in the error when it fails.
 		wantErr string
 	}{
@@ -29,9 +34,9 @@ func TestRun(t *testing.T) {
 		{name: "--version is the same", args: []string{"--version"}, wantOut: "diagrammer "},
 		{name: "version takes no arguments", args: []string{"version", "extra"}, wantErr: "takes no arguments"},
 		{name: "unknown command is refused", args: []string{"nonsense"}, wantErr: `unknown command "nonsense"`},
-		{name: "validate accepts the fixture", args: []string{"validate", fixture}, wantOut: "valid, 4 families"},
-		{name: "validate names the families", args: []string{"validate", fixture}, wantOut: "component, sequence, state, usecase"},
-		{name: "validate needs a path", args: []string{"validate"}, wantErr: "takes one codegraph.json path"},
+		{name: "validate accepts the fixture", args: []string{"validate", fixture}, wantErrOut: "valid, 4 families"},
+		{name: "validate names the families", args: []string{"validate", fixture}, wantErrOut: "component, sequence, state, usecase"},
+		{name: "validate needs a path", args: []string{"validate"}, wantErr: "codegraph.json path, got none"},
 		{name: "validate takes only one path", args: []string{"validate", "a", "b"}, wantErr: "takes one codegraph.json path"},
 		{name: "validate reports a missing file", args: []string{"validate", "no/such/file.json"}, wantErr: "read no/such/file.json"},
 	}
@@ -53,25 +58,28 @@ func TestRun(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if !strings.Contains(stdout.String(), c.wantOut) {
+			if c.wantOut != "" && !strings.Contains(stdout.String(), c.wantOut) {
 				t.Errorf("stdout does not contain %q:\n%s", c.wantOut, stdout.String())
+			}
+			if c.wantErrOut != "" && !strings.Contains(stderr.String(), c.wantErrOut) {
+				t.Errorf("stderr does not contain %q:\n%s", c.wantErrOut, stderr.String())
 			}
 		})
 	}
 }
 
 // TestUnbuiltCommandsAreNamed keeps a subcommand that 0.1.0 has planned
-// distinguishable from one that does not exist. Someone typing `compose` should
+// distinguishable from one that does not exist. Someone typing `render` should
 // be told it is coming, not that they mistyped.
 func TestUnbuiltCommandsAreNamed(t *testing.T) {
-	for _, name := range []string{"render", "serve"} {
-		t.Run(name, func(t *testing.T) {
-			var stdout, stderr bytes.Buffer
-			err := run([]string{name}, &stdout, &stderr)
-			if !errors.Is(err, errNotImplemented) {
-				t.Errorf("want errNotImplemented, got %v", err)
-			}
-		})
+	var stdout, stderr bytes.Buffer
+	err := run([]string{"render", "doc.json"}, &stdout, &stderr)
+	var notBuilt *command.ErrNotImplemented
+	if !errors.As(err, &notBuilt) {
+		t.Fatalf("want a not-implemented error, got %v", err)
+	}
+	if notBuilt.Op != command.OpRender {
+		t.Errorf("the error names %q rather than render", notBuilt.Op)
 	}
 }
 
@@ -207,8 +215,8 @@ func TestComposeCommand(t *testing.T) {
 		if err := schema.Validate(schema.Diagram, raw); err != nil {
 			t.Errorf("written document does not satisfy the schema: %v", err)
 		}
-		if !strings.Contains(stdout.String(), "proven") {
-			t.Errorf("no accounting on stdout: %q", stdout.String())
+		if !strings.Contains(stderr.String(), "proven") {
+			t.Errorf("no accounting on stderr: %q", stderr.String())
 		}
 	})
 

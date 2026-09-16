@@ -20,8 +20,13 @@ them does not happen inside this program.
 4. **render** turns a document into a self-contained HTML page.
 
 `validate` guards the boundary between stages 2 and 3, and `serve` exposes the
-same capabilities as a local MCP server so any plugin can drive them. Neither
-surface has a capability the other lacks.
+same capabilities as a local MCP server so any plugin can drive them.
+
+Neither surface has a capability the other lacks, and that is arranged to be
+checkable rather than merely intended: both are built from one registry of
+operations, and tests assert they cover the same set, that every argument a
+request takes is reachable from the command line, and that the tool schema a
+plugin reads is complete.
 
 UML is load-bearing rather than decorative. A component diagram carries provided
 and required interfaces, ports and dependencies; sequence carries lifelines,
@@ -33,13 +38,13 @@ extend. That vocabulary is what stage 2 is held to.
 
 Early, and honest about it.
 
-Working: `graph` for Go, `validate`, `compose` for all four families, the
-embedded schemas for all three stage boundaries, and the drift guard that keeps
-the Go types matching them.
+Working: `graph` for Go, `validate`, `compose` for all four families, `serve`,
+the embedded schemas for all three stage boundaries, and the drift guard that
+keeps the Go types matching them.
 
-Not built yet: `render` and `serve`, and `graph` for Python and JS/TS. Each
-unbuilt command is named in the command list and reports that it is not
-implemented rather than pretending not to exist.
+Not built yet: `render`, and `graph` for Python and JS/TS. An unbuilt capability
+is named on both surfaces and reports that it is not implemented rather than
+pretending not to exist.
 
 ## Build
 

@@ -386,6 +386,8 @@ Deferred deliberately, to be settled when the work reaches them:
 
 - Whether source evidence, which needs git, is in 0.1.0.
 - How the binary reaches the codemine plugin, and which architectures it targets.
+  The MCP server it is driven through exists; how the binary gets onto a machine
+  does not.
 - Error policy and exit codes for parse failures, levels that cannot be laid out,
   and output path collisions.
 - The measured speed and binary cost of the tree-sitter runtime. The published
