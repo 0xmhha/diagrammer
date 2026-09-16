@@ -80,10 +80,21 @@ vet:
 	$(GO) vet ./...
 
 ## lint: the wider rule set, when it is installed
+#
+# Both builds, because a linter run with CGO_ENABLED=0 never sees the four
+# grammars: every file in that package but its doc is behind a build tag, so
+# the checks would pass by not looking.
+#
+# Deliberately not part of `make verify`. The release gate is defined as a clean
+# machine with only Go and make, and requiring a linter would change that
+# definition for a check that finds style rather than defects. It is part of
+# `make check`, which is what to run before a commit on a machine that has it.
 lint:
 	@command -v $(GOLANGCI) >/dev/null 2>&1 \
 		|| { echo "$(GOLANGCI) not installed: brew install golangci-lint"; exit 1; }
-	$(GOLANGCI) run
+	CGO_ENABLED=0 $(GOLANGCI) run ./...
+	@command -v cc >/dev/null 2>&1 && CGO_ENABLED=1 $(GOLANGCI) run ./... \
+		|| echo "no C compiler: the four-language build was not linted"
 
 ## tidy: reconcile go.mod, go.sum and vendor/ with the imports
 #
@@ -95,7 +106,10 @@ tidy:
 	$(GO) mod vendor
 
 ## check: what must pass before a commit
-check: fmt vet test
+#
+# Wider than `verify` rather than narrower: this runs on a development machine
+# that has the linter, and `verify` runs on one that has only Go and make.
+check: fmt vet lint test
 
 ## vendor-check: fail if vendor/ has drifted from go.mod
 #

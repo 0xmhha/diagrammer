@@ -107,13 +107,6 @@ func (g *grid) channelLeftOf(col int) float64 {
 	return prev + (g.colX[col]-prev)/2
 }
 
-func (g *grid) channelRightOf(col int) float64 {
-	if col >= len(g.colX)-1 {
-		return g.colX[col] + g.colW[col] + channelX/2
-	}
-	return g.channelLeftOf(col + 1)
-}
-
 func (g *grid) channelAbove(row int) float64 {
 	if row == 0 {
 		return g.rowY[0] - channelY/2

@@ -164,7 +164,7 @@ func (r *ComposeRequest) Run(context.Context) (*Result, error) {
 		return nil, err
 	}
 	if r.Out != "" {
-		if err := os.MkdirAll(r.Out, 0o755); err != nil {
+		if err := os.MkdirAll(r.Out, outputDirMode); err != nil {
 			return nil, fmt.Errorf("create %s: %w", r.Out, err)
 		}
 	}
@@ -361,7 +361,7 @@ func encode(v any) ([]byte, error) {
 // deliver writes content to path, or hands it back when no path was named.
 func deliver(out *Result, path string, content []byte) error {
 	if path != "" {
-		if err := os.WriteFile(path, content, 0o644); err != nil {
+		if err := os.WriteFile(path, content, outputFileMode); err != nil {
 			return fmt.Errorf("write %s: %w", path, err)
 		}
 	}

@@ -49,8 +49,8 @@ func (p *Page) HTML() string {
 		b.WriteString(`<section ` + attrLevel + `="` + esc(scene.Level) + `" hidden>` + "\n")
 		b.WriteString("<div class=\"level-head\">\n")
 		b.WriteString("<h2>" + esc(scene.Title) + "</h2>\n")
-		b.WriteString(fmt.Sprintf("<span class=\"count\">%d boxes, %d relationships drawn</span>\n",
-			len(scene.Boxes), len(scene.Routes)))
+		fmt.Fprintf(&b, "<span class=\"count\">%d boxes, %d relationships drawn</span>\n",
+			len(scene.Boxes), len(scene.Routes))
 		b.WriteString(`<button class="back" ` + attrLevelBack + `="1">back</button>` + "\n")
 		b.WriteString("</div>\n")
 		b.WriteString(svgFor(scene))
@@ -74,9 +74,9 @@ func recordFor(drops []Drop) string {
 	}
 	var b strings.Builder
 	b.WriteString("<div class=\"record\">\n<h3>Not drawn</h3>\n")
-	b.WriteString(fmt.Sprintf(
+	fmt.Fprintf(&b,
 		"<p>%d relationship(s) here could not be drawn. They are listed so the diagram does not quietly leave them out.</p>\n",
-		len(drops)))
+		len(drops))
 	b.WriteString("<ul>\n")
 	for _, d := range drops {
 		b.WriteString("<li><code>" + esc(d.Route) + "</code> from <code>" + esc(d.Box) + "</code>: " +

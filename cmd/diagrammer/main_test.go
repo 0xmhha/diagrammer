@@ -323,3 +323,43 @@ func TestRenderCommand(t *testing.T) {
 		}
 	})
 }
+
+// TestOutputBelongsToWhoeverRanIt holds the file modes to a decision rather
+// than to whatever the umask happened to be.
+//
+// A code graph carries the doc comments of everything it read, and a rendered
+// page carries whatever those comments said. Pointed at a private repository,
+// the output holds private prose, and world-readable is the wrong default for
+// that. Widening it is one chmod the person who wants it can run.
+func TestOutputBelongsToWhoeverRanIt(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "out")
+	var stdout, stderr bytes.Buffer
+
+	graphPath := filepath.Join(t.TempDir(), "graph.json")
+	if err := run([]string{"graph", basicSrc, "-o", graphPath}, &stdout, &stderr); err != nil {
+		t.Fatalf("graph: %v", err)
+	}
+	if err := run([]string{"compose", nestedModel, "-o", dir}, &stdout, &stderr); err != nil {
+		t.Fatalf("compose: %v", err)
+	}
+
+	cases := []struct {
+		path string
+		want os.FileMode
+		what string
+	}{
+		{graphPath, 0o600, "a code graph"},
+		{dir, 0o700, "an output directory"},
+		{filepath.Join(dir, "component.diagram.json"), 0o600, "a diagram source"},
+	}
+	for _, c := range cases {
+		info, err := os.Stat(c.path)
+		if err != nil {
+			t.Errorf("%s: %v", c.what, err)
+			continue
+		}
+		if got := info.Mode().Perm(); got != c.want {
+			t.Errorf("%s is %v, want %v; anyone on the machine can read it", c.what, got, c.want)
+		}
+	}
+}

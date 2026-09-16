@@ -61,11 +61,24 @@ func run(args []string, stdout, stderr io.Writer) error {
 }
 
 func usage(w io.Writer) {
-	fmt.Fprintln(w, "usage: diagrammer <command> [arguments]")
-	fmt.Fprintln(w)
+	say(w, "usage: diagrammer <command> [arguments]\n\n")
 	for _, c := range commands() {
-		fmt.Fprintf(w, "  %-9s %s\n", c.name, c.summary)
+		say(w, "  %-9s %s\n", c.name, c.summary)
 	}
+}
+
+// say writes a line of commentary.
+//
+// The write error is discarded, once, here, rather than at every call site.
+// Commentary goes to a terminal or to nothing: a failed write to either is not
+// something a caller can act on, and on a closed pipe the process is signalled
+// before the error is ever returned.
+//
+// Output that is the product rather than commentary about it is written with
+// Write, and that error is returned. deliverResult does exactly that for the
+// documents, and runVersion for the version it was asked to print.
+func say(w io.Writer, format string, args ...any) {
+	_, _ = fmt.Fprintf(w, format, args...)
 }
 
 // parseOperand splits one positional argument out of args, whichever side of it
@@ -96,6 +109,10 @@ func runVersion(args []string, stdout, _ io.Writer) error {
 	if len(args) > 0 {
 		return fmt.Errorf("version takes no arguments, got %d", len(args))
 	}
-	fmt.Fprintf(stdout, "diagrammer %s (%s %s/%s)\n", version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
-	return nil
+	// The version is what the command was asked for rather than commentary
+	// about something else, so a failure to write it is a failure of the
+	// command.
+	_, err := fmt.Fprintf(stdout, "diagrammer %s (%s %s/%s)\n",
+		version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	return err
 }

@@ -408,6 +408,35 @@ Beside `make verify`, and not automated, because each item is a judgement:
 Nothing on this list may silently substitute for a test. An item that can be
 automated moves into `make verify` rather than staying a habit.
 
+### What the linter is for, and is not
+
+`golangci-lint` runs over both builds, because a run with `CGO_ENABLED=0` never
+sees the four grammars: every file in that package but its doc is behind a build
+tag, so the checks would pass by not looking.
+
+It is deliberately not part of `make verify`. The release gate is a clean
+machine with only Go and make, and requiring a linter would change that
+definition for checks that find style rather than defects. It is part of
+`make check`, which is what to run before a commit on a machine that has it.
+
+The enabled set is the default plus the checks this project has actually been
+bitten by, and nothing chosen for completeness. A linter reporting things nobody
+intends to fix trains people to skim its output, which costs more than the
+checks are worth.
+
+Two exclusions are decisions rather than conveniences, and `.golangci.yml` says
+so where they are made. `G304`, reading a file whose path came from a variable,
+can never fire usefully here: every file this program reads is one the caller
+named, and a security review found no trust boundary being crossed. `G115`,
+integer conversion, is about grid indices and parser positions, both bounded by
+the document they came from.
+
+One finding was fixed rather than excluded. Output was being written 0644 into
+0755 directories, and a code graph carries the doc comments of everything it
+read: pointed at a private repository, the output holds private prose.
+World-readable is the wrong default for that, so it is now 0600 and 0700, and a
+test holds it there. Widening it is one chmod the person who wants it can run.
+
 ## What was withdrawn
 
 | Withdrawn | Round | Replaced by | Why |

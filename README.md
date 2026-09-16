@@ -61,7 +61,7 @@ macOS is the supported target today.
 ```
 make build           # bin/diagrammer, reading Go
 make build-polyglot  # bin/diagrammer-polyglot, reading four languages
-make check           # fmt, vet, test
+make check           # fmt, vet, lint, test — before a commit
 make verify          # the release gate: fmt-check, vet, test, fixtures
 make verify-cgo      # the second gate, for the four-language build
 make help            # every target

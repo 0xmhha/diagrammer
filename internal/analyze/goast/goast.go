@@ -248,22 +248,6 @@ func (a *analyzer) collect(ctx context.Context) error {
 	return nil
 }
 
-// parseExcludes normalizes a comma-separated flag into module-relative
-// directory prefixes. Empty entries are dropped so "a,,b" behaves as "a,b".
-func parseExcludes(raw string) []string {
-	var out []string
-	for _, part := range strings.Split(raw, ",") {
-		cleaned := strings.Trim(strings.TrimSpace(filepath.ToSlash(part)), "/")
-		if cleaned == "" || cleaned == "." {
-			continue
-		}
-		out = append(out, cleaned)
-	}
-	sort.Strings(out)
-	return out
-}
-
-// isExcluded reports whether rel is an excluded directory or sits beneath one.
 func (a *analyzer) isExcluded(rel string) bool {
 	for _, prefix := range a.excluded {
 		if rel == prefix || strings.HasPrefix(rel, prefix+"/") {
