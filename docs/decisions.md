@@ -1,0 +1,396 @@
+# Decisions
+
+The design of 0.1.0 was settled in a 16-round interview before any code was
+written. That transcript is the record, but it cannot be read from the top: the
+design was revised three times as facts came in, and several early answers were
+withdrawn later. Reading it in order produces an implementation of decisions
+that were abandoned.
+
+This page separates what holds from what was withdrawn, so the transcript can be
+consulted for reasoning without being mistaken for a specification.
+
+Source: Ouroboros interview `interview_20260915_124605`, 16 rounds, closed
+2026-09-16 with an ambiguity score of 0.1305. Round numbers below cite it.
+
+## How the design moved
+
+Rounds 1 to 5 built a contract that measured diagrammer against Archify: a
+pinned commit, a three-layer comparison, and a second artifact emitted purely to
+feed Archify's checker.
+
+Round 6 withdrew all of it, on two facts. The Archify branch carrying every rule
+worth measuring against is 20 commits ahead of its origin and is never pushed,
+so a pinned commit names something CI cannot fetch and a second person cannot
+obtain. And every reference number came from a private repository that cannot
+ship in an MIT project's testdata. Correctness moved to invariants checked over
+synthetic fixtures held in this repository.
+
+Round 10 rewrote the goal itself. The four-stage pipeline, the UML model, and
+the second stage performed outside the binary all appear there for the first
+time. That round reopened the language scope and reversed the decision to ship
+one diagram family.
+
+Rounds 11 to 16 settled the details on top of the rewritten goal and are the
+specification.
+
+**The trap is that withdrawn rounds carry live technical content.** Round 3's
+scope statement is dead, but the viewer and renderer decisions inside the same
+answer are current. Round 4's premise is dead, but its floating-point findings
+are current. Neither round can be discarded or adopted whole.
+
+## What holds
+
+### Goal (round 10)
+
+Parse a project's code into a graph with an AST parser. A plugin's skill
+analyses that graph with an LLM and returns a `codegraph.json` expressed as a
+UML model. Derive from that JSON the source data for UML diagrams (component,
+sequence, state) and for use cases. Assemble the pages from an HTML template.
+
+The four stages each run independently, because the second is performed by an
+external plugin rather than by the binary. One compiled Go binary serves as both
+a CLI and a local MCP server, so any plugin can drive it.
+
+UML is load-bearing rather than decorative. A component diagram carries provided
+and required interfaces, ports and dependencies; sequence carries lifelines,
+messages, activations and fragments; state carries transitions with trigger,
+guard and effect; use case carries actors, a system boundary, include and
+extend. `codegraph.json` is a UML model, and that is the instruction the
+stage-2 model works to.
+
+### Correctness is proven by invariants, not by comparison (round 6)
+
+Correctness is asserted against synthetic fixtures committed to this repository.
+No external repository, no network, no private corpus, and no comparison with
+another implementation.
+
+Comparison with Archify stays available as a local development aid and is
+documented as never being a gate.
+
+### Schemas are the only contract (round 14)
+
+Three JSON Schema files are committed and embedded with `go:embed`: the stage-1
+graph schema, the stage-2 UML codegraph schema, and the stage-3 diagram-source
+schema with a branch per family. `validate`, `compose` and `render` read only
+those embedded schemas, and the stage-2 skill prompt is built from the same
+files, so the instruction given to the model and the check applied to what it
+returns come from one place.
+
+Go structs are not the contract. They are either generated from the schemas or
+checked against them by a test that fails the build on divergence. The drift
+guard must exist; the decision is only worth taking if nothing can quietly
+disagree with the schema.
+
+This is forced by the external stage. A skill and a plugin can read a schema
+file; neither can read a Go type. A hand-transcribed copy drifts from its
+original without anyone noticing until the output is wrong.
+
+Every document carries a schema version field, so a plugin detects a mismatch
+and says so rather than half-consuming a document. Schemas are embedded rather
+than read from disk, which is what keeps the binary self-contained and
+`make verify` offline. Documentation under `docs/` describing a schema is marked
+as derived: where the two disagree the schema wins and the documentation is what
+gets corrected.
+
+Once 0.1.0 ships the schemas are public contract. A change is a versioned
+change, not an edit.
+
+### Command surface (round 13)
+
+    diagrammer graph    <src> -o graph.json       stage 1
+    diagrammer validate <codegraph.json>          stage 2 boundary
+    diagrammer compose  <codegraph.json> -o <dir> stage 3
+    diagrammer render   <doc.json> -o out.html    stage 4
+    diagrammer serve                              the same, as a local MCP server
+    diagrammer version
+
+No single command infers its stage from the shape of the file it was handed.
+Stage separation is a requirement, and a command that guesses makes the
+boundaries invisible exactly where they matter most.
+
+The `codegraph.json` declares which families the model supports, because what a
+UML model can express is a property of its contents rather than of the command
+line. `compose` emits every declared family by default and `--family` narrows it
+to one. Asking for a family the model does not declare is refused with a clear
+message rather than drawn empty. `validate` checks the declaration against the
+contents, so a model claiming sequence support without lifelines is caught at the
+boundary rather than three stages later.
+
+`validate` is the only gate at the stage-2 boundary. `compose` and `render` may
+assume a validated model and must say so rather than re-validating silently.
+
+Every subcommand reports failures on stderr with a non-zero exit status and names
+the offending input path where one exists.
+
+CLI and MCP are two faces of one set of capabilities. `serve` exposes graph,
+validate, compose and render with the same names, arguments and error behaviour
+as the subcommands. Neither surface has a capability the other lacks. The MCP
+tool and argument names are contract once 0.1.0 ships, because plugins bind to
+them.
+
+### Languages and parsers (rounds 12, 16)
+
+Three languages, two parser paths. Go is parsed with `go/ast` from the standard
+library. Python and JS/TS are parsed with a cgo-free pure-Go tree-sitter runtime
+whose grammars are vendored into the repository.
+
+tree-sitter is rejected for Go, on inspection rather than preference. Its
+grammar's default branch has had no commit since 2025-09-15 and its
+`method_declaration` rule carries no type parameters, so a Go 1.27 generic
+method does not parse. tree-sitter fails soft by emitting an ERROR node and
+continuing, so such a method disappears from the graph without an error, and no
+LLM can restore what was never extracted. `go/ast` is free, faster, and current
+with whichever compiler builds the binary.
+
+The runtime must be cgo-free so `CGO_ENABLED=0` builds keep working. Grammars
+are vendored rather than fetched, because `make verify` runs offline. The
+runtime and every grammar get a `THIRD_PARTY_NOTICES` row naming project,
+version and licence, added in the commit that brings them in. The runtime sits
+behind an internal interface so it can be replaced without touching the
+analyzers; it is a v0.x single-maintainer project and that risk is accepted
+knowingly.
+
+Two parser paths must not become two graph shapes. The graph schema is one
+contract and every analyzer satisfies it.
+
+### The renderer is reimplemented; the viewer is embedded (round 3)
+
+Go reimplements the renderer. The viewer ships as one frozen embedded asset.
+
+The viewer is not Node code: it uses only `document` and `window`, and runs in
+the browser inside the emitted HTML, so embedding it puts Node nowhere near the
+shipped path. It is a generated build artifact of roughly 780 KB, and embedding
+it grows the binary from about 1.5 MB to about 2.3 MB. It is copied material and
+takes a `THIRD_PARTY_NOTICES` row in the commit that brings it in.
+
+Layout cannot be deferred to the viewer under any arrangement. The document
+format is a placed format: components carry position and size, connections carry
+end sides and routes. Whoever owns layout owns the composition gates, because
+those gates read routed polylines that only a renderer produces.
+
+Three constraints from this round are easy to lose and expensive to rediscover:
+
+- **The renderer-to-viewer DOM contract must be pinned by a generated test.**
+  The viewer reads 195 distinct `data-*` attributes. A renderer that omits one
+  still produces a page that draws, while interaction dies silently, and no
+  composition rule would notice, because those rules check the drawing rather
+  than the attribute vocabulary. The test extracts the attribute set from the
+  pinned viewer and fails on mismatch.
+- **The East Asian width table must be transcribed exactly.** Text is measured
+  by arithmetic rather than font metrics: width is text units times font size
+  times 0.6. The table deciding which characters count as two units is one
+  regular expression of roughly 46 ranges with deliberate deviations from the
+  Unicode standard, and `golang.org/x/text/width` will not reproduce it. This is
+  the most transcription-error-prone part of the port, and it matters because
+  labels here contain CJK.
+- **Brand marks are catalog-only.** The live fetcher opens network connections.
+
+Schema validation uses `santhosh-tekuri/jsonschema` v6.0.3: draft 2020-12,
+cgo-free.
+
+### Composition rules are ours, checked natively (round 7)
+
+The composition checker is reimplemented in Go as an in-repo test. No Node step
+in CI, and no vendored copy of the upstream script. Vendoring it would reinstate
+the unfetchable dependency that round 6 removed, and would leave the gates as
+somebody else's code that cannot be fixed without editing a copy.
+
+Seven rules move into Go beside the renderer: endpoint side matches route
+direction; no route through a non-endpoint box; no proper crossing between
+unrelated relationships; no ambiguous corridor; no route following a boundary
+border instead of crossing it; route rhythm, covering bend count, stretch ratio
+and minimum segment lengths; and connection-label clearance from every route.
+Alongside them sit the renderer's own local checks: unique ids, finite positions
+and sizes, viewBox containment, label wider than its box, component separation,
+boundary title containment and overlap, minimum connection length.
+
+`data-composition-points` is a specified attribute of every emitted path,
+written unrounded. The checker reads the emitted artifact rather than the
+renderer's in-memory state, deliberately: that is what makes the check judge
+what was produced rather than what was intended. The Go side needs its own
+parser for that attribute, with unit tests, so a malformed or missing attribute
+fails loudly rather than skipping a check in silence.
+
+**Each rule needs a fixture that makes it fail.** A ported check that never
+fires is indistinguishable from a check that was never ported, and that is the
+main risk of reimplementing rather than invoking.
+
+### Floating point (round 4)
+
+The premise of this round was withdrawn; its measurements were not.
+
+One numeric emission helper: quantize where the source already quantizes, format
+with `strconv.FormatFloat(v, 'f', -1, 64)`, and normalise negative zero to `"0"`
+because JS renders it that way and Go does not. Hard-fail on NaN and Inf rather
+than serialising them.
+
+`jsRound(x) = math.Floor(x + 0.5)` replaces every `Math.round` the port mirrors.
+JS rounds negative halves toward positive infinity while Go rounds away from
+zero, so `-2.5` gives `-2` there and `-3` here. Verified on eight values.
+
+Float expressions keep the same evaluation order as the source. Rewriting one
+for readability is a correctness change.
+
+Formatting itself is not a risk: Go matched V8 on all 48 distinct long-float
+values in a real artifact and on 20,003 of 20,007 random and boundary values,
+the four misses being notation thresholds a diagram coordinate cannot reach.
+The residual risk is `Math.hypot`, which is libm-defined rather than
+bit-guaranteed, and which is the strongest single reason bytes are not gated.
+
+### Acceptance (rounds 11, 15, 16)
+
+`make verify` exiting zero is the only automated gate, and it is what authorises
+a tag. It runs offline on a clean macOS machine with only Go and make installed.
+Anything it needs that such a machine lacks is a defect.
+
+What it runs, by stage:
+
+- **Stage 1.** At least one source fixture per language emits a graph that
+  validates against the graph schema and is byte-identical across runs. A
+  fixture per language contains a deliberate parse failure, asserting the
+  failure is counted and reported rather than silently dropped. This weighs more
+  on the tree-sitter path, whose soft failure is exactly how missing code hides.
+- **Stage 2.** Skipped. It is an external responsibility, and the acceptance
+  ritual does not attempt it. Stage-2 inputs are `codegraph.json` fixtures
+  committed to the repository, each recording its provenance so a reader can
+  tell a hand-written fixture from one a model generated and a human reviewed.
+- **Stage 3.** Each fixture produces a document that validates against its
+  family's schema. The completeness rule for that family holds. Every element of
+  the model appears somewhere in the output; nothing is silently discarded. The
+  families the model declares and the families `compose` emits agree. Output is
+  byte-identical across runs. At least one fixture per family is dense enough
+  that the record path is exercised rather than merely present.
+- **Stage 4.** The family's composition rules pass, checked by our own Go
+  checker over the emitted artifact. Document to HTML is structurally lossless:
+  every element in the document is present in the artifact and the artifact
+  introduces none the document does not account for. The SVG comparison is exact
+  on element order, tag names, classes, text and every non-numeric attribute,
+  with a 1e-6 tolerance on numeric attributes only. Output is byte-identical
+  across runs.
+
+Golden HTML byte comparison runs and reports but never fails the build. Byte
+equality has total sensitivity and almost no specificity: a good canary and a bad
+specification. A difference is explained or fixed by a person, never silenced by
+regenerating the golden file.
+
+The 1e-6 tolerance is written down with its justification: far below one device
+pixel, far above accumulated double error at diagram scale.
+
+Recorded honestly rather than glossed: nothing in `make verify` demonstrates
+that an LLM actually produces a conformant `codegraph.json`. The fixtures could
+be more obliging than reality. That is accepted deliberately, because the
+alternative is a network dependency inside the acceptance ritual.
+
+### Completeness rules, per family (round 16)
+
+All four families ship with their rule defined and their fixtures written.
+Leaving three of them open would mean shipping with no way to tell a correct
+diagram from a lossy one.
+
+The general form is completeness: every element of the model is either rendered
+or accounted for with a reason. The component family's version is specific to a
+grid that cannot route everything, and does not transfer unchanged. A sequence
+diagram does not drop messages the way a grid drops relationships.
+
+- **component** — every proven relationship is drawn, or recorded on its box
+  with a reason; `drawn + dropped == proven` holds exactly.
+- **sequence** — every message and activation appears; ordering is preserved;
+  no lifeline referenced by a message is missing.
+- **state** — every state and transition appears; every transition's source and
+  target resolve; initial and final states are present where declared.
+- **use case** — every actor, use case and association appears; include and
+  extend resolve to declared use cases; nothing sits outside the system boundary
+  that the model placed inside it.
+
+Each needs a fixture that violates it, so the rule is proven to fire. All four
+are written into `docs/invariants.md`, so the contract is one document rather
+than one rule and three verbal understandings.
+
+### The four component-family capabilities (rounds 9, 11)
+
+Multi-level free placement; drill-down pages that open and return; region frames
+for the generation an unfolded level skipped; and the per-box record of every
+proven relationship the drawing could not hold.
+
+These are one argument rather than four features. Free placement without
+drill-down is a picture that cannot go deeper. Drill-down without the record
+silently loses what the grid could not draw. The region frames are what stop an
+unfolded overview from reading as a flat list. Removing the fourth would also
+remove the only way to check `drawn + dropped == proven`.
+
+Round 11 attached them to the component family specifically; they are properties
+of that layout rather than of the product.
+
+### Shipped documents
+
+Deliverables, carrying acceptance weight:
+
+- `docs/invariants.md` — the correctness contract in full: composition rules,
+  the four completeness rules, the accounting invariant, determinism.
+- `docs/analyzer-interface.md` — the extension point for a new language.
+- `docs/thresholds.md` — why 6, 14, 24 and 1.4, written as the measurements
+  that produced them, so a future change is made the same way rather than by
+  taste.
+- `docs/licensing.md`, `THIRD_PARTY_NOTICES.md`, `README.md`.
+
+Anything else under `docs/` is a working note. This page is a working note.
+
+### The human release checklist (round 16)
+
+Beside `make verify`, and not automated, because each item is a judgement:
+
+- Triage any difference from the golden HTML byte comparison.
+- Confirm `THIRD_PARTY_NOTICES` carries a row for the embedded viewer asset, the
+  tree-sitter runtime and every vendored grammar, each naming project, version
+  and licence.
+- Confirm the shipped documents match the code they describe.
+- Confirm the measured cost of the tree-sitter runtime has been recorded, since
+  the published figures were never verified here and the number may reopen that
+  choice.
+
+Nothing on this list may silently substitute for a test. An item that can be
+automated moves into `make verify` rather than staying a habit.
+
+## What was withdrawn
+
+| Withdrawn | Round | Replaced by | Why |
+|---|---|---|---|
+| Three-layer contract measured against a pinned Archify commit | 1 | 6 | The branch holding the rules is never pushed; the commit cannot be fetched by CI or obtained by a second person |
+| The reference counts 3,029 / 3,247 / 431 / 3,039 / 1,355 / 800 | 1, 2 | 6 | Measured on one private repository at one commit, with thresholds that moved three times in a day; freezing them turns a tuning knob into an API |
+| Byte-identical graph output as a cross-implementation contract | 2 | 6, 12 | Byte-identity now means identical across our own runs, not identical to another implementation |
+| Sequence, lifecycle, dataflow and workflow renderers out of scope | 3 | 10 | The rewritten goal puts component, sequence, state and use case all in 0.1.0 |
+| Upstream's golden test as the conformance oracle | 3 | 4 | It hardcodes a Node invocation and byte-compares checked-in HTML; it is that project's self-consistency test and knows nothing about Go |
+| Byte equality as a gate | 4 | 4, 15 | Total sensitivity, near-zero specificity; `Math.hypot` is not bit-guaranteed, so it cannot be promised |
+| A second layout-JSON artifact emitted to feed the checker | 5 | 6 | False premise: the checker reads `data-composition-points` from the HTML, already unrounded, so no second artifact is needed |
+| 0.1.0 reads Go only, Python and JS/TS deferred | 8 | 10, 12 | The rewritten goal states AST-based multi-language parsing, and stage 2 now supplies the meaning that weak call resolution used to owe |
+| The four capabilities as the whole product's feature set | 9 | 11 | They are properties of the component layout; the other three families have their own rules |
+
+Two corrections recorded inside the transcript itself, both worth keeping,
+because each would otherwise send an implementer at the wrong problem:
+
+- The per-language divergence in unfolding is **not** that Python and
+  JavaScript graphs lack `file` nodes. The unfold logic never inspects node
+  kind. The mechanism is the unfold window: a level unfolds one generation at a
+  time while it holds fewer than 6 members, and stops before the next generation
+  would exceed 24. Go's hierarchy has an extra file generation that lands inside
+  that window; a language without one jumps from package straight to functions
+  and usually overshoots. A fix written against "JS lacks file nodes" fixes the
+  wrong thing.
+- The long decimal coordinates in Archify's output predate the local branch.
+  They appear in checked-in examples on its `origin/main`. The region-boundary
+  work multiplied them in large artifacts rather than introducing them.
+
+## Still open
+
+Deferred deliberately, to be settled when the work reaches them:
+
+- Whether source evidence, which needs git, is in 0.1.0.
+- How the binary reaches the codemine plugin, and which architectures it targets.
+- Error policy and exit codes for parse failures, levels that cannot be laid out,
+  and output path collisions.
+- The measured speed and binary cost of the tree-sitter runtime. The published
+  figures, roughly 3.9x slower than native C and roughly 20 MB of growth, are
+  that project's own and were never verified here. The result may reopen the
+  choice.
+- How the unfold window behaves for a language without a file generation. To be
+  decided by measurement on the fixtures rather than assumed.
