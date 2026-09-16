@@ -433,6 +433,58 @@ because each would otherwise send an implementer at the wrong problem:
   They appear in checked-in examples on its `origin/main`. The region-boundary
   work multiplied them in large artifacts rather than introducing them.
 
+## Blocked
+
+### The cgo-free tree-sitter runtime does not exist (round 12, tested)
+
+Round 12 settled stage 1 as three languages behind two parser paths: `go/ast`
+for Go, and **a cgo-free pure-Go tree-sitter runtime with vendored grammars**
+for Python and JS/TS. That round also said the runtime's cost had not been
+measured here and that the result might reopen the choice. It has, and earlier
+than expected: the premise itself does not hold.
+
+What was tested, on 2026-09-16:
+
+- `github.com/alexaandru/go-sitter-forest` v1.9.163 carries grammars for Python,
+  JavaScript and TypeScript, and depends on
+  `github.com/alexaandru/go-tree-sitter-bare` v1.10.0 as its runtime.
+- That runtime is **not** cgo-free. `tree.go` and `query.go` both open with
+  `// #include "sitter.h"` followed by `import "C"`.
+- Building a program that imports the Python grammar with `CGO_ENABLED=0` fails
+  outright: *build constraints exclude all Go files in
+  .../go-sitter-forest/python@v1.9.10*. With `CGO_ENABLED=1` the same import
+  compiles.
+- No wasm-backed Go binding exists under the obvious names
+  (`wasilibs/go-tree-sitter`, `smacker/go-tree-sitter-wasm`,
+  `tree-sitter/go-tree-sitter-wasm` are all absent from the module proxy).
+
+Why this is a blocker rather than an inconvenience: the constraint is not a
+preference, it is load-bearing for the release gate. Round 9 says `make verify`
+must run on a clean macOS machine with only Go and make installed, and that
+anything it needs beyond that is a defect. cgo needs a C toolchain, which such a
+machine does not have. Accepting cgo would not merely add a dependency; it would
+invalidate the definition of done.
+
+Everything built so far compiles with `CGO_ENABLED=0`, which was confirmed while
+testing this.
+
+Four ways out, none of them a tidy-up:
+
+1. **Accept cgo for the two languages.** Contradicts round 2, round 8 and round
+   12, breaks `CGO_ENABLED=0`, makes cross-compilation a cross-toolchain
+   problem, and puts a C compiler in the release gate's prerequisites.
+2. **Find or build a wasm-backed runtime.** Keeps every constraint. Nothing
+   off the shelf does it, so this is a project of its own.
+3. **Write parsers by hand.** Round 2 already surveyed the pure-Go options and
+   found none current: gpython targets Python 3.4, and the two production Go
+   TypeScript parsers keep theirs under `internal/` deliberately.
+4. **Ship 0.1.0 reading Go only**, which is what round 8 decided before round 10
+   reopened it. The analyzer interface exists, so the other two remain additions
+   rather than redesigns.
+
+This is a decision about what 0.1.0 is, so it is recorded here rather than
+resolved in code.
+
 ## Still open
 
 Deferred deliberately, to be settled when the work reaches them:
