@@ -71,10 +71,9 @@ check: fmt vet test
 
 ## fixtures: run the shipped binary over every committed fixture
 #
-# compose is asked for the component family by name rather than for everything
-# a model declares. A fixture declaring four families is composed only for the
-# one whose composer exists, and asking for the rest is refused on purpose
-# rather than skipped in silence. Drop the flag once every family is built.
+# compose is asked for everything a model declares. A family with no composer
+# is refused by name rather than skipped in silence, so this line failing means
+# a fixture grew a family nobody built rather than that the gate is too strict.
 #
 # This exercises the binary a second person would get, not the library the
 # tests link against, because "the tests pass" and "the program works" are
@@ -114,8 +113,8 @@ fixtures: build
 		[ -e "$$f" ] || continue; \
 		found=$$((found + 1)); \
 		name=$$(basename "$$f" .codegraph.json); \
-		$(BIN_DIR)/$(BINARY) compose "$$f" --family component -o "$$work/$$name.1" >/dev/null; \
-		$(BIN_DIR)/$(BINARY) compose "$$f" --family component -o "$$work/$$name.2" >/dev/null; \
+		$(BIN_DIR)/$(BINARY) compose "$$f" -o "$$work/$$name.1" >/dev/null; \
+		$(BIN_DIR)/$(BINARY) compose "$$f" -o "$$work/$$name.2" >/dev/null; \
 		for doc in "$$work/$$name.1"/*.diagram.json; do \
 			[ -e "$$doc" ] || continue; \
 			cmp -s "$$doc" "$$work/$$name.2/$$(basename "$$doc")" \

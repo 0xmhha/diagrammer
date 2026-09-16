@@ -230,13 +230,25 @@ func TestComposeCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("refuses a declared family whose composer is not built", func(t *testing.T) {
-		// order-service declares all four. Asking for everything must say so
-		// rather than quietly emitting only what exists.
+	t.Run("emits every family the model declares", func(t *testing.T) {
+		// order-service declares all four, so all four files must appear. A
+		// composer added without being reachable from here would otherwise sit
+		// unused with nothing to say so.
+		dir := t.TempDir()
 		var stdout, stderr bytes.Buffer
-		err := run([]string{"compose", fixture, "-o", t.TempDir()}, &stdout, &stderr)
-		if err == nil || !strings.Contains(err.Error(), "not built yet") {
-			t.Errorf("want a refusal naming the unbuilt composer, got %v", err)
+		if err := run([]string{"compose", fixture, "-o", dir}, &stdout, &stderr); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		for _, family := range []string{"component", "sequence", "state", "usecase"} {
+			path := filepath.Join(dir, family+".diagram.json")
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Errorf("%s was not written: %v", family, err)
+				continue
+			}
+			if err := schema.Validate(schema.Diagram, raw); err != nil {
+				t.Errorf("%s does not satisfy the schema: %v", family, err)
+			}
 		}
 	})
 

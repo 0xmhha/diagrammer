@@ -10,7 +10,7 @@
     "schemaVersion": { "const": 1 },
     "family": {
       "description": "Which family this document is. One document holds one family; compose emits a file per family the model declares. The list grows as each family's composer lands, so a value missing here names a family that is not built yet rather than one that is not allowed.",
-      "enum": ["component"]
+      "enum": ["component", "sequence", "state", "usecase"]
     },
     "meta": {
       "type": "object",
@@ -101,6 +101,16 @@
           "type": "array",
           "items": { "$ref": "#/$defs/connection" }
         },
+        "activations": {
+          "description": "Executions on a lifeline, for the sequence family. Each spans the rows of the messages that start and end it. Empty for every other family.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/activation" }
+        },
+        "fragments": {
+          "description": "Combined fragments, for the sequence family. Each covers a run of rows and a span of columns. Empty for every other family.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/fragment" }
+        },
         "accounting": { "$ref": "#/$defs/accounting" }
       }
     },
@@ -164,8 +174,51 @@
       }
     },
     "relationshipKind": {
-      "description": "dependency is stated by the model outright. assembly is derived: one component requires an interface another provides, which UML draws as the two halves of a connector meeting.",
-      "enum": ["dependency", "assembly"]
+      "description": "What a connection stands for. Each family uses its own subset and its completeness rule refuses the rest, so one vocabulary serves every family without any of them accepting a kind that means nothing to it. component: dependency, stated by the model outright, and assembly, derived where one component requires an interface another provides. sequence: message. state: transition. usecase: association, include and extend.",
+      "enum": ["dependency", "assembly", "message", "transition", "association", "include", "extend"]
+    },
+    "activation": {
+      "description": "One execution on a lifeline, as a bar spanning rows.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "box", "fromRow", "toRow"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "box": {
+          "description": "The lifeline this execution runs on, named by its box.",
+          "$ref": "#/$defs/id"
+        },
+        "fromRow": { "type": "integer", "minimum": 0 },
+        "toRow": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "fragment": {
+      "description": "One combined fragment, as a frame over a run of rows and a span of columns.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "fromRow", "toRow", "fromCol", "toCol", "operands"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["alt", "opt", "loop", "par", "critical", "break", "strict", "seq"] },
+        "fromRow": { "type": "integer", "minimum": 0 },
+        "toRow": { "type": "integer", "minimum": 0 },
+        "fromCol": { "type": "integer", "minimum": 0 },
+        "toCol": { "type": "integer", "minimum": 0 },
+        "operands": {
+          "description": "One entry per branch, each naming the row it starts at so stage 4 can draw the divider above it.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["fromRow"],
+            "properties": {
+              "guard": { "type": "string", "maxLength": 200 },
+              "fromRow": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
     },
     "region": {
       "type": "object",
@@ -194,6 +247,15 @@
           "description": "The interface an assembly connector passes through, so stage 4 can name the socket it draws.",
           "type": "string",
           "maxLength": 200
+        },
+        "order": {
+          "description": "Where this connection sits in a sequence, counting from zero. A sequence diagram is a ladder and its messages are ordered; a component or use case diagram's connections are not, and omit this.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "variant": {
+          "description": "How the line is drawn, when the kind alone does not say. A sequence message may be synchronous, asynchronous, a reply, or the one that creates or destroys a lifeline.",
+          "enum": ["sync", "async", "reply", "create", "destroy"]
         }
       }
     }

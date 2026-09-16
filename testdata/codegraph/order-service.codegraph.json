@@ -102,7 +102,9 @@
       { "id": "st.start", "name": "start", "kind": "initial" },
       { "id": "st.pending", "name": "Pending", "kind": "simple", "entry": "reserveStock()" },
       { "id": "st.paid", "name": "Paid", "kind": "simple" },
-      { "id": "st.shipped", "name": "Shipped", "kind": "simple", "activity": "trackDelivery()" },
+      { "id": "st.shipped", "name": "Shipped", "kind": "composite", "activity": "trackDelivery()" },
+      { "id": "st.intransit", "name": "In transit", "kind": "simple", "parent": "st.shipped" },
+      { "id": "st.lastmile", "name": "Out for delivery", "kind": "simple", "parent": "st.shipped" },
       { "id": "st.cancelled", "name": "Cancelled", "kind": "simple", "entry": "releaseStock()" },
       { "id": "st.done", "name": "done", "kind": "final" }
     ],
@@ -111,7 +113,8 @@
       { "id": "tr.pay", "from": "st.pending", "to": "st.paid", "trigger": "payment", "guard": "amount == total", "effect": "recordPayment()" },
       { "id": "tr.ship", "from": "st.paid", "to": "st.shipped", "trigger": "dispatch", "effect": "notifyCustomer()" },
       { "id": "tr.cancel", "from": "st.pending", "to": "st.cancelled", "trigger": "cancel", "guard": "not yet dispatched" },
-      { "id": "tr.delivered", "from": "st.shipped", "to": "st.done", "trigger": "delivered" },
+      { "id": "tr.handover", "from": "st.intransit", "to": "st.lastmile", "trigger": "arrived at depot" },
+      { "id": "tr.delivered", "from": "st.lastmile", "to": "st.done", "trigger": "delivered" },
       { "id": "tr.closed", "from": "st.cancelled", "to": "st.done" }
     ]
   },

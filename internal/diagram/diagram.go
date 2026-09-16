@@ -18,6 +18,9 @@ type Family string
 
 const (
 	FamilyComponent Family = "component"
+	FamilySequence  Family = "sequence"
+	FamilyState     Family = "state"
+	FamilyUsecase   Family = "usecase"
 )
 
 // RelationshipKind separates what the model stated from what compose derived.
@@ -29,6 +32,42 @@ const (
 	// KindAssembly is derived: one component requires an interface another
 	// provides, which UML draws as the two halves of a connector meeting.
 	KindAssembly RelationshipKind = "assembly"
+	// KindMessage is one lifeline reaching another, in the sequence family.
+	KindMessage RelationshipKind = "message"
+	// KindTransition moves a state machine from one state to another.
+	KindTransition RelationshipKind = "transition"
+	// KindAssociation ties an actor to a use case.
+	KindAssociation RelationshipKind = "association"
+	// KindInclude is one use case always performing another.
+	KindInclude RelationshipKind = "include"
+	// KindExtend is one use case optionally adding to another.
+	KindExtend RelationshipKind = "extend"
+)
+
+// MessageVariant is how a sequence message is drawn, where the kind alone does
+// not say.
+type MessageVariant string
+
+const (
+	VariantSync    MessageVariant = "sync"
+	VariantAsync   MessageVariant = "async"
+	VariantReply   MessageVariant = "reply"
+	VariantCreate  MessageVariant = "create"
+	VariantDestroy MessageVariant = "destroy"
+)
+
+// FragmentKind is the interaction operator of a combined fragment.
+type FragmentKind string
+
+const (
+	FragmentAlt      FragmentKind = "alt"
+	FragmentOpt      FragmentKind = "opt"
+	FragmentLoop     FragmentKind = "loop"
+	FragmentPar      FragmentKind = "par"
+	FragmentCritical FragmentKind = "critical"
+	FragmentBreak    FragmentKind = "break"
+	FragmentStrict   FragmentKind = "strict"
+	FragmentSeq      FragmentKind = "seq"
 )
 
 // DropReason says why a level could not draw a relationship.
@@ -104,7 +143,42 @@ type Level struct {
 	Regions []Region `json:"regions,omitempty"`
 	// Connections is sorted by id, and carries endpoints only.
 	Connections []Connection `json:"connections"`
-	Accounting  Accounting   `json:"accounting"`
+	// Activations are executions on a lifeline, for the sequence family, and
+	// are empty for every other.
+	Activations []Activation `json:"activations,omitempty"`
+	// Fragments are combined fragments, for the sequence family, and are empty
+	// for every other.
+	Fragments  []Fragment `json:"fragments,omitempty"`
+	Accounting Accounting `json:"accounting"`
+}
+
+// Activation is one execution on a lifeline, as a bar spanning rows.
+type Activation struct {
+	ID string `json:"id"`
+	// Box is the lifeline this execution runs on.
+	Box     string `json:"box"`
+	FromRow int    `json:"fromRow"`
+	ToRow   int    `json:"toRow"`
+}
+
+// Fragment is a combined fragment, as a frame over a run of rows and a span of
+// columns.
+type Fragment struct {
+	ID      string       `json:"id"`
+	Kind    FragmentKind `json:"kind"`
+	FromRow int          `json:"fromRow"`
+	ToRow   int          `json:"toRow"`
+	FromCol int          `json:"fromCol"`
+	ToCol   int          `json:"toCol"`
+	// Operands has one entry per branch, each naming the row it starts at so
+	// stage 4 can draw the divider above it.
+	Operands []FragmentOperand `json:"operands"`
+}
+
+// FragmentOperand is one branch of a fragment.
+type FragmentOperand struct {
+	Guard   string `json:"guard,omitempty"`
+	FromRow int    `json:"fromRow"`
 }
 
 // Grid is how many cells a level's layout spans.
@@ -167,4 +241,15 @@ type Connection struct {
 	// Interface is what an assembly connector passes through, so stage 4 can
 	// name the socket it draws.
 	Interface string `json:"interface,omitempty"`
+	// Order is where this connection sits in a sequence, counting from zero. A
+	// sequence diagram is a ladder and its messages are ordered; the other
+	// families' connections are not, and leave this out.
+	//
+	// It is a pointer because the first row is row zero, and a plain int with
+	// omitempty would erase it: the message at the top of the ladder would
+	// arrive carrying no position at all. Absent and zero are different
+	// answers here, so the type has to be able to tell them apart.
+	Order *int `json:"order,omitempty"`
+	// Variant is how the line is drawn, when the kind alone does not say.
+	Variant MessageVariant `json:"variant,omitempty"`
 }

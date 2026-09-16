@@ -33,15 +33,13 @@ extend. That vocabulary is what stage 2 is held to.
 
 Early, and honest about it.
 
-Working: `graph` for Go, `validate`, `compose` for the component family, the
+Working: `graph` for Go, `validate`, `compose` for all four families, the
 embedded schemas for all three stage boundaries, and the drift guard that keeps
 the Go types matching them.
 
-Not built yet: `render` and `serve`, `graph` for Python and JS/TS, and `compose`
-for the sequence, state and use case families. Each unbuilt command is named in
-the command list and reports that it is not implemented rather than pretending
-not to exist; asking `compose` for a family it cannot build is refused by name
-rather than quietly skipped.
+Not built yet: `render` and `serve`, and `graph` for Python and JS/TS. Each
+unbuilt command is named in the command list and reports that it is not
+implemented rather than pretending not to exist.
 
 ## Build
 

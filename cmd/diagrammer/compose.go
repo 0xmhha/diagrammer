@@ -25,6 +25,9 @@ import (
 func composers() map[uml.Family]func(string, *uml.Model) (*diagram.Document, error) {
 	return map[uml.Family]func(string, *uml.Model) (*diagram.Document, error){
 		uml.FamilyComponent: compose.Component,
+		uml.FamilySequence:  compose.Sequence,
+		uml.FamilyState:     compose.State,
+		uml.FamilyUsecase:   compose.Usecase,
 	}
 }
 
@@ -36,6 +39,9 @@ func composers() map[uml.Family]func(string, *uml.Model) (*diagram.Document, err
 func checkers() map[uml.Family]func(*uml.Model, *diagram.Document) []invariant.Problem {
 	return map[uml.Family]func(*uml.Model, *diagram.Document) []invariant.Problem{
 		uml.FamilyComponent: invariant.Component,
+		uml.FamilySequence:  invariant.Sequence,
+		uml.FamilyState:     invariant.State,
+		uml.FamilyUsecase:   invariant.Usecase,
 	}
 }
 

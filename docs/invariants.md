@@ -123,23 +123,69 @@ ends roll up to the same box, so drawing it would be a loop that says nothing. A
 grid that cannot route a line is a geometric problem and belongs to stage 4,
 which is where the rest of the drop reasons will appear.
 
+### shared by every family
+
+Four things are wrong in the same way whatever the family, and are checked once
+rather than four times: a connection with an end nobody can see, two boxes in
+one cell, a page nobody can reach, and an accounting that does not describe the
+document it is attached to.
+
+A fifth is shared in form but not in content. Each family names the relationship
+kinds it can mean, and a connection carrying any other is refused: a dependency
+in a state machine and a transition in a use case diagram are both nonsense, and
+one vocabulary serving every family only works if each of them refuses the rest
+of it.
+
 ### sequence
 
-Not built yet. The rule, settled in advance: every message and activation in the
-model appears on the diagram; ordering is preserved; no lifeline referenced by a
-message is missing.
+Every message and activation in the model appears on the diagram, ordering is
+preserved, and no lifeline a message refers to is missing.
+
+Ordering is the one thing a sequence diagram cannot get wrong quietly. The same
+messages in a different order describe a different interaction, so the row each
+message lands on is checked against the model's own order rather than assumed.
+That order is the model's array order and nothing else; a second field
+expressing it would be a second thing that can disagree.
+
+Nothing is dropped here, and the rule asserts that rather than assuming it. A
+grid cannot route every relationship, which is why the component family needs a
+record; a ladder has a rung for every message and no reason to refuse one. The
+day something does start dropping messages, it will be a failure rather than a
+silence.
 
 ### state
 
-Not built yet. The rule: every state and transition appears; every transition's
-source and target resolve; initial and final states are present where the model
-declares them.
+Every state and transition appears, every transition's source and target
+resolve, and initial and final states are present where the model declares them.
+
+A composite state is drawn as both a box and a band. That is not a duplicate: in
+UML the composite state's own box is the frame its substates sit inside, and a
+transition has to be able to land on it. The rule permits the repeat for this
+family and refuses it for the component family, where two boxes for one
+component would say there are two of it.
+
+The kind of a state is carried as its stereotype and checked against the model,
+because a final state drawn as an ordinary box is a diagram that reads wrongly
+while every count still adds up.
+
+Nothing is dropped.
 
 ### use case
 
-Not built yet. The rule: every actor, use case and association appears; include
-and extend resolve to declared use cases; nothing sits outside the system
-boundary that the model placed inside it.
+Every actor, use case and association appears, include and extend resolve to
+declared use cases, and nothing sits outside the system boundary that the model
+placed inside it.
+
+The boundary is the diagram's claim about what the system is responsible for, so
+where a box sits is not a presentation detail here. A use case drawn outside the
+band, or an actor drawn inside it, reverses that claim while every count still
+adds up, and is refused.
+
+Include and extend run between use cases. One ending on an actor would satisfy
+the endpoint rule, because an actor is a box, and still be nonsense, so it is
+checked separately.
+
+Nothing is dropped.
 
 ## Stage 4, rendering
 
