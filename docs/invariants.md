@@ -236,6 +236,12 @@ by routed lines. Seven rules, each with a drawing that breaks it:
   where it starts to read as joined to it.
 - **crossing** — no proper intersection between two routes that share no end.
   Two lines arriving at the same box are not a crossing; a reader expects that.
+  This is the one rule that condemns a pair rather than a route. Every other
+  rule points at one line and says it is wrong on its own; a crossing says at
+  least one of two has to go and leaves the choice open. The renderer settles
+  the others first and then takes out the fewest routes that leave no crossing
+  behind, which on a real project is far fewer than taking out whichever route
+  of each pair sorts first. `docs/thresholds.md` has the measurements.
 - **minimum-segment** — no run between bends shorter than 16px, below which a
   turn reads as a kink.
 - **label-clearance** — a connection's text stays 10px clear of every route but

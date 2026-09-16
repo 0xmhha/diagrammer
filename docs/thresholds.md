@@ -160,6 +160,47 @@ contract; the ones that decide where to put things are free to improve. Freezing
 the ratio would turn every layout improvement into a failing test, which is how
 a tuning knob becomes an API.
 
+### What a crossing costs, and who pays it
+
+A crossing is the only composition rule that condemns two routes at once. The
+renderer used to take out every route the checker named, and the checker named
+whichever route of each pair sorted first, so the set that went was a cover of
+the conflicts by accident rather than by choice.
+
+It now settles every other rule first, which removes some crossings for free,
+and then takes out the fewest routes that leave none behind. Finding the
+smallest such set is a hard problem in general; these graphs hold tens of routes
+and the greedy answer, take out whichever route crosses the most others and look
+again, is what a person would do by eye.
+
+Two other changes came out of the same measurements. A detour now leaves by the
+side that faces its target, where before it always left downward and a route to
+a row above climbed back past its own row and travelled the channel above the
+target: the height of the page for a relationship between two rows. And every
+route now takes its position on a box edge from one allocator rather than two,
+because the two handed out the same first position and a route arriving at a
+box's top was drawn along the same line as a route leaving it. No rule saw that.
+Two parallel lines on one x do not properly intersect and the pair shared an
+endpoint anyway; what noticed was a label sitting on a line that ran underneath
+it the whole way.
+
+Measured on models of real projects, grouped package by package:
+
+| model | before | after |
+|---|---|---|
+| archify | 9/25 | 17/25 |
+| diagrammer | 18/28 | 21/28 |
+| mythril | 7/9 | 8/9 |
+| OpenMMO | 20/63 | 28/63 |
+| ego-lite | 8/8 | 8/8 |
+
+The committed fixtures do not move, because each of them produces at most one
+crossing and with one crossing every answer removes one route.
+`testdata/codegraph/tangle.codegraph.json` was written for that reason: twelve
+services each reaching one and five places along the row, which produces
+thirty-one crossings at once. Like hub-overflow it is deliberately worse than an
+ordinary model and is not in the table below.
+
 What the layout scored before the placement work, and after:
 
 | | before | after |

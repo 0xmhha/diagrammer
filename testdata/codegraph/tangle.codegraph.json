@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Tangle",
+    "subtitle": "Twelve services each reaching one and five places along the row, which is the shape that crosses"
+  },
+  "provenance": {
+    "origin": "handwritten",
+    "note": "Written so that choosing which route to leave out is exercised. Every other fixture here produces at most one crossing, and with one crossing every answer removes one route, so the code that picks the smaller set never runs on them. Real projects produce dozens at once: grouped by package, this repository produces thirty-eight and archify twenty-five. Like hub-overflow it is deliberately worse than an ordinary model and so is not in the drawn-ratio table."
+  },
+  "families": [
+    "component"
+  ],
+  "component": {
+    "components": [
+      {
+        "id": "ingest",
+        "name": "Ingest",
+        "stereotype": "service"
+      },
+      {
+        "id": "parse",
+        "name": "Parse",
+        "stereotype": "service"
+      },
+      {
+        "id": "index",
+        "name": "Index",
+        "stereotype": "service"
+      },
+      {
+        "id": "store",
+        "name": "Store",
+        "stereotype": "service"
+      },
+      {
+        "id": "query",
+        "name": "Query",
+        "stereotype": "service"
+      },
+      {
+        "id": "rank",
+        "name": "Rank",
+        "stereotype": "service"
+      },
+      {
+        "id": "cache",
+        "name": "Cache",
+        "stereotype": "service"
+      },
+      {
+        "id": "api",
+        "name": "Api",
+        "stereotype": "service"
+      },
+      {
+        "id": "auth",
+        "name": "Auth",
+        "stereotype": "service"
+      },
+      {
+        "id": "audit",
+        "name": "Audit",
+        "stereotype": "service"
+      },
+      {
+        "id": "report",
+        "name": "Report",
+        "stereotype": "service"
+      },
+      {
+        "id": "admin",
+        "name": "Admin",
+        "stereotype": "service"
+      }
+    ],
+    "interfaces": [],
+    "dependencies": [
+      {
+        "id": "d.admin.ingest",
+        "from": "admin",
+        "to": "ingest",
+        "kind": "use"
+      },
+      {
+        "id": "d.admin.query",
+        "from": "admin",
+        "to": "query",
+        "kind": "use"
+      },
+      {
+        "id": "d.api.auth",
+        "from": "api",
+        "to": "auth",
+        "kind": "use"
+      },
+      {
+        "id": "d.api.ingest",
+        "from": "api",
+        "to": "ingest",
+        "kind": "use"
+      },
+      {
+        "id": "d.audit.index",
+        "from": "audit",
+        "to": "index",
+        "kind": "use"
+      },
+      {
+        "id": "d.audit.report",
+        "from": "audit",
+        "to": "report",
+        "kind": "use"
+      },
+      {
+        "id": "d.auth.audit",
+        "from": "auth",
+        "to": "audit",
+        "kind": "use"
+      },
+      {
+        "id": "d.auth.parse",
+        "from": "auth",
+        "to": "parse",
+        "kind": "use"
+      },
+      {
+        "id": "d.cache.admin",
+        "from": "cache",
+        "to": "admin",
+        "kind": "use"
+      },
+      {
+        "id": "d.cache.api",
+        "from": "cache",
+        "to": "api",
+        "kind": "use"
+      },
+      {
+        "id": "d.index.api",
+        "from": "index",
+        "to": "api",
+        "kind": "use"
+      },
+      {
+        "id": "d.index.store",
+        "from": "index",
+        "to": "store",
+        "kind": "use"
+      },
+      {
+        "id": "d.ingest.parse",
+        "from": "ingest",
+        "to": "parse",
+        "kind": "use"
+      },
+      {
+        "id": "d.ingest.rank",
+        "from": "ingest",
+        "to": "rank",
+        "kind": "use"
+      },
+      {
+        "id": "d.parse.cache",
+        "from": "parse",
+        "to": "cache",
+        "kind": "use"
+      },
+      {
+        "id": "d.parse.index",
+        "from": "parse",
+        "to": "index",
+        "kind": "use"
+      },
+      {
+        "id": "d.query.audit",
+        "from": "query",
+        "to": "audit",
+        "kind": "use"
+      },
+      {
+        "id": "d.query.rank",
+        "from": "query",
+        "to": "rank",
+        "kind": "use"
+      },
+      {
+        "id": "d.rank.cache",
+        "from": "rank",
+        "to": "cache",
+        "kind": "use"
+      },
+      {
+        "id": "d.rank.report",
+        "from": "rank",
+        "to": "report",
+        "kind": "use"
+      },
+      {
+        "id": "d.report.admin",
+        "from": "report",
+        "to": "admin",
+        "kind": "use"
+      },
+      {
+        "id": "d.report.store",
+        "from": "report",
+        "to": "store",
+        "kind": "use"
+      },
+      {
+        "id": "d.store.auth",
+        "from": "store",
+        "to": "auth",
+        "kind": "use"
+      },
+      {
+        "id": "d.store.query",
+        "from": "store",
+        "to": "query",
+        "kind": "use"
+      }
+    ]
+  }
+}

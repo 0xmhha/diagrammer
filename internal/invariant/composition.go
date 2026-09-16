@@ -345,3 +345,31 @@ func pointSegmentDistance(p, a, b artifact.Point) float64 {
 	t = math.Max(0, math.Min(1, t))
 	return math.Hypot(p.X-(a.X+t*dx), p.Y-(a.Y+t*dy))
 }
+
+// Crossings returns every pair of routes that cross although they share no
+// endpoint, in a stable order.
+//
+// Composition reports one route per crossing, which is all a check over a
+// finished drawing needs: it answers whether the page is sound. A caller
+// deciding what to leave out needs the pair. A crossing condemns two routes
+// jointly and which of them goes is a choice, where every other rule condemns
+// one route on its own and leaves nothing to decide.
+func Crossings(scene *artifact.Scene) [][2]string {
+	var out [][2]string
+	for i := range scene.Routes {
+		for j := i + 1; j < len(scene.Routes); j++ {
+			a, b := scene.Routes[i], scene.Routes[j]
+			if shareEndpoint(a, b) || !crosses(a, b) {
+				continue
+			}
+			out = append(out, [2]string{a.ID, b.ID})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i][0] != out[j][0] {
+			return out[i][0] < out[j][0]
+		}
+		return out[i][1] < out[j][1]
+	})
+	return out
+}

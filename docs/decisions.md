@@ -276,6 +276,15 @@ routes that will use them, which is what `channelsWanted` in
 and `docs/thresholds.md` has the measurements and the ceiling that widening
 stops at.
 
+The same comparison showed a second class. A crossing is the only rule that
+condemns two routes at once, and the renderer used to take out every route the
+checker named without noticing that naming one of each pair was already a
+choice, and an arbitrary one. It now takes out the fewest routes that leave no
+crossing behind. Two shapes changed with it: a detour leaves by the side facing
+its target rather than always downward, and box-edge positions come from one
+allocator rather than two, which had been handing two routes the same place on
+the same box.
+
 ### Floating point (round 4)
 
 The premise of this round was withdrawn; its measurements were not.
