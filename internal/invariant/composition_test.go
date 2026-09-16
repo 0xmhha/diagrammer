@@ -143,3 +143,48 @@ func TestEveryCompositionRuleFires(t *testing.T) {
 		}
 	}
 }
+
+// TestEveryMisplacedLabelIsReported is about the checker being complete rather
+// than merely correct.
+//
+// It used to return from the whole function at the first misplaced label, so a
+// page with two reported one. The caller drops what it is told about, draws the
+// rest, and the check over the emitted artifact then finds the one that was
+// never mentioned — which is how this was found: rendering a real model failed
+// with "the renderer thought it had satisfied" these rules.
+//
+// A caller acting on a checker's answer is acting on all of it or on a fragment
+// of it, and cannot tell which.
+func TestEveryMisplacedLabelIsReported(t *testing.T) {
+	scene := soundScene()
+	// A second pair, with a route whose label lands on the first route, and a
+	// third whose label lands on the second. Two independent violations.
+	scene.Boxes = append(scene.Boxes,
+		artifact.Box{ID: "c", X: 60, Y: 200, W: 80, H: 40},
+		artifact.Box{ID: "d", X: 400, Y: 200, W: 80, H: 40},
+		artifact.Box{ID: "e", X: 60, Y: 20, W: 80, H: 40},
+		artifact.Box{ID: "f", X: 400, Y: 20, W: 80, H: 40})
+	scene.Routes = append(scene.Routes,
+		artifact.Route{
+			ID: "r2", From: "c", To: "d", FromSide: "right", ToSide: "left",
+			Points:    []artifact.Point{{X: 140, Y: 220}, {X: 400, Y: 220}},
+			LabelText: "one", LabelAt: artifact.Point{X: 300, Y: 134},
+		},
+		artifact.Route{
+			ID: "r3", From: "e", To: "f", FromSide: "right", ToSide: "left",
+			Points:    []artifact.Point{{X: 140, Y: 40}, {X: 400, Y: 40}},
+			LabelText: "two", LabelAt: artifact.Point{X: 300, Y: 220},
+		})
+
+	reported := map[string]bool{}
+	for _, p := range invariant.Composition(scene) {
+		if p.Rule == invariant.RuleLabelClear {
+			reported[p.Route] = true
+		}
+	}
+	for _, want := range []string{"r2", "r3"} {
+		if !reported[want] {
+			t.Errorf("%s's label is misplaced and was not reported", want)
+		}
+	}
+}
