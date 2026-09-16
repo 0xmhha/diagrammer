@@ -207,12 +207,17 @@ func TestTheReadmeListsTheCommandsThatExist(t *testing.T) {
 // TestTheScopeIsStatedWhereSomebodyWillSeeIt is the one round 8 asked for and
 // no version of the README carried until it was checked.
 //
-// Nobody should learn which languages this reads by pointing it at a repository
-// and wondering why the graph came back nearly empty.
+// It used to assert the README said "Go source only". That stopped being true
+// when the second build arrived, and the check now asks the question the claim
+// was standing in for: does a reader learn which languages they get, and does
+// the program say so at run time. Nobody should discover the scope by pointing
+// it at a repository and wondering why the graph came back nearly empty.
 func TestTheScopeIsStatedWhereSomebodyWillSeeIt(t *testing.T) {
-	readme := read(t, "README.md")
-	if !strings.Contains(strings.ToLower(readme), "go source only") {
-		t.Error("the README does not say plainly that only Go is read")
+	readme := strings.ToLower(read(t, "README.md"))
+	for _, want := range []string{"reads go and nothing else", "python, solidity"} {
+		if !strings.Contains(readme, want) {
+			t.Errorf("the README does not say %q, so a reader cannot tell which build reads what", want)
+		}
 	}
 
 	// And the program says it at run time, not only in a document somebody may
@@ -220,6 +225,15 @@ func TestTheScopeIsStatedWhereSomebodyWillSeeIt(t *testing.T) {
 	operations := read(t, "internal/command/operations.go")
 	if !strings.Contains(operations, "languages read") {
 		t.Error("graph does not report which languages the build reads")
+	}
+
+	// Both registries exist, and each says what it holds. A build tag that
+	// silently fell away would leave one of them covering both cases.
+	for _, path := range []string{"internal/command/analyzers.go", "internal/command/analyzers_cgo.go"} {
+		body := read(t, path)
+		if !strings.Contains(body, "//go:build") {
+			t.Errorf("%s carries no build tag, so both builds would use it", path)
+		}
 	}
 }
 

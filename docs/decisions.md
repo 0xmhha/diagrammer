@@ -439,9 +439,55 @@ because each would otherwise send an implementer at the wrong problem:
   They appear in checked-in examples on its `origin/main`. The region-boundary
   work multiplied them in large artifacts rather than introducing them.
 
+## Unblocked: two builds from one source
+
+The block below stood for as long as the question was "which cgo-free runtime",
+and it has no answer. The question that does is **which binary**.
+
+`CGO_ENABLED=0` compiles an analyzer for Go and nothing else. That is the build
+the release gate runs, and it needs no C toolchain, so round 9's definition of
+done is untouched. `CGO_ENABLED=1` compiles the same source with tree-sitter
+analyzers for Python, Solidity and JS/TS as well.
+
+The structure was already there. The analyzer registry is assembled by its
+caller rather than registered into globally, precisely so that what a build can
+read depends on the build; `graph` reports the languages it read on every run,
+so nobody learns the scope by pointing the program at a repository and wondering
+why the graph came back nearly empty.
+
+**The soft failure is answered rather than accepted.** tree-sitter does not
+refuse a file it cannot parse: it emits an ERROR node and carries on, which is
+why this project does not use it for Go, where the standard library gives a
+parser that says no. It can be asked, though. Every tree is checked with
+HasError and a file that parsed with errors is recorded with the position of the
+first one, so a silent gap becomes a reported one. A fixture with a deliberately
+broken JavaScript file holds that to it: the part that parses is still read, and
+the failure is still named.
+
+**The cost, stated rather than glossed.** Two things.
+
+One name now means two binaries. `go install` builds with cgo on by default and
+gives four languages; a distributed binary built for a machine without a C
+toolchain gives one. Every run says which, and `make build` and
+`make build-polyglot` are named apart so nobody produces one while meaning the
+other.
+
+And a second gate. `make verify` cannot cover the cgo analyzers without
+requiring a C toolchain, which is the thing it exists not to require. So
+`make verify-cgo` exists, needs one, and a release claiming those languages has
+to pass it. An analyzer no gate covers is worse than one that does not exist,
+because its output looks the same as a tree with none of that language in it.
+
+Vendoring the grammars takes `vendor/` from 4.7 MB to 22 MB. Both gates run
+offline, which is what that buys.
+
 ## Blocked
 
 ### The cgo-free tree-sitter runtime does not exist (round 12, tested)
+
+**Resolved by the section above**, which did not find one. It stopped needing
+one. Kept because the finding stands and the four ways out are still the four
+ways out.
 
 Round 12 settled stage 1 as three languages behind two parser paths: `go/ast`
 for Go, and **a cgo-free pure-Go tree-sitter runtime with vendored grammars**

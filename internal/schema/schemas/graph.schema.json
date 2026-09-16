@@ -46,7 +46,7 @@
       "enum": ["group", "package", "file", "type", "func"]
     },
     "language": {
-      "enum": ["go", "python", "javascript", "typescript"]
+      "enum": ["go", "python", "solidity", "javascript", "typescript"]
     },
     "node": {
       "type": "object",

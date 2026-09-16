@@ -3,6 +3,11 @@ module github.com/0xmhha/diagrammer
 go 1.25.12
 
 require (
+	github.com/alexaandru/go-sitter-forest/javascript v1.9.2
+	github.com/alexaandru/go-sitter-forest/python v1.9.10
+	github.com/alexaandru/go-sitter-forest/solidity v1.9.3
+	github.com/alexaandru/go-sitter-forest/typescript v1.9.4
+	github.com/alexaandru/go-tree-sitter-bare v1.11.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	golang.org/x/text v0.14.0
 )

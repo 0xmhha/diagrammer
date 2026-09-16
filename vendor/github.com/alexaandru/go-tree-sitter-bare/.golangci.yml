@@ -1,0 +1,229 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - exhaustruct
+    - godot # TODO
+    - nonamedreturns
+    - testpackage
+  settings:
+    cyclop:
+      max-complexity: 10
+      package-average: 2
+    decorder:
+      disable-dec-num-check: true
+      disable-dec-order-check: false
+    errcheck:
+      disable-default-exclusions: false
+      check-type-assertions: true
+      check-blank: true
+    errchkjson:
+      report-no-exported: true
+    errorlint:
+      asserts: true
+    exhaustive:
+      check:
+        - switch
+        - map
+      default-signifies-exhaustive: true
+    funlen:
+      lines: 69
+      statements: 40
+      ignore-comments: true
+    gocognit:
+      min-complexity: 30
+    goconst:
+      min-occurrences: 5
+    gocritic:
+      disabled-checks:
+        - commentedOutCode
+        - dupImport
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+        - opinionated
+      settings:
+        captLocal:
+          paramsOnly: false
+        elseif:
+          skipBalanced: true
+        hugeParam:
+          sizeThreshold: 80
+        nestingReduce:
+          bodyWidth: 5
+        rangeExprCopy:
+          sizeThreshold: 512
+          skipTestFuncs: true
+        rangeValCopy:
+          sizeThreshold: 128
+          skipTestFuncs: true
+        truncateCmp:
+          skipArchDependent: true
+        underef:
+          skipRecvDeref: true
+    gocyclo:
+      min-complexity: 235
+    godot:
+      scope: all
+    gosec:
+      config:
+        G302: "0640"
+        G306: "0640"
+    govet:
+      enable-all: true
+      settings:
+        shadow:
+          strict: true
+    ireturn:
+      allow:
+        - empty
+        - error
+        - stdlib
+        - generic
+    lll:
+      line-length: 120
+      tab-width: 1
+    makezero:
+      always: false
+    nakedret:
+      max-func-lines: 30
+    nestif:
+      min-complexity: 5
+    nlreturn:
+      block-size: 2
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+    predeclared:
+      qualified-name: false
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+    testpackage:
+      skip-regexp: (export|internal)_test\.go
+    thelper:
+      test:
+        first: true
+        name: true
+        begin: true
+      benchmark:
+        first: true
+        name: true
+        begin: true
+      tb:
+        first: true
+        name: true
+        begin: true
+    unparam:
+      check-exported: false
+    unused:
+      field-writes-are-uses: true
+      post-statements-are-reads: false
+      exported-fields-are-used: false
+      parameters-are-used: true
+      local-variables-are-used: false
+      generated-is-used: false
+    varnamelen:
+      max-distance: 14
+      min-name-length: 2
+      check-receiver: false
+      check-return: true
+      check-type-param: true
+      ignore-names:
+        - err
+      ignore-type-assert-ok: true
+      ignore-map-index-ok: true
+      ignore-chan-recv-ok: true
+      ignore-decls:
+        - T any
+        - f *os.File
+        - g *errgroup.Group
+        - q *Query
+        - n Node
+        - m *QueryMatch
+        - c *QueryCursor
+    wsl:
+      strict-append: true
+      allow-assign-and-call: true
+      allow-multiline-assign: true
+      force-case-trailing-whitespace: 0
+      allow-trailing-comment: false
+      allow-separated-leading-comment: false
+      allow-cuddle-declarations: false
+      force-err-cuddling: false
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - decorder
+          - err113
+          - funlen
+          - gocognit
+          - godot
+          - govet
+          - varnamelen
+        path: _test\.go
+      - linters:
+          - staticcheck
+        text: "SA9003:"
+      - linters:
+          - revive
+        text: "exported: exported method [a-zA-Z]*.(Unm|M)arshalJSON should have comment or be unexported"
+      - linters:
+          - lll
+        source: "^//go:generate "
+      - linters:
+          - gosec
+        text: G104
+      - linters:
+          - gosec
+        text: G601
+      - linters:
+          - gosec
+        text: G304
+      - linters:
+          - gosec
+        path: _test\.go
+        text: G404
+      - linters:
+          - gocritic
+        path: _test\.go
+        text: rangeValCopy
+      - path: (.+)\.go$
+        text: binding_test.go
+      - linters:
+          - cyclop
+        path: (.+)_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+  fix: false
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    gofumpt:
+      extra-rules: true
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -9,7 +9,9 @@ them does not happen inside this program.
    packages, files, types and functions, with the imports and calls it can
    prove, plus the doc comments their authors wrote. Structure and raw
    references only; nothing is interpreted here. Go is read with `go/ast` from
-   the standard library.
+   the standard library, which refuses a file it cannot parse; the other
+   languages with tree-sitter, which does not, so every tree is asked whether
+   it parsed cleanly and a file that did not is recorded with its line.
 2. A plugin's skill analyses that graph with an LLM and returns a
    **codegraph.json** expressed as a UML model. The binary has no subcommand for
    this and never calls a model itself. It hands the graph out and takes the
@@ -40,28 +42,29 @@ extend. That vocabulary is what stage 2 is held to.
 
 Early, and honest about it.
 
-**Go source only.** `graph` reads `.go` files and nothing else, and says so
-every time it runs. Pointed at a Python or TypeScript repository it will return
-a nearly empty graph, correctly and unhelpfully.
+**Two builds, one source.** `make build` produces a binary that reads Go and nothing else, needs no C toolchain, and is what the release gate covers.
+`make build-polyglot` produces one that also reads Python, Solidity and JS/TS
+through tree-sitter, and needs a C compiler because tree-sitter is a C library
+and Go links C through cgo.
 
-Everything else works end to end for all four families: `graph`, `validate`,
-`compose`, `render` and `serve`.
+Which one you have is printed every time `graph` runs, so nobody discovers the
+scope by pointing the program at a repository and wondering why the graph came
+back nearly empty.
 
-Python and JS/TS were settled and are not built. The runtime that was to read
-them does not satisfy a constraint the release gate depends on; what was tested
-and what the ways out are is in [docs/decisions.md](docs/decisions.md) under
-*Blocked*. The analyzer interface they would plug into is defined and
-documented, so adding one is an addition rather than a redesign.
+Everything else works end to end for all four families in either build:
+`graph`, `validate`, `compose`, `render` and `serve`.
 
 ## Build
 
 macOS is the supported target today.
 
 ```
-make build      # bin/diagrammer
-make check      # fmt, vet, test
-make verify     # the release gate: fmt-check, vet, test, fixtures
-make help       # every target
+make build           # bin/diagrammer, reading Go
+make build-polyglot  # bin/diagrammer-polyglot, reading four languages
+make check           # fmt, vet, test
+make verify          # the release gate: fmt-check, vet, test, fixtures
+make verify-cgo      # the second gate, for the four-language build
+make help            # every target
 ```
 
 `make verify` is the only automated gate. It runs offline on a clean machine

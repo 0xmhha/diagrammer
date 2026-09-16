@@ -13,17 +13,38 @@ GO          ?= go
 GOLANGCI    := golangci-lint
 
 .DEFAULT_GOAL := build
-.PHONY: build test race cover fmt fmt-check vet lint tidy clean install run linux check verify fixtures vendor-check
+.PHONY: build build-polyglot test test-cgo race cover fmt fmt-check vet lint tidy clean install run linux check verify verify-cgo fixtures vendor-check
 
 ## build: compile the binary for this machine
+#
+# CGO_ENABLED=0, which reads Go and nothing else. That is the binary the release
+# gate covers and the one that needs no C toolchain, so it is what `make build`
+# means without being asked otherwise.
 build:
 	@mkdir -p $(BIN_DIR)
-	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(BIN_DIR)/$(BINARY) $(PKG)
-	@echo "built $(BIN_DIR)/$(BINARY) $(VERSION)"
+	CGO_ENABLED=0 $(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(BIN_DIR)/$(BINARY) $(PKG)
+	@echo "built $(BIN_DIR)/$(BINARY) $(VERSION), reading Go"
+
+## build-polyglot: compile the binary that also reads Python, Solidity and JS/TS
+#
+# Needs a C toolchain, because tree-sitter is a C library and Go links C through
+# cgo and nothing else. Which languages a binary reads is printed by `graph` on
+# every run, so nobody has to remember which one they built.
+build-polyglot:
+	@mkdir -p $(BIN_DIR)
+	CGO_ENABLED=1 $(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(BIN_DIR)/$(BINARY)-polyglot $(PKG)
+	@echo "built $(BIN_DIR)/$(BINARY)-polyglot $(VERSION), reading Go, Python, Solidity and JS/TS"
 
 ## test: run the unit tests
+#
+# CGO_ENABLED=0 on purpose. This is the build the release gate covers, and it
+# must not quietly start depending on a C toolchain being present.
 test:
-	$(GO) test ./...
+	CGO_ENABLED=0 $(GO) test ./...
+
+## test-cgo: run the tests for the build that reads four languages
+test-cgo:
+	CGO_ENABLED=1 $(GO) test ./...
 
 ## race: run the tests under the race detector
 race:
@@ -166,6 +187,38 @@ fixtures: build
 # anything it needs that such a machine lacks is a defect, not a prerequisite.
 verify: vendor-check fmt-check vet test fixtures
 	@echo "verify: ok"
+
+## verify-cgo: the second gate, for the build that reads four languages
+#
+# Separate because the first one must stay runnable on a machine with only Go
+# and make. This one needs a C toolchain, and a release claiming those languages
+# has to pass it: an analyzer no gate covers is worse than one that does not
+# exist, because its output looks the same as a tree with none of that language
+# in it.
+verify-cgo: build-polyglot
+	@command -v cc >/dev/null 2>&1 \
+		|| { echo "no C compiler; this gate needs one and 'make verify' does not"; exit 1; }
+	CGO_ENABLED=1 $(GO) vet ./...
+	$(MAKE) test-cgo
+	@set -e; \
+	work=$$(mktemp -d); \
+	trap 'rm -rf "$$work"' EXIT; \
+	found=0; \
+	for d in testdata/src/*/; do \
+		[ -d "$$d" ] || continue; \
+		found=$$((found + 1)); \
+		name=$$(basename "$$d"); \
+		$(BIN_DIR)/$(BINARY)-polyglot graph "$$d" -o "$$work/$$name.1.json"; \
+		$(BIN_DIR)/$(BINARY)-polyglot graph "$$d" -o "$$work/$$name.2.json"; \
+		cmp -s "$$work/$$name.1.json" "$$work/$$name.2.json" \
+			|| { echo "$$name: two runs produced different bytes"; exit 1; }; \
+	done; \
+	if [ "$$found" -eq 0 ]; then \
+		echo "no source fixtures; this gate would pass by doing nothing"; \
+		exit 1; \
+	fi; \
+	echo "$$found source fixture(s) read by every grammar: schema valid, byte-identical"
+	@echo "verify-cgo: ok"
 
 ## install: put the binary on PATH via GOBIN
 install:

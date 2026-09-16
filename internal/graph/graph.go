@@ -32,6 +32,7 @@ type Language string
 const (
 	Go         Language = "go"
 	Python     Language = "python"
+	Solidity   Language = "solidity"
 	JavaScript Language = "javascript"
 	TypeScript Language = "typescript"
 )

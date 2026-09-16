@@ -1,3 +1,18 @@
+# github.com/alexaandru/go-sitter-forest/javascript v1.9.2
+## explicit; go 1.22.1
+github.com/alexaandru/go-sitter-forest/javascript
+# github.com/alexaandru/go-sitter-forest/python v1.9.10
+## explicit; go 1.22.1
+github.com/alexaandru/go-sitter-forest/python
+# github.com/alexaandru/go-sitter-forest/solidity v1.9.3
+## explicit; go 1.22.1
+github.com/alexaandru/go-sitter-forest/solidity
+# github.com/alexaandru/go-sitter-forest/typescript v1.9.4
+## explicit; go 1.22.1
+github.com/alexaandru/go-sitter-forest/typescript
+# github.com/alexaandru/go-tree-sitter-bare v1.11.0
+## explicit; go 1.24.3
+github.com/alexaandru/go-tree-sitter-bare
 # github.com/google/jsonschema-go v0.4.3
 ## explicit; go 1.23.0
 github.com/google/jsonschema-go/jsonschema

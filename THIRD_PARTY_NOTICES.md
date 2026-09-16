@@ -127,6 +127,21 @@ none of them restricts what this project may do; the obligation is attribution.
 | golang.org/x/text | v0.14.0 | BSD-3-Clause |
 | golang.org/x/time | v0.15.0 | BSD-3-Clause |
 
+Compiled into the four-language build only, and vendored so that gate runs
+offline too. They are tree-sitter grammars, transpiled from C, and the runtime
+that drives them.
+
+| Module | Version | Licence |
+|---|---|---|
+| github.com/alexaandru/go-tree-sitter-bare | v1.11.0 | MIT |
+| github.com/alexaandru/go-sitter-forest/python | v1.9.10 | MIT |
+| github.com/alexaandru/go-sitter-forest/solidity | v1.9.3 | MIT |
+| github.com/alexaandru/go-sitter-forest/javascript | v1.9.2 | MIT |
+| github.com/alexaandru/go-sitter-forest/typescript | v1.9.4 | MIT |
+
+Each grammar carries the licence of the tree-sitter grammar it was generated
+from as well as the generator's; both travel in the vendored directory.
+
 The MCP Go SDK is mid-transition from MIT to Apache-2.0. New contributions are
 Apache-2.0; contributions whose authors have not consented to relicensing remain
 MIT. Its `LICENSE` file states this, and both licences are satisfied by the row

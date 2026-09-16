@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/0xmhha/diagrammer/internal/analyze"
-	"github.com/0xmhha/diagrammer/internal/analyze/goast"
 	"github.com/0xmhha/diagrammer/internal/artifact"
 	"github.com/0xmhha/diagrammer/internal/compose"
 	"github.com/0xmhha/diagrammer/internal/diagram"
@@ -40,32 +39,35 @@ type GraphRequest struct {
 
 func (r *GraphRequest) Op() Op { return OpGraph }
 
-// analyzers is what this build can read.
-//
-// One language today. It is assembled rather than registered globally, so the
-// set depends on this line rather than on which packages happened to be linked,
-// and a caller can be told what it is instead of discovering it by pointing the
-// program at a repository it returns almost nothing for.
-func analyzers() *analyze.Registry {
-	return analyze.NewRegistry(goast.Analyzer{})
-}
-
 func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 	if r.Source == "" {
 		return nil, fmt.Errorf("graph needs a source directory")
 	}
 	registry := analyzers()
-	reader, ok := registry.For(graph.Go)
-	if !ok {
-		return nil, fmt.Errorf("this build has no analyzer for Go")
-	}
-	g, err := reader.Analyze(ctx, r.Source, analyze.Options{
+	opts := analyze.Options{
 		IncludeTests: r.IncludeTests,
 		MaxDepth:     r.MaxDepth,
 		Exclude:      r.Exclude,
-	})
+	}
+
+	// Every language this build reads is run over the tree and the results are
+	// merged. A tree with none of a language in it costs a walk and contributes
+	// nothing, which is cheaper than asking the caller to say what is in there.
+	var graphs []*graph.Graph
+	for _, language := range registry.Languages() {
+		reader, ok := registry.For(language)
+		if !ok {
+			continue
+		}
+		one, err := reader.Analyze(ctx, r.Source, opts)
+		if err != nil {
+			return nil, fmt.Errorf("analyze %s as %s: %w", r.Source, language, err)
+		}
+		graphs = append(graphs, one)
+	}
+	g, err := analyze.Merge(graphs...)
 	if err != nil {
-		return nil, fmt.Errorf("analyze %s: %w", r.Source, err)
+		return nil, fmt.Errorf("merge the analyzers' graphs: %w", err)
 	}
 
 	encoded, err := encode(g)
