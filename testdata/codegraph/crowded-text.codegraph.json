@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Crowded text",
+    "subtitle": "A state machine whose transitions are named at length"
+  },
+  "provenance": {
+    "origin": "handwritten",
+    "note": "Written so that a line drawn without its text is seen to happen. Text is fitted to the room its run has and then cut, and when even the cut text lands on something else the line is kept and the name is recorded. No other fixture here is crowded enough to reach that, and a record nothing ever reaches is indistinguishable from one that was never written."
+  },
+  "families": [
+    "state"
+  ],
+  "state": {
+    "states": [
+      {
+        "id": "s.start",
+        "name": "start",
+        "kind": "initial"
+      },
+      {
+        "id": "s.queued",
+        "name": "Queued",
+        "kind": "simple"
+      },
+      {
+        "id": "s.claimed",
+        "name": "Claimed",
+        "kind": "simple"
+      },
+      {
+        "id": "s.running",
+        "name": "Running",
+        "kind": "simple"
+      },
+      {
+        "id": "s.retrying",
+        "name": "Retrying",
+        "kind": "simple"
+      },
+      {
+        "id": "s.failed",
+        "name": "Failed",
+        "kind": "simple"
+      },
+      {
+        "id": "s.settled",
+        "name": "Settled",
+        "kind": "simple"
+      },
+      {
+        "id": "s.done",
+        "name": "done",
+        "kind": "final"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "t.enter",
+        "from": "s.start",
+        "to": "s.queued"
+      },
+      {
+        "id": "t.claim",
+        "from": "s.queued",
+        "to": "s.claimed",
+        "trigger": "claim [worker available and lease not held]",
+        "effect": "recordLease()"
+      },
+      {
+        "id": "t.run",
+        "from": "s.claimed",
+        "to": "s.running",
+        "trigger": "start [lease still valid at the moment of dispatch]",
+        "effect": "notifyWatchers()"
+      },
+      {
+        "id": "t.stall",
+        "from": "s.running",
+        "to": "s.retrying",
+        "trigger": "timeout [no heartbeat for longer than the lease]",
+        "effect": "releaseLease()"
+      },
+      {
+        "id": "t.again",
+        "from": "s.retrying",
+        "to": "s.running",
+        "trigger": "retry [attempts remaining below the configured ceiling]",
+        "effect": "incrementAttempt()"
+      },
+      {
+        "id": "t.giveup",
+        "from": "s.retrying",
+        "to": "s.failed",
+        "trigger": "retry [attempts remaining exhausted]",
+        "effect": "recordFailure()"
+      },
+      {
+        "id": "t.finish",
+        "from": "s.running",
+        "to": "s.settled",
+        "trigger": "complete [every output written and flushed]",
+        "effect": "recordSuccess()"
+      },
+      {
+        "id": "t.report",
+        "from": "s.failed",
+        "to": "s.done"
+      },
+      {
+        "id": "t.close",
+        "from": "s.settled",
+        "to": "s.done"
+      },
+      {
+        "id": "t.abandon",
+        "from": "s.claimed",
+        "to": "s.failed",
+        "trigger": "cancel [requested before the first output was written]",
+        "effect": "releaseLease()"
+      }
+    ]
+  }
+}

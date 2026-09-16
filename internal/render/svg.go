@@ -91,8 +91,23 @@ func svgFor(scene artifact.Scene) string {
 		// baking the visual offset into y would mean it read back six pixels
 		// from where the renderer decided to put it — enough to flip a
 		// clearance verdict that was measured against ten.
+		//
+		// The size and the bounds travel with it. The label rule measures the
+		// text, and how wide text is depends on the size this one label was
+		// shrunk to, which nothing in the string says.
+		// Beside a vertical line, centred above a horizontal one. The dy is
+		// what moves the baseline: text hangs off its baseline rather than
+		// sitting on its top edge, so the offset differs with the anchor.
+		x, dy := r.LabelAt.X, -float64(labelLift)
+		if r.LabelAnchor == anchorStart {
+			x, dy = r.LabelAt.X+labelLift, r.LabelSize*baselineShare
+		}
 		b.WriteString(`  <text class="edge-label" ` + attrEdgeLabelFor + `="` + esc(r.ID) +
-			`" x="` + num(r.LabelAt.X) + `" y="` + num(r.LabelAt.Y) + `" dy="-6">` +
+			`" x="` + num(x) + `" y="` + num(r.LabelAt.Y) +
+			`" dy="` + num(dy) + `" text-anchor="` + esc(anchorOf(r)) +
+			`" font-size="` + num(r.LabelSize) +
+			`" ` + attrLabelBounds + `="` +
+			boundsValue(r.LabelBounds.X, r.LabelBounds.Y, r.LabelBounds.W, r.LabelBounds.H) + `">` +
 			esc(r.LabelText) + `</text>` + "\n")
 	}
 
@@ -179,6 +194,21 @@ func pathData(points []artifact.Point) string {
 
 // pointsValue writes the polyline for the composition checker, which reads it
 // back rather than re-deriving it from the path.
+// baselineShare is how far below the middle of a line of text its baseline
+// sits, as a share of the font size. It is what puts text written beside a line
+// level with the point it names rather than above it.
+const baselineShare = 0.35
+
+// anchorOf is the anchor the page should use, defaulting to the one the
+// stylesheet already sets so a route written before anchors existed still
+// draws where it always did.
+func anchorOf(r artifact.Route) string {
+	if r.LabelAnchor == "" {
+		return anchorMiddle
+	}
+	return r.LabelAnchor
+}
+
 func pointsValue(points []artifact.Point) string {
 	parts := make([]string, len(points))
 	for i, p := range points {

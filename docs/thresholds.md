@@ -201,6 +201,34 @@ services each reaching one and five places along the row, which produces
 thirty-one crossings at once. Like hub-overflow it is deliberately worse than an
 ordinary model and is not in the table below.
 
+### Text is measured, and the page is laid out in the direction it is read
+
+Three things were wrong together, and comparing this tool's pages with
+archify's on the same source tree is what showed them.
+
+**Text on a line was never measured.** A box's label has been measured, shrunk
+and cut since the first drawing; a line's label was emitted at whatever length
+it came in at. On a sequence diagram whose lifelines sit 220px apart, a message
+named `Merge(graphs) -> 536 nodes, 477 edges` is 232px wide and lay across three
+of them. The rule that was supposed to catch it measured the label as the point
+it hangs from, and the centre of a long string clears everything. A label is now
+fitted to the room its run has, at `edgeLabelSize` = 11px down to `labelMinSize`
+before it is cut, and the rule reads the rectangle. Counted on the pages this
+repository draws of itself, text on text went from four occurrences to none.
+
+**Text sat across a line that ran down the page.** Centring it either way put
+half of it in the channel on each side, so a transition between two states in
+one column had its name written over the routes either side. Text now sits above
+a line that runs across the page and beside one that runs down it.
+
+**Nothing in the arrangement said which way anything depended on anything.** A
+page filled a square grid in walk order, so two boxes joined by a line could land
+three rows and two columns apart, and a relationship between them became a
+detour across the page. Rows are now dependency depth and columns belong to the
+bands, which is what makes a page read downward and a region frame a block
+rather than a scatter. This is what archify's `rankMembers` does, arrived at the
+same way: by looking at a page of ours beside a page of theirs.
+
 What the layout scored before the placement work, and after:
 
 | | before | after |

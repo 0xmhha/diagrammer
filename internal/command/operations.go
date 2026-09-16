@@ -322,6 +322,15 @@ func (r *RenderRequest) Run(context.Context) (*Result, error) {
 	for _, d := range page.Dropped {
 		out.say("  %s on %s: %s", d.Route, d.Level, d.Why)
 	}
+	// Drawn but unnamed. It is not a drop and is not counted as one: the
+	// relationship is on the page and its text is not, and a reader deciding
+	// whether to trust the drawing needs the difference.
+	if n := len(page.Unwritten); n > 0 {
+		out.say("%d line(s) are drawn without their text:", n)
+		for _, u := range page.Unwritten {
+			out.say("  %s on %s: %s", u.Route, u.Level, u.Text)
+		}
+	}
 	if err := deliver(out, r.Out, html); err != nil {
 		return nil, err
 	}

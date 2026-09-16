@@ -2,7 +2,6 @@ package compose
 
 import (
 	"fmt"
-	"math"
 	"sort"
 
 	"github.com/0xmhha/diagrammer/internal/diagram"
@@ -384,8 +383,7 @@ func composeLevel(l plannedLevel, t *componentTree, relationships []relationship
 	for _, c := range connections {
 		adjacency = append(adjacency, [2]string{c.From, c.To})
 	}
-	boxes := placeBoxes(l, t, regionOf, dropped, adjacency)
-	grid := gridFor(len(boxes))
+	boxes, grid := placeBoxes(l, t, regionOf, dropped, adjacency)
 
 	regions := make([]diagram.Region, 0, len(l.regions))
 	for _, id := range l.regions {
@@ -406,23 +404,23 @@ func composeLevel(l plannedLevel, t *componentTree, relationships []relationship
 	}
 }
 
-// placeBoxes lays the members out row-major on a square-ish grid.
+// placeBoxes lays the members out by dependency depth, in bands.
 //
-// Boxes are ordered by their region first so that a band frames a contiguous
-// run rather than a scatter, and by id within it so the result is the same on
-// every run. Which cell a box lands in is deliberately simple: the rules that
-// decide what to draw are the contract, and the ones that decide where to put
-// it are free to improve without breaking anything.
-func placeBoxes(l plannedLevel, t *componentTree, regionOf map[string]string, dropped map[string][]diagram.DroppedRelationship, adjacency [][2]string) []diagram.Box {
+// The row is the depth: whatever nothing on this page depends on is at the top
+// and what it rests on is beneath it, which is the direction a reader of a
+// component diagram expects and the direction the router draws best. The
+// columns belong to the bands, so a region frames a block rather than a scatter.
+//
+// It used to fill a square grid in walk order. Nothing in the picture then said
+// which way anything depended on anything, and a relationship between two boxes
+// the walk happened to separate became a detour across the page.
+func placeBoxes(l plannedLevel, t *componentTree, regionOf map[string]string, dropped map[string][]diagram.DroppedRelationship, adjacency [][2]string) ([]diagram.Box, diagram.Grid) {
 	sorted := append([]string(nil), l.members...)
 	sort.Strings(sorted)
 	ordered := orderByAdjacency(sorted, adjacency, func(id string) string { return regionOf[id] })
 
-	grid := gridFor(len(ordered))
-	placed := make(map[string][2]int, len(ordered))
-	for i, id := range ordered {
-		placed[id] = [2]int{i / grid.Cols, i % grid.Cols}
-	}
+	rank := ranksOf(ordered, adjacency)
+	placed, grid := cellsByRank(ordered, rank, func(id string) string { return regionOf[id] })
 
 	boxes := make([]diagram.Box, 0, len(ordered))
 	for _, id := range ordered {
@@ -453,15 +451,5 @@ func placeBoxes(l plannedLevel, t *componentTree, regionOf map[string]string, dr
 		boxes = append(boxes, box)
 	}
 	sort.Slice(boxes, func(i, j int) bool { return boxes[i].ID < boxes[j].ID })
-	return boxes
-}
-
-// gridFor returns the squarest grid that holds n boxes.
-func gridFor(n int) diagram.Grid {
-	if n <= 0 {
-		return diagram.Grid{Rows: 1, Cols: 1}
-	}
-	cols := int(math.Ceil(math.Sqrt(float64(n))))
-	rows := (n + cols - 1) / cols
-	return diagram.Grid{Rows: rows, Cols: cols}
+	return boxes, grid
 }

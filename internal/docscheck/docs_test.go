@@ -342,3 +342,30 @@ func TestEveryPackageHasADocFile(t *testing.T) {
 // packageComment matches a doc comment at the very top of a file, immediately
 // above the package clause.
 var packageComment = regexp.MustCompile(`\A(// [^\n]*\n)*// (Package|Command) [^\n]*\n(//[^\n]*\n)*package `)
+
+// TestTheLabelSizeMatchesTheStylesheet holds two numbers together that are
+// written down twice.
+//
+// The renderer measures a label to decide where it fits and the browser draws
+// it at whatever the stylesheet says. If those two sizes ever part company the
+// page still renders, the checker still passes, and the text sits somewhere the
+// checker was never asked about — which is the failure the label rule exists to
+// prevent, arriving through the one door the rule cannot see.
+func TestTheLabelSizeMatchesTheStylesheet(t *testing.T) {
+	const name = "edgeLabelSize"
+	declared, ok := constantsIn(t, "internal/render/label.go")[name]
+	if !ok {
+		t.Fatalf("internal/render/label.go no longer declares %s", name)
+	}
+
+	css := read(t, "internal/render/viewer/viewer.css")
+	pattern := regexp.MustCompile(`\.edge-label\s*\{[^}]*font-size:\s*(\d+)px`)
+	found := pattern.FindStringSubmatch(css)
+	if found == nil {
+		t.Fatal("viewer.css no longer gives .edge-label a font-size in px, so the two cannot be compared")
+	}
+	if found[1] != declared {
+		t.Errorf("the renderer measures labels at %s and the stylesheet draws them at %spx",
+			declared, found[1])
+	}
+}

@@ -58,6 +58,14 @@ const (
 	// where a value sitting on a threshold can have its verdict flipped by
 	// rounding.
 	attrCompositionPoints = "data-composition-points"
+
+	// attrLabelBounds carries the rectangle a connection's text occupies.
+	//
+	// It is written for the same reason as the points: the label rule measures
+	// the text, and how wide text is depends on the font and on the size this
+	// one label was shrunk to. Working it out again from the string would judge
+	// a rectangle the page does not have.
+	attrLabelBounds = "data-label-bounds"
 )
 
 // The artifact has two readers, and they read different things.
@@ -79,7 +87,7 @@ func CheckerContract() []string {
 	return []string{
 		attrFamily, attrLevel, attrLevelTitle, attrBoxID, attrBoxBounds, attrBoxOpens, attrRegionID,
 		attrEdgeID, attrEdgeFrom, attrEdgeTo, attrEdgeFromSide, attrEdgeToSide,
-		attrEdgeLabelFor, attrCompositionPoints,
+		attrEdgeLabelFor, attrCompositionPoints, attrLabelBounds,
 		attrBarID, attrBarBox, attrFrameID, attrFrameKind,
 	}
 }

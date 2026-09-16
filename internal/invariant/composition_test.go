@@ -102,7 +102,41 @@ func TestEveryCompositionRuleFires(t *testing.T) {
 					Points:    []artifact.Point{{X: 140, Y: 220}, {X: 400, Y: 220}},
 					LabelText: "misplaced",
 					LabelAt:   artifact.Point{X: 300, Y: 134},
+					// A label is a rectangle of text, and the rule measures the
+					// rectangle. Giving only a point would describe a label the
+					// page does not draw.
+					LabelBounds: artifact.Rect{X: 274, Y: 115, W: 52, H: 13},
 				})
+			},
+		}, {
+			name: "two labels are written in the same place",
+			rule: invariant.RuleLabelClear,
+			damage: func(s *artifact.Scene) {
+				// Far from every line, and on top of each other. A label
+				// measured as its centre point would clear both tests; the
+				// rule reads the rectangle, so it does not.
+				s.Boxes = append(s.Boxes,
+					artifact.Box{ID: "c", X: 60, Y: 320, W: 80, H: 40},
+					artifact.Box{ID: "d", X: 400, Y: 320, W: 80, H: 40})
+				s.Routes = append(s.Routes, artifact.Route{
+					ID: "r2", From: "c", To: "d", FromSide: "right", ToSide: "left",
+					Points:      []artifact.Point{{X: 140, Y: 340}, {X: 400, Y: 340}},
+					LabelText:   "one",
+					LabelAt:     artifact.Point{X: 260, Y: 340},
+					LabelBounds: artifact.Rect{X: 240, Y: 320, W: 40, H: 13},
+				})
+				s.Routes[0].LabelText = "two"
+				s.Routes[0].LabelAt = artifact.Point{X: 300, Y: 340}
+				s.Routes[0].LabelBounds = artifact.Rect{X: 260, Y: 322, W: 40, H: 13}
+			},
+		}, {
+			name: "a label is written over a box",
+			rule: invariant.RuleLabelClear,
+			damage: func(s *artifact.Scene) {
+				s.Boxes = append(s.Boxes, artifact.Box{ID: "c", X: 280, Y: 320, W: 80, H: 40})
+				s.Routes[0].LabelText = "over the box"
+				s.Routes[0].LabelAt = artifact.Point{X: 300, Y: 348}
+				s.Routes[0].LabelBounds = artifact.Rect{X: 290, Y: 330, W: 60, H: 13}
 			},
 		}, {
 			name: "a route traces a band's border instead of crossing it",
@@ -169,11 +203,13 @@ func TestEveryMisplacedLabelIsReported(t *testing.T) {
 			ID: "r2", From: "c", To: "d", FromSide: "right", ToSide: "left",
 			Points:    []artifact.Point{{X: 140, Y: 220}, {X: 400, Y: 220}},
 			LabelText: "one", LabelAt: artifact.Point{X: 300, Y: 134},
+			LabelBounds: artifact.Rect{X: 291, Y: 115, W: 18, H: 13},
 		},
 		artifact.Route{
 			ID: "r3", From: "e", To: "f", FromSide: "right", ToSide: "left",
 			Points:    []artifact.Point{{X: 140, Y: 40}, {X: 400, Y: 40}},
 			LabelText: "two", LabelAt: artifact.Point{X: 300, Y: 220},
+			LabelBounds: artifact.Rect{X: 291, Y: 201, W: 18, H: 13},
 		})
 
 	reported := map[string]bool{}

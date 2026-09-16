@@ -79,6 +79,21 @@ The check has two halves:
 A model claiming sequence support without lifelines is refused here rather than
 three stages later.
 
+### What is drawn without its text
+
+A label with nowhere to go loses its text and keeps its line, and the page says
+which names it could not write.
+
+The two losses are not the same size. A reader of an unnamed line can still see
+that two things are joined; a reader of no line cannot. Refusing the
+relationship was the earlier behaviour and it charged the larger price for the
+smaller problem.
+
+It is kept out of the accounting deliberately. **drawn + dropped == proven**
+counts relationships, and one of these is a relationship the reader can see. The
+record is separate, on the page beside the drawing and in what the command
+prints, so that nothing goes missing quietly either way.
+
 ## Stage 3, composition
 
 Per family, and per fixture:
@@ -115,6 +130,13 @@ Also checked:
   band.
 - Every connection has both ends on the page that draws it.
 - Every box has a cell of its own, inside its level's grid.
+- The row a box sits on is its depth in the dependency graph, so a component
+  diagram reads downward: whatever nothing depends on is at the top and what it
+  rests on is beneath it. A cycle has no depth, and the edge that closes one is
+  left out of the reckoning rather than followed.
+- A band owns its own columns. Two bands sharing a column would each have to
+  reach across the other's boxes, and the two frames would overlap, which says
+  the two groups overlap.
 - Exactly one level has no parent. Every other is opened from a named box on its
   parent, and that box points back at it.
 
@@ -234,6 +256,12 @@ by routed lines. Seven rules, each with a drawing that breaks it:
 - **pass-through** — no route enters a box that is not one of its ends.
 - **separation** — no route runs closer than 8px to a box it is not attached to,
   where it starts to read as joined to it.
+- **label-clearance** — a connection's text keeps clear of every line but its
+  own, of every other label, and of every box. The rule measures the rectangle
+  the text occupies, not the point it hangs from: a string forty characters long
+  has a centre that clears everything and two ends that clear nothing, and
+  measuring the centre passed a page where eight of eight labels lay across
+  another line.
 - **crossing** — no proper intersection between two routes that share no end.
   Two lines arriving at the same box are not a crossing; a reader expects that.
   This is the one rule that condemns a pair rather than a route. Every other

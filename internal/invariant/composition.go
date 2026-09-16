@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 
 	"github.com/0xmhha/diagrammer/internal/artifact"
 )
@@ -258,33 +259,83 @@ func crosses(a, b artifact.Route) bool {
 	return false
 }
 
-// checkLabels keeps a connection's text off every route but its own. A label
-// sitting on another line attaches itself to the wrong relationship, and the
-// reader has no way to tell.
+// checkLabels keeps a connection's text off everything but its own line. A
+// label sitting on another line attaches itself to the wrong relationship, and
+// the reader has no way to tell; one sitting on another label or on a box is
+// simply two pieces of text in one place.
+//
+// One report per label, and every label examined. An earlier version returned
+// from the whole function at the first finding, which meant a page with two
+// misplaced labels reported one: the caller dropped that route, drew the rest,
+// and the check over the emitted artifact then found the other. A checker has
+// to report everything it can see in one pass, or the caller acting on its
+// answer is acting on a fragment of it.
 func checkLabels(scene *artifact.Scene, add func(string, string, string, ...any)) {
-	// One report per label, and every label examined. An earlier version
-	// returned from the whole function at the first finding, which meant a page
-	// with two misplaced labels reported one: the caller dropped that route,
-	// drew the rest, and the check over the emitted artifact then found the
-	// other. A checker has to report everything it can see in one pass, or the
-	// caller acting on its answer is acting on a fragment of it.
-next:
 	for _, r := range scene.Routes {
 		if r.LabelText == "" {
 			continue
 		}
-		for _, other := range scene.Routes {
-			if other.ID == r.ID {
-				continue
-			}
-			for i := 0; i+1 < len(other.Points); i++ {
-				if pointSegmentDistance(r.LabelAt, other.Points[i], other.Points[i+1]) < LabelClearance {
-					add(r.ID, RuleLabelClear, "its label sits within %dpx of %s", LabelClearance, other.ID)
-					continue next
-				}
-			}
+		if why, ok := LabelClear(scene, r.ID, r.LabelBounds); !ok {
+			add(r.ID, RuleLabelClear, "%s", why)
 		}
 	}
+}
+
+// LabelClear reports whether a rectangle of text sits clear of everything on
+// the page but the route it belongs to, and says what it hit when it does not.
+//
+// The renderer asks this while it is choosing where to put a label and the
+// checker asks it of the label the renderer chose, which is deliberate: two
+// implementations of the same question would let the drawing satisfy one and
+// fail the other, and the page would lose a relationship for a reason its own
+// author did not agree with.
+//
+// The rectangle is the text, not a point. Measuring a label as its centre was
+// the earlier answer and it passed a page where eight of eight labels lay
+// across another line: a string forty characters long has a centre that clears
+// everything and two ends that clear nothing.
+//
+// Clearance is kept from lines and not from text or boxes. A label is read as
+// belonging to the nearest line, so it has to be nearer its own than any other
+// by a margin; a label merely touching another label or a box is already
+// wrong, and demanding a gap there would move text about for no gain.
+func LabelClear(scene *artifact.Scene, route string, box artifact.Rect) (string, bool) {
+	if box.W == 0 && box.H == 0 {
+		return "", true // no label, nothing to keep clear
+	}
+	padded := artifact.Rect{
+		X: box.X - LabelClearance, Y: box.Y - LabelClearance,
+		W: box.W + 2*LabelClearance, H: box.H + 2*LabelClearance,
+	}
+	for _, other := range scene.Routes {
+		if other.ID == route {
+			continue
+		}
+		for i := 0; i+1 < len(other.Points); i++ {
+			if segmentMeetsRect(other.Points[i], other.Points[i+1], padded) {
+				return "its text comes within " + itoa(LabelClearance) + "px of " + other.ID, false
+			}
+		}
+		if other.LabelText != "" && other.LabelBounds.Overlaps(box) {
+			return "its text overlaps the text on " + other.ID, false
+		}
+	}
+	for _, b := range scene.Boxes {
+		if (artifact.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}).Overlaps(box) {
+			return "its text overlaps " + b.ID, false
+		}
+	}
+	return "", true
+}
+
+func itoa(n int) string { return strconv.Itoa(n) }
+
+// segmentMeetsRect reports whether an axis-aligned segment enters a rectangle.
+// The segments here are axis-aligned, so an overlap test is exact.
+func segmentMeetsRect(a, b artifact.Point, r artifact.Rect) bool {
+	loX, hiX := math.Min(a.X, b.X), math.Max(a.X, b.X)
+	loY, hiY := math.Min(a.Y, b.Y), math.Max(a.Y, b.Y)
+	return loX < r.Right() && hiX > r.X && loY < r.Bottom() && hiY > r.Y
 }
 
 // --- geometry -----------------------------------------------------------------
@@ -334,16 +385,6 @@ func spanOverlap(a1, a2, b1, b2 float64) float64 {
 		return 0
 	}
 	return hi - lo
-}
-
-func pointSegmentDistance(p, a, b artifact.Point) float64 {
-	dx, dy := b.X-a.X, b.Y-a.Y
-	if dx == 0 && dy == 0 {
-		return math.Hypot(p.X-a.X, p.Y-a.Y)
-	}
-	t := ((p.X-a.X)*dx + (p.Y-a.Y)*dy) / (dx*dx + dy*dy)
-	t = math.Max(0, math.Min(1, t))
-	return math.Hypot(p.X-(a.X+t*dx), p.Y-(a.Y+t*dy))
 }
 
 // Crossings returns every pair of routes that cross although they share no

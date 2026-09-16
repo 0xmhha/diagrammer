@@ -21,6 +21,24 @@ type Page struct {
 	// Dropped records, per level and per box, the relationships the geometry
 	// could not hold, each with the rule that refused it.
 	Dropped []Drop
+	// Unwritten records the connections that are drawn but carry no text,
+	// because there was nowhere on the page to put it.
+	//
+	// It is kept apart from Dropped and out of the accounting on purpose. The
+	// accounting counts relationships, and one of these is a relationship the
+	// reader can see; what is missing is its name. Losing the whole line for
+	// want of room for a word was the earlier behaviour and it cost more than
+	// it saved.
+	Unwritten []Unwritten
+}
+
+// Unwritten is one connection drawn without its text.
+type Unwritten struct {
+	Level string
+	Box   string
+	Route string
+	Text  string
+	Why   string
 }
 
 // Drop is one relationship a page could not draw.
@@ -52,9 +70,10 @@ func Build(doc *diagram.Document) (*Page, error) {
 
 	page := &Page{Title: doc.Meta.Title, Subtitle: doc.Meta.Subtitle, Family: doc.Family}
 	for _, level := range doc.Levels {
-		scene, drops := buildScene(doc.Family, level)
+		scene, drops, silent := buildScene(doc.Family, level)
 		page.Scenes = append(page.Scenes, scene)
 		page.Dropped = append(page.Dropped, drops...)
+		page.Unwritten = append(page.Unwritten, silent...)
 
 		page.Accounting.Proven += level.Accounting.Drawn
 		page.Accounting.Drawn += len(scene.Routes)
@@ -65,7 +84,7 @@ func Build(doc *diagram.Document) (*Page, error) {
 }
 
 // buildScene draws one level.
-func buildScene(family diagram.Family, level diagram.Level) (artifact.Scene, []Drop) {
+func buildScene(family diagram.Family, level diagram.Level) (artifact.Scene, []Drop, []Unwritten) {
 	boxes, regions, g := layOut(family, level)
 	paths, refused := routeAll(level, g, boxes)
 
@@ -95,9 +114,20 @@ func buildScene(family diagram.Family, level diagram.Level) (artifact.Scene, []D
 	// Labels are placed before the rules are consulted, so a relationship is
 	// only refused when there is nowhere on its route to write on, rather than
 	// when the middle happens to be taken.
-	placeLabels(&scene)
+	//
+	// A label with nowhere to go loses its text and keeps its line. The two are
+	// not the same loss: a reader of a line without a name can still see that
+	// the two boxes are joined, and a reader of neither cannot. What the page
+	// must not do is lose the text quietly, so each one is recorded.
+	unwritten := placeLabels(&scene)
 
 	var drops []Drop
+	var silent []Unwritten
+	for _, u := range unwritten {
+		u.Level = level.ID
+		u.Box = sourceOf(level, u.Route)
+		silent = append(silent, u)
+	}
 	// A route with no lane left never became a line at all, so it is recorded
 	// before the rules are consulted: there is nothing for them to judge.
 	for _, id := range sortedKeys(refused) {
@@ -142,7 +172,20 @@ func buildScene(family diagram.Family, level diagram.Level) (artifact.Scene, []D
 	})
 
 	sort.Slice(drops, func(i, j int) bool { return drops[i].Route < drops[j].Route })
-	return scene, drops
+	// A route that went in the end takes its unwritten text with it: there is
+	// no line left for the reader to wonder about the name of.
+	gone := map[string]bool{}
+	for _, d := range drops {
+		gone[d.Route] = true
+	}
+	kept := silent[:0]
+	for _, u := range silent {
+		if !gone[u.Route] {
+			kept = append(kept, u)
+		}
+	}
+	sort.Slice(kept, func(i, j int) bool { return kept[i].Route < kept[j].Route })
+	return scene, drops, kept
 }
 
 // withoutRoutes takes the condemned routes out of the scene and records each
