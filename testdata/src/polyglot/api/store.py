@@ -1,5 +1,8 @@
 """Keeps orders."""
 
+from ..lib.shared import trim
+import json  # outside the tree
+
 
 class Store:
     """Holds orders in memory."""

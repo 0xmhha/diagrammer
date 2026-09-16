@@ -93,15 +93,24 @@ func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 	return out, nil
 }
 
-// summariseGraph names the files that went missing rather than counting them. A
-// count says something is gone; the paths say what to go and open.
+// summariseGraph names the files that would not parse rather than counting
+// them. A count says something is wrong; the paths say what to go and open.
+//
+// It does not claim those files are missing from the graph, because that
+// depends on which parser refused them and the summary cannot tell. go/ast
+// refuses a file outright and nothing of it arrives. tree-sitter recovers: it
+// reports an error and carries on, and most of the file usually still comes
+// through — one file in this repository's reference tree yielded 42
+// declarations while being reported as unparsable. A message claiming either
+// behaviour for both would be wrong half the time, and wrong in the direction
+// that matters: telling somebody their code is absent when it is there.
 func summariseGraph(out *Result, source string, g *graph.Graph) {
 	d := g.Diagnostics
 	out.say("%s: %d nodes, %d edges, %d files read", source, len(g.Nodes), len(g.Edges), d.FilesParsed)
 	if len(d.ParseFailures) == 0 {
 		return
 	}
-	out.say("%d file(s) did not parse and are missing from the graph:", len(d.ParseFailures))
+	out.say("%d file(s) did not parse cleanly; whatever could not be read is not in the graph:", len(d.ParseFailures))
 	for _, f := range d.ParseFailures {
 		if f.Line > 0 {
 			out.say("  %s:%d: %s", f.Path, f.Line, f.Message)

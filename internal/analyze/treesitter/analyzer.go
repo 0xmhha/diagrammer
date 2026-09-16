@@ -76,6 +76,7 @@ func (a Analyzer) Analyze(ctx context.Context, root string, opts analyze.Options
 	if err := w.collect(ctx); err != nil {
 		return nil, err
 	}
+	w.resolveImports()
 	w.resolveCalls()
 	return w.build(), nil
 }
@@ -95,6 +96,13 @@ func normalizeExcludes(raw []string) []string {
 type pendingCall struct {
 	from string
 	name string
+}
+
+// pendingImport is one import, before the walk knows whether its target is in
+// this tree.
+type pendingImport struct {
+	fromDir string
+	target  string
 }
 
 // declaration is one thing the grammar named.
@@ -122,9 +130,10 @@ type walker struct {
 	// grammar without type resolution can offer a call.
 	byName map[string][]string
 
-	pendingCalls  []pendingCall
-	filesRead     int
-	parseFailures []graph.ParseFailure
-	unresolved    map[string]int
-	warnings      []string
+	pendingCalls   []pendingCall
+	pendingImports []pendingImport
+	filesRead      int
+	parseFailures  []graph.ParseFailure
+	unresolved     map[string]int
+	warnings       []string
 }

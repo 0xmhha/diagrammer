@@ -193,22 +193,45 @@ func calleeName(n sitter.Node, source []byte) string {
 	return text
 }
 
+// importTarget reads the module an import names.
+//
+// From the grammar rather than from the text. Every grammar here puts the
+// module in a field or in a string child, and cutting the statement apart with
+// string surgery instead is how every import in a JavaScript tree came out as
+// "{": `import { x } from './a.mjs'` trimmed down to the first word after the
+// keyword, which is a brace.
 func importTarget(n sitter.Node, source []byte) string {
-	text := strings.TrimSpace(n.Content(source))
-	for _, prefix := range []string{"import ", "from ", "import"} {
-		text = strings.TrimPrefix(text, prefix)
+	for _, field := range []string{"source", "module_name", "name", "path"} {
+		if child := n.ChildByFieldName(field); !child.IsNull() {
+			return unquote(child.Content(source))
+		}
 	}
-	if i := strings.IndexAny(text, "\n;"); i >= 0 {
-		text = text[:i]
+	// Solidity and Python's plain form carry it as a child rather than a field.
+	if found := firstStringOrName(n, source); found != "" {
+		return found
 	}
-	if i := strings.Index(text, " import "); i >= 0 {
-		text = text[:i]
+	return ""
+}
+
+func firstStringOrName(n sitter.Node, source []byte) string {
+	for i := range int(n.NamedChildCount()) {
+		child := n.NamedChild(uint32(i))
+		switch child.Type() {
+		case "string", "string_literal":
+			return unquote(child.Content(source))
+		case "dotted_name", "identifier", "relative_import":
+			return unquote(child.Content(source))
+		}
 	}
-	text = strings.Trim(strings.TrimSpace(text), `"'`)
-	if i := strings.Index(text, " "); i >= 0 {
-		text = text[:i]
+	return ""
+}
+
+func unquote(text string) string {
+	text = strings.TrimSpace(text)
+	for _, q := range []string{`"`, "'", "`"} {
+		text = strings.Trim(text, q)
 	}
-	return strings.Trim(text, `"'`)
+	return strings.TrimSpace(text)
 }
 
 // docFor reads a declaration's documentation, wherever its language keeps it.
@@ -294,19 +317,74 @@ func (w *walker) isExported(n sitter.Node, name string) bool {
 	return w.lang.exported(name)
 }
 
+// noteImport records an import to be resolved once the walk knows what is in
+// the tree.
+//
+// It cannot be resolved as it is found: whether a target names a directory this
+// walk read is not known until the walk is over, and without that check every
+// bare specifier — node:fs, a package from the registry — resolves to the root
+// and the graph fills with edges to nowhere.
 func (w *walker) noteImport(fromDir, target string) {
-	w.addEdge(packageID(fromDir), packageID(normalizeTarget(target)), graph.EdgeImport)
+	w.pendingImports = append(w.pendingImports, pendingImport{fromDir: fromDir, target: target})
 }
 
-// normalizeTarget turns an import's text into something that might name a
-// directory in this tree. A relative path is kept; anything else is left alone
-// and simply will not resolve, which is reported rather than guessed at.
-func normalizeTarget(target string) string {
-	target = strings.TrimSuffix(target, ".sol")
-	target = strings.TrimSuffix(target, ".js")
-	target = strings.TrimSuffix(target, ".ts")
-	target = strings.ReplaceAll(target, ".", "/")
-	return strings.Trim(path.Clean(target), "/")
+// resolveImport turns an import's text into the directory it names, or nothing.
+//
+// Languages disagree about what an import string is, and reading them all the
+// same way is how every edge in a JavaScript tree went missing: `./shared/x.mjs`
+// was being resolved against the analyzed root rather than against the file
+// that wrote it, so it never matched anything.
+//
+// Nothing is guessed. A target that does not resolve to a directory in this
+// tree is counted in the diagnostics rather than pointed at whatever it most
+// resembles: an edge to the wrong package is worse than a missing one, because
+// a reader cannot tell it is wrong.
+func (w *walker) resolveImport(fromDir, target string) string {
+	if target == "" {
+		return ""
+	}
+	switch w.lang.name {
+	case graph.Python:
+		// A dotted module name is a path from the root. A leading dot is a
+		// relative import, and each one climbs a level.
+		climbed := fromDir
+		for strings.HasPrefix(target, ".") {
+			target = target[1:]
+			if climbed != "." && climbed != "" {
+				climbed = path.Dir(climbed)
+			}
+		}
+		module := strings.ReplaceAll(target, ".", "/")
+		if climbed != "." && climbed != "" {
+			return clean(path.Join(climbed, module))
+		}
+		return clean(module)
+	default:
+		// The rest name files. A relative one is relative to whoever wrote it,
+		// which is the part that was wrong.
+		target = trimSourceSuffix(target)
+		if strings.HasPrefix(target, ".") {
+			return clean(path.Join(fromDir, target))
+		}
+		return clean(target)
+	}
+}
+
+func trimSourceSuffix(target string) string {
+	for _, ext := range []string{".sol", ".mjs", ".cjs", ".jsx", ".tsx", ".js", ".ts"} {
+		if strings.HasSuffix(target, ext) {
+			return strings.TrimSuffix(target, ext)
+		}
+	}
+	return target
+}
+
+func clean(p string) string {
+	p = strings.Trim(path.Clean(p), "/")
+	if p == "" || p == "." {
+		return "."
+	}
+	return p
 }
 
 func (w *walker) noteCall(from, name string) {

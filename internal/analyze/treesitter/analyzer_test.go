@@ -176,3 +176,57 @@ func TestSymlinkedFilesAreNotRead(t *testing.T) {
 		}
 	}
 }
+
+// TestImportsResolveWithinTheTree is the edge that was missing entirely.
+//
+// Imports were being resolved against the analyzed root rather than against the
+// file that wrote them, so every relative import in a JavaScript or Python tree
+// pointed at nothing. Worse, a bare specifier — node:fs, a package from a
+// registry — resolved to the root, and a real repository came out with hundreds
+// of edges to a node nobody had imported.
+func TestImportsResolveWithinTheTree(t *testing.T) {
+	g := analyzeAll(t)
+
+	var imports [][2]string
+	for _, e := range g.Edges {
+		if e.Kind == graph.EdgeImport {
+			imports = append(imports, [2]string{e.From, e.To})
+		}
+	}
+	if len(imports) == 0 {
+		t.Fatal("no import was resolved, so this test is watching nothing")
+	}
+
+	// The fixture's Python package reaches a sibling with `from ..lib.shared`,
+	// where the last segment names a file rather than a directory.
+	found := false
+	for _, e := range imports {
+		if e[0] == "pkg:api" && e[1] == "pkg:lib" {
+			found = true
+		}
+		if e[1] == "root" {
+			t.Errorf("%s imports the root, which nothing declares and nobody wrote", e[0])
+		}
+	}
+	if !found {
+		t.Error("a relative Python import across packages was not resolved")
+	}
+}
+
+// TestImportsOutsideTheTreeAreCountedNotDrawn keeps the standard library and
+// anything from a registry out of the drawing.
+//
+// An edge to a package nobody read is a line to nowhere, and a reader cannot
+// tell it from a real one. The boundary of what was read is reported instead.
+func TestImportsOutsideTheTreeAreCountedNotDrawn(t *testing.T) {
+	g := analyzeAll(t)
+	counted := 0
+	for _, u := range g.Diagnostics.UnresolvedReferences {
+		if u.Reason == "import-outside-the-tree" {
+			counted = u.Count
+		}
+	}
+	if counted == 0 {
+		t.Error("the fixture imports nothing from outside itself, so the boundary is never tested")
+	}
+}

@@ -21,6 +21,47 @@ import (
 // This is weaker than what go/ast manages for Go, and deliberately so: stage 2
 // attributes the meaning, and stage 1 only has to be honest about what it
 // actually saw.
+// resolveImports turns the imports the walk collected into edges, now that it
+// knows which directories it actually read.
+//
+// A target that does not name one of them is outside the tree: the standard
+// library, a package from a registry, a file in a sibling project. That is the
+// boundary of what was read rather than a defect in the file, so it is counted
+// and not drawn. An edge to a package nobody read would be a line to nowhere,
+// and a reader could not tell it from a real one.
+func (w *walker) resolveImports() {
+	known := make(map[string]bool, len(w.declsIn))
+	for dir := range w.declsIn {
+		known[dir] = true
+	}
+	for _, imp := range w.pendingImports {
+		to := w.resolveImport(imp.fromDir, imp.target)
+		if to == "" {
+			w.unresolved["import-outside-the-tree"]++
+			continue
+		}
+		// The last segment of a module path may name a package or a file, and
+		// the text does not say which: `from ..lib import x` names a directory,
+		// `from ..lib.shared import x` names a file inside one. Both are tried
+		// against what the walk actually read rather than guessed at from the
+		// shape of the string.
+		if !known[to] {
+			if parent := path.Dir(to); known[parent] {
+				to = parent
+			} else {
+				w.unresolved["import-outside-the-tree"]++
+				continue
+			}
+		}
+		if to == imp.fromDir {
+			// A package importing itself is not an edge between packages. The
+			// file-level relationship is real and the graph draws packages.
+			continue
+		}
+		w.addEdge(packageID(imp.fromDir), packageID(to), graph.EdgeImport)
+	}
+}
+
 func (w *walker) resolveCalls() {
 	for _, call := range w.pendingCalls {
 		candidates := w.byName[call.name]

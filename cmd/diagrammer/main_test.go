@@ -179,8 +179,8 @@ func TestGraphCommand(t *testing.T) {
 		if !strings.Contains(stderr.String(), "bad.go") {
 			t.Errorf("the failing file is not named on stderr: %q", stderr.String())
 		}
-		if !strings.Contains(stderr.String(), "did not parse") {
-			t.Errorf("stderr does not say the file was dropped: %q", stderr.String())
+		if !strings.Contains(stderr.String(), "did not parse cleanly") {
+			t.Errorf("stderr does not say the file would not parse: %q", stderr.String())
 		}
 	})
 
