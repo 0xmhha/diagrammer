@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0xmhha/diagrammer/internal/schema"
 	"github.com/0xmhha/diagrammer/internal/validate"
 )
 
@@ -63,7 +64,7 @@ func TestRun(t *testing.T) {
 // distinguishable from one that does not exist. Someone typing `compose` should
 // be told it is coming, not that they mistyped.
 func TestUnbuiltCommandsAreNamed(t *testing.T) {
-	for _, name := range []string{"graph", "compose", "render", "serve"} {
+	for _, name := range []string{"compose", "render", "serve"} {
 		t.Run(name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
 			err := run([]string{name}, &stdout, &stderr)
@@ -107,4 +108,85 @@ func TestValidateRefusesAndReports(t *testing.T) {
 	if stdout.Len() != 0 {
 		t.Errorf("a refused document must print nothing to stdout, got %q", stdout.String())
 	}
+}
+
+const (
+	basicSrc  = "../../testdata/src/go-basic"
+	brokenSrc = "../../testdata/src/go-broken"
+)
+
+func TestGraphCommand(t *testing.T) {
+	t.Run("writes a schema-valid graph to a file", func(t *testing.T) {
+		out := filepath.Join(t.TempDir(), "graph.json")
+		var stdout, stderr bytes.Buffer
+		if err := run([]string{"graph", basicSrc, "-o", out}, &stdout, &stderr); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		raw, err := os.ReadFile(out)
+		if err != nil {
+			t.Fatalf("read output: %v", err)
+		}
+		if err := schema.Validate(schema.Graph, raw); err != nil {
+			t.Errorf("written graph does not satisfy the schema: %v", err)
+		}
+		// The summary goes to stderr so that stdout stays usable as a pipe.
+		if !strings.Contains(stderr.String(), "nodes") {
+			t.Errorf("no summary on stderr: %q", stderr.String())
+		}
+	})
+
+	t.Run("writes to stdout when no output is named", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		if err := run([]string{"graph", basicSrc}, &stdout, &stderr); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if err := schema.Validate(schema.Graph, stdout.Bytes()); err != nil {
+			t.Errorf("graph on stdout does not satisfy the schema: %v", err)
+		}
+	})
+
+	t.Run("accepts flags after the source", func(t *testing.T) {
+		// The command surface puts the operand first, which Go's flag package
+		// does not handle on its own, so this is the case that would regress.
+		var withFlag, plain bytes.Buffer
+		var stderr bytes.Buffer
+		if err := run([]string{"graph", basicSrc, "-exclude", "internal"}, &withFlag, &stderr); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if err := run([]string{"graph", basicSrc}, &plain, &stderr); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if withFlag.Len() >= plain.Len() {
+			t.Error("-exclude after the source had no effect, so the flag was not parsed")
+		}
+	})
+
+	t.Run("names the files that did not parse", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		if err := run([]string{"graph", brokenSrc}, &stdout, &stderr); err != nil {
+			t.Fatalf("a parse failure must not fail the command: %v", err)
+		}
+		if !strings.Contains(stderr.String(), "bad.go") {
+			t.Errorf("the failing file is not named on stderr: %q", stderr.String())
+		}
+		if !strings.Contains(stderr.String(), "did not parse") {
+			t.Errorf("stderr does not say the file was dropped: %q", stderr.String())
+		}
+	})
+
+	t.Run("needs a source directory", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run([]string{"graph"}, &stdout, &stderr)
+		if err == nil || !strings.Contains(err.Error(), "source directory") {
+			t.Errorf("want a complaint about the missing operand, got %v", err)
+		}
+	})
+
+	t.Run("refuses a source that is not a directory", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run([]string{"graph", "main.go"}, &stdout, &stderr)
+		if err == nil || !strings.Contains(err.Error(), "not a directory") {
+			t.Errorf("want a complaint about the source, got %v", err)
+		}
+	})
 }

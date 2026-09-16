@@ -17,6 +17,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -48,7 +49,7 @@ type command struct {
 
 func commands() []command {
 	return []command{
-		{"graph", "parse a source tree into a code graph", notImplemented},
+		{"graph", "parse a source tree into a code graph", runGraph},
 		{"validate", "check a UML codegraph against the stage-2 contract", runValidate},
 		{"compose", "turn a UML codegraph into diagram-source documents", notImplemented},
 		{"render", "turn a diagram-source document into a self-contained page", notImplemented},
@@ -89,6 +90,30 @@ func usage(w io.Writer) {
 
 func notImplemented(_ []string, _, _ io.Writer) error {
 	return errNotImplemented
+}
+
+// parseOperand splits one positional argument out of args, whichever side of it
+// the flags are written on.
+//
+// Go's flag package stops at the first non-flag argument, so `graph . -o out`
+// would leave -o unparsed. The command surface puts the operand first, so this
+// parses what precedes it, takes it, and parses what follows.
+func parseOperand(flags *flag.FlagSet, args []string, what string) (string, error) {
+	if err := flags.Parse(args); err != nil {
+		return "", err
+	}
+	rest := flags.Args()
+	if len(rest) == 0 {
+		return "", fmt.Errorf("%s takes %s, got none", flags.Name(), what)
+	}
+	operand := rest[0]
+	if err := flags.Parse(rest[1:]); err != nil {
+		return "", err
+	}
+	if flags.NArg() != 0 {
+		return "", fmt.Errorf("%s takes one %s, got %d", flags.Name(), what, flags.NArg()+1)
+	}
+	return operand, nil
 }
 
 func runVersion(args []string, stdout, _ io.Writer) error {

@@ -47,8 +47,8 @@ const (
 // of the byte-identity guarantee rather than a convenience, so anything
 // rebuilding a Graph must restore it before writing.
 type Graph struct {
-	SchemaVersion int         `json:"schema_version"`
-	GeneratedBy   string      `json:"generated_by,omitempty"`
+	SchemaVersion int         `json:"schemaVersion"`
+	GeneratedBy   string      `json:"generatedBy,omitempty"`
 	Root          string      `json:"root"`
 	Nodes         []Node      `json:"nodes"`
 	Edges         []Edge      `json:"edges"`
@@ -62,8 +62,19 @@ type Node struct {
 	// Name is for display and is not an identifier: two nodes may share one.
 	Name string `json:"name"`
 	// Parent is empty only on the root node.
-	Parent   string     `json:"parent,omitempty"`
-	Language Language   `json:"language,omitempty"`
+	Parent   string   `json:"parent,omitempty"`
+	Language Language `json:"language,omitempty"`
+	// Doc is the declaration's own documentation comment, as written.
+	//
+	// It is carried because stage 2 attributes meaning, and a doc comment is
+	// meaning the author already wrote down. Withholding it would make the
+	// model infer from names what the source states outright.
+	Doc string `json:"doc,omitempty"`
+	// Exported says whether the declaration is part of its package's public
+	// surface. It is stored rather than derived from the name: Go reads the
+	// first letter, Python a leading underscore and JS/TS an export keyword,
+	// so only the analyzer knows which rule applied.
+	Exported bool       `json:"exported,omitempty"`
 	Source   *SourceRef `json:"source,omitempty"`
 }
 
@@ -72,8 +83,18 @@ type Node struct {
 // Path is relative to the analyzed root, so a graph does not carry the machine
 // that produced it.
 type SourceRef struct {
+	// Path is a file for a declaration and a directory for a package or group.
 	Path string `json:"path"`
-	Line int    `json:"line,omitempty"`
+	// Line is where a declaration starts, and is absent for anything else.
+	Line int `json:"line,omitempty"`
+	// Lines is how many lines the node spans. For a declaration this cannot be
+	// recovered from anything else in the graph, which is why it is kept; for a
+	// container it is the total of the files beneath it.
+	Lines int `json:"lines,omitempty"`
+	// File is one real file standing for this node, needed when Path names a
+	// directory. A package is not a blob, so source evidence has to point at
+	// something that can be opened.
+	File string `json:"file,omitempty"`
 }
 
 // Edge is one proven reference. Repeated references raise Weight rather than
@@ -94,13 +115,13 @@ type Edge struct {
 type Diagnostics struct {
 	// FilesParsed counts every file read, whether or not it parsed. The number
 	// that succeeded is this minus len(ParseFailures) and is not stored twice.
-	FilesParsed int `json:"files_parsed"`
+	FilesParsed int `json:"filesParsed"`
 	// ParseFailures holds one entry per failed file, sorted by path.
-	ParseFailures []ParseFailure `json:"parse_failures"`
+	ParseFailures []ParseFailure `json:"parseFailures"`
 	// UnresolvedReferences is reported rather than gated. Resolution rates
 	// differ by language, and a low one is a property of the parser rather
 	// than a defect in the document.
-	UnresolvedReferences []UnresolvedReference `json:"unresolved_references,omitempty"`
+	UnresolvedReferences []UnresolvedReference `json:"unresolvedReferences,omitempty"`
 }
 
 // ParseFailure is one file the analyzer could not read.

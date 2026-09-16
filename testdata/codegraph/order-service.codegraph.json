@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schemaVersion": 1,
   "meta": {
     "title": "Order Service",
     "subtitle": "A small system that exercises every family's vocabulary"
@@ -137,7 +137,7 @@
       { "id": "in.place.pay", "from": "uc.place", "to": "uc.pay" }
     ],
     "extends": [
-      { "id": "ex.notify.place", "from": "uc.notify", "to": "uc.place", "extension_point": "after acceptance", "condition": "customer opted in" }
+      { "id": "ex.notify.place", "from": "uc.notify", "to": "uc.place", "extensionPoint": "after acceptance", "condition": "customer opted in" }
     ]
   }
 }

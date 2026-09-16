@@ -39,8 +39,12 @@ fmt:
 	$(GO) fmt ./...
 
 ## fmt-check: fail if anything is unformatted, rather than fixing it
+#
+# testdata is excluded on purpose. The Go files under it are fixture input
+# rather than code this project maintains, and one of them is deliberately
+# malformed so the analyzer has a parse failure to report.
 fmt-check:
-	@unformatted=$$(gofmt -l . 2>/dev/null); \
+	@unformatted=$$(gofmt -l $$(find . -name '*.go' -not -path './testdata/*' -not -path './bin/*')); \
 	if [ -n "$$unformatted" ]; then \
 		echo "these files are not gofmt'd:"; \
 		echo "$$unformatted"; \
@@ -72,6 +76,23 @@ check: fmt vet test
 # different claims.
 fixtures: build
 	@set -e; \
+	work=$$(mktemp -d); \
+	trap 'rm -rf "$$work"' EXIT; \
+	found=0; \
+	for d in testdata/src/*/; do \
+		[ -d "$$d" ] || continue; \
+		found=$$((found + 1)); \
+		name=$$(basename "$$d"); \
+		$(BIN_DIR)/$(BINARY) graph "$$d" -o "$$work/$$name.1.json"; \
+		$(BIN_DIR)/$(BINARY) graph "$$d" -o "$$work/$$name.2.json"; \
+		cmp -s "$$work/$$name.1.json" "$$work/$$name.2.json" \
+			|| { echo "$$name: two runs produced different bytes"; exit 1; }; \
+	done; \
+	if [ "$$found" -eq 0 ]; then \
+		echo "no source fixtures under testdata/src; the stage-1 gate would pass by doing nothing"; \
+		exit 1; \
+	fi; \
+	echo "$$found source fixture(s): schema valid and byte-identical across runs"; \
 	found=0; \
 	for f in testdata/codegraph/*.codegraph.json; do \
 		[ -e "$$f" ] || continue; \
@@ -79,10 +100,10 @@ fixtures: build
 		$(BIN_DIR)/$(BINARY) validate "$$f"; \
 	done; \
 	if [ "$$found" -eq 0 ]; then \
-		echo "no fixtures found under testdata/codegraph; the gate would pass by doing nothing"; \
+		echo "no fixtures under testdata/codegraph; the stage-2 gate would pass by doing nothing"; \
 		exit 1; \
 	fi; \
-	echo "$$found fixture(s) validated"
+	echo "$$found model fixture(s) validated"
 
 ## verify: the release gate
 #

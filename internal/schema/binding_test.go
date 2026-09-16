@@ -33,13 +33,13 @@ var bindings = map[schema.Name]map[string]reflect.Type{
 		"#/$defs/edge":         reflect.TypeOf(graph.Edge{}),
 		"#/$defs/diagnostics":  reflect.TypeOf(graph.Diagnostics{}),
 		"#/$defs/parseFailure": reflect.TypeOf(graph.ParseFailure{}),
-		"#/$defs/diagnostics/properties/unresolved_references/items": reflect.TypeOf(graph.UnresolvedReference{}),
+		"#/$defs/diagnostics/properties/unresolvedReferences/items": reflect.TypeOf(graph.UnresolvedReference{}),
 	},
 	schema.Codegraph: {
 		"#":                  reflect.TypeOf(uml.Model{}),
 		"#/properties/meta":  reflect.TypeOf(uml.Meta{}),
 		"#/$defs/provenance": reflect.TypeOf(uml.Provenance{}),
-		"#/$defs/provenance/properties/source_graph": reflect.TypeOf(uml.SourceGraph{}),
+		"#/$defs/provenance/properties/sourceGraph": reflect.TypeOf(uml.SourceGraph{}),
 
 		"#/$defs/componentModel": reflect.TypeOf(uml.ComponentModel{}),
 		"#/$defs/component":      reflect.TypeOf(uml.Component{}),

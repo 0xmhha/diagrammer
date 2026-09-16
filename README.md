@@ -7,7 +7,10 @@ them does not happen inside this program.
 
 1. **graph** parses the source with an AST parser and emits a code graph:
    packages, files, types and functions, with the imports and calls it can
-   prove. Structure and raw references only; nothing is interpreted here.
+   prove, plus the doc comments their authors wrote. Structure and raw
+   references only; nothing is interpreted here. Go is read with `go/ast` from
+   the standard library, and Python and JS/TS will be read with a cgo-free
+   tree-sitter whose grammars are vendored.
 2. A plugin's skill analyses that graph with an LLM and returns a
    **codegraph.json** expressed as a UML model. The binary has no subcommand for
    this and never calls a model itself. It hands the graph out and takes the
@@ -30,12 +33,12 @@ extend. That vocabulary is what stage 2 is held to.
 
 Early, and honest about it.
 
-Working: `validate`, the embedded schemas for stages 1 and 2, and the drift
-guard that keeps the Go types matching them.
+Working: `graph` for Go, `validate`, the embedded schemas for stages 1 and 2,
+and the drift guard that keeps the Go types matching them.
 
-Not built yet: `graph`, `compose`, `render` and `serve`. Each is named in the
-command list and reports that it is not implemented rather than pretending not
-to exist.
+Not built yet: `compose`, `render` and `serve`, and `graph` for Python and
+JS/TS. Each unbuilt command is named in the command list and reports that it is
+not implemented rather than pretending not to exist.
 
 ## Build
 

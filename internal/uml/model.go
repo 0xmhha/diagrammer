@@ -36,12 +36,12 @@ const (
 	OriginModel Origin = "model"
 	// OriginModelReviewed was emitted by an LLM and checked by a person, which
 	// is what a committed fixture should normally be.
-	OriginModelReviewed Origin = "model_reviewed"
+	OriginModelReviewed Origin = "modelReviewed"
 )
 
 // Model is a UML model of a code graph, returned by a plugin's skill.
 type Model struct {
-	SchemaVersion int        `json:"schema_version"`
+	SchemaVersion int        `json:"schemaVersion"`
 	Meta          Meta       `json:"meta"`
 	Provenance    Provenance `json:"provenance"`
 	// Families is what this model can support. A family is listed only when its
@@ -67,7 +67,7 @@ type Provenance struct {
 	Note   string `json:"note,omitempty"`
 	// SourceGraph names the stage-1 graph this model was derived from, if one
 	// was used.
-	SourceGraph *SourceGraph `json:"source_graph,omitempty"`
+	SourceGraph *SourceGraph `json:"sourceGraph,omitempty"`
 }
 
 // SourceGraph identifies a stage-1 graph.
@@ -345,6 +345,6 @@ type Extend struct {
 	ID             string `json:"id"`
 	From           string `json:"from"`
 	To             string `json:"to"`
-	ExtensionPoint string `json:"extension_point,omitempty"`
+	ExtensionPoint string `json:"extensionPoint,omitempty"`
 	Condition      string `json:"condition,omitempty"`
 }

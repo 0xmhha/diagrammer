@@ -30,6 +30,50 @@ its origin, and the Archify copyright notice must ship with the distribution:
 A Go file that follows the same algorithm but was typed here is not a copy. A
 Go file produced by mechanically transliterating an `.mjs` file is.
 
+## Which Archify files are actually Archify's
+
+The working tree this project reads from is a local branch that is 20 commits
+ahead of its origin, and a good deal of what looks like Archify is this
+project's author's own work committed there. Those files carry no obligation at
+all, and treating them as third-party would add notices for material nobody
+else wrote.
+
+Checked by asking two questions of each file: does it exist on `origin/main`,
+and who has ever committed to it.
+
+**The author's own. Copy freely; no notices row.**
+
+| File | What it is |
+|---|---|
+| `analyzers/go/goscan.go` | the Go analyzer |
+| `analyzers/python/pyscan.py` | the Python analyzer |
+| `analyzers/javascript/jsscan.mjs` | the JS/TS analyzer |
+| `analyzers/codegraph.mjs` | the converter, and every rule deciding what to draw |
+| `renderers/architecture/layers.mjs` | the drill-down level composition |
+
+None of these exist on `origin/main`, and every commit touching them is by the
+author of this project.
+
+**Third-party. Reimplementing is free; copying takes a notices row.**
+
+`renderers/shared/geometry.mjs`, `renderers/shared/utils.mjs`,
+`renderers/shared/text-fit.mjs`, `renderers/architecture/render-architecture.mjs`,
+`renderers/sequence/render-sequence.mjs`,
+`renderers/lifecycle/render-lifecycle.mjs`, `assets/template.html`,
+`schemas/*.schema.json` and `scripts/check-render-output.mjs`.
+
+Several of these have the author among their contributors, which does not make
+the file theirs: a file with several authors is jointly held, and the others did
+not agree to anything beyond the MIT terms.
+
+One of them deserves naming ahead of time. The full-width character table in
+`renderers/shared/utils.mjs` is a single regular expression of roughly 46
+ranges with deliberate departures from the Unicode standard, and
+`golang.org/x/text/width` does not reproduce it. Transcribing it exactly, which
+is what correctness requires, is copying. When that lands it takes a notices
+row; deriving an equivalent table from Unicode data instead is the only way to
+avoid one, and it will not produce the same widths.
+
 ## What to do when unsure
 
 Write the origin down. A line in `THIRD_PARTY_NOTICES.md` costs nothing and is

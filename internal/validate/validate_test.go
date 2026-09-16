@@ -20,7 +20,7 @@ import (
 // below shows only the part it is about.
 func doc(families string, sections ...string) []byte {
 	var b strings.Builder
-	b.WriteString(`{"schema_version":1,"meta":{"title":"t"},`)
+	b.WriteString(`{"schemaVersion":1,"meta":{"title":"t"},`)
 	b.WriteString(`"provenance":{"origin":"handwritten"},"families":[` + families + `]`)
 	for _, s := range sections {
 		b.WriteString("," + s)
@@ -190,7 +190,7 @@ func TestCodegraphRefuses(t *testing.T) {
 		// shape, settled by the schema rather than here
 		{
 			"required field missing",
-			[]byte(`{"schema_version":1,"provenance":{"origin":"handwritten"},"families":["component"]}`),
+			[]byte(`{"schemaVersion":1,"provenance":{"origin":"handwritten"},"families":["component"]}`),
 			"meta",
 		}, {
 			"unknown field present",
@@ -204,14 +204,14 @@ func TestCodegraphRefuses(t *testing.T) {
 			"must be one of 'provided', 'required'",
 		}, {
 			"no families declared",
-			[]byte(`{"schema_version":1,"meta":{"title":"t"},` +
+			[]byte(`{"schemaVersion":1,"meta":{"title":"t"},` +
 				`"provenance":{"origin":"handwritten"},"families":[]}`),
 			"families",
 		}, {
 			"schema version not recognised",
-			[]byte(`{"schema_version":99,"meta":{"title":"t"},` +
+			[]byte(`{"schemaVersion":99,"meta":{"title":"t"},` +
 				`"provenance":{"origin":"handwritten"},"families":["component"],` + componentSection + `}`),
-			"schema_version",
+			"schemaVersion",
 		},
 	}
 

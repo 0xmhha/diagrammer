@@ -5,9 +5,9 @@
   "description": "A UML model of a code graph, produced outside this binary by a plugin's skill. It is not a generic node-and-edge graph: each family carries the vocabulary its UML diagram is defined in, and that vocabulary is the instruction the model works to. Nothing here is placed; geometry belongs to stage 3.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "meta", "provenance", "families"],
+  "required": ["schemaVersion", "meta", "provenance", "families"],
   "properties": {
-    "schema_version": {
+    "schemaVersion": {
       "description": "Bumped when a change would make an older reader misread a newer document. A plugin that does not recognise the value says so rather than half-consuming the document.",
       "const": 1
     },
@@ -53,11 +53,11 @@
       "required": ["origin"],
       "properties": {
         "origin": {
-          "description": "handwritten is authored by a person; model is emitted by an LLM and not reviewed; model_reviewed is emitted by an LLM and checked by a person, which is what a committed fixture should normally be.",
-          "enum": ["handwritten", "model", "model_reviewed"]
+          "description": "handwritten is authored by a person; model is emitted by an LLM and not reviewed; modelReviewed is emitted by an LLM and checked by a person, which is what a committed fixture should normally be.",
+          "enum": ["handwritten", "model", "modelReviewed"]
         },
         "note": { "type": "string", "maxLength": 1000 },
-        "source_graph": {
+        "sourceGraph": {
           "description": "The stage-1 graph this model was derived from, if one was used.",
           "type": "object",
           "additionalProperties": false,
@@ -392,7 +392,7 @@
           }
         },
         "extends": {
-          "description": "from may add behaviour to to, under condition, at extension_point. The arrow points from the extending use case to the extended one, which is the direction UML defines and the one most often drawn backwards.",
+          "description": "from may add behaviour to to, under condition, at extensionPoint. The arrow points from the extending use case to the extended one, which is the direction UML defines and the one most often drawn backwards.",
           "type": "array",
           "items": {
             "type": "object",
@@ -402,7 +402,7 @@
               "id": { "$ref": "#/$defs/id" },
               "from": { "$ref": "#/$defs/id" },
               "to": { "$ref": "#/$defs/id" },
-              "extension_point": { "type": "string", "maxLength": 200 },
+              "extensionPoint": { "type": "string", "maxLength": 200 },
               "condition": { "type": "string", "maxLength": 300 }
             }
           }
