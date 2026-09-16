@@ -289,3 +289,47 @@ func TestCancellation(t *testing.T) {
 		t.Error("want the cancelled walk to fail, got success")
 	}
 }
+
+// TestSymlinkedFilesAreNotRead closes a way of getting a file from outside the
+// analyzed tree into a graph of it.
+//
+// A symlink named *.go is not a directory, so a filter that only skipped
+// directories let it through, and go/ast happily followed it. The declarations
+// arrived recorded under the in-tree name, so nothing in the graph said the
+// content came from somewhere else. A repository that ships such a link decides
+// which of the reader's own files end up in their diagram, and the graph is
+// handed to a model in the next stage.
+func TestSymlinkedFilesAreNotRead(t *testing.T) {
+	g := analyze(t, "go-symlink")
+
+	ids := make(map[string]bool, len(g.Nodes))
+	for _, n := range g.Nodes {
+		ids[n.ID] = true
+	}
+	if !ids["fn:..Own"] {
+		t.Fatal("the fixture's own file was not read, so this test proves nothing")
+	}
+
+	// linked.go points at go-basic/doc.go, which declares Version and hidden.
+	// Nothing from it may appear, and neither may the file node itself.
+	for _, forbidden := range []string{"file:linked.go", "fn:..Version", "ty:.Version"} {
+		if ids[forbidden] {
+			t.Errorf("%s came from outside the analyzed tree", forbidden)
+		}
+	}
+	for _, n := range g.Nodes {
+		if n.Source != nil && n.Source.Path == "linked.go" {
+			t.Errorf("%s is recorded at linked.go, which is a symlink out of the tree", n.ID)
+		}
+	}
+
+	// The link is not a parse failure either. It is skipped as something that
+	// is not a file to read, which is a different thing from a file that would
+	// not parse, and saying so wrongly would send a reader looking for a syntax
+	// error that is not there.
+	for _, f := range g.Diagnostics.ParseFailures {
+		if f.Path == "linked.go" {
+			t.Errorf("the symlink is reported as a parse failure: %s", f.Message)
+		}
+	}
+}

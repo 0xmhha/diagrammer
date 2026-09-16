@@ -302,7 +302,13 @@ func (a *analyzer) collectDir(fset *token.FileSet, abs, rel string) {
 
 	var info *pkgInfo
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+		// Only regular files are read. A symlink is not one, and following a
+		// symlink named *.go would pull a file from wherever it points into a
+		// graph of this tree — recorded under the in-tree name, so nothing in
+		// the output would say the content came from somewhere else. A
+		// repository that ships such a link decides which of the reader's files
+		// end up in their own diagram.
+		if entry.IsDir() || !entry.Type().IsRegular() || !strings.HasSuffix(entry.Name(), ".go") {
 			continue
 		}
 		if !a.includeTests && strings.HasSuffix(entry.Name(), "_test.go") {
