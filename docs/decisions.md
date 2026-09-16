@@ -395,7 +395,12 @@ Beside `make verify`, and not automated, because each item is a judgement:
   each with its version and licence. `go list -deps ./cmd/diagrammer` names
   them. The viewer asset and the tree-sitter runtime this item was originally
   written for are both gone: the viewer is ours, and the runtime is not built.
-- Confirm the shipped documents match the code they describe.
+- ~~Confirm the shipped documents match the code they describe.~~ Automated,
+  as the rule below says such an item should be. `make verify` reads the
+  thresholds and the rule names out of the source and fails when a document
+  quotes a number the code no longer uses, or omits a rule the checkers have.
+  What is left for a person is whether the prose still says something true,
+  which no test can judge.
 - ~~Confirm the measured cost of the tree-sitter runtime has been recorded.~~
   Moot. The choice was reopened by the runtime's premise rather than its cost;
   see **Blocked** above.

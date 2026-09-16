@@ -283,6 +283,56 @@ almost no specificity, which makes it a good canary and a bad specification. A
 difference is explained or fixed by a person, never silenced by regenerating
 the golden file.
 
+## Every rule by name
+
+A rule fires with its name, and this is where a reader looks it up. The names
+are a contract too: a failure saying `label-clearance` should lead somewhere,
+not just somewhere in a source tree.
+
+Held over every document, whatever its family:
+
+| Name | What it holds |
+|---|---|
+| `accounting` | drawn plus dropped equals proven, per level and for the document |
+| `record-matches-accounting` | the counts describe what is actually there, not what was claimed |
+| `connection-endpoints` | a connection has both ends on the page that draws it |
+| `box-placement` | every box has a cell of its own, inside its level's grid |
+| `drilldown` | exactly one level has no parent, and every other is opened from a named box that points back at it |
+| `completeness` | nothing the model declared is absent, and nothing appears that it did not declare |
+| `relationship-kind` | a connection carries a kind its family can mean |
+
+Held per family, where the shared set says nothing:
+
+| Name | Family | What it holds |
+|---|---|---|
+| `no-drops` | sequence, state, use case | nothing was dropped, because these have nowhere to drop one |
+| `message-ordering` | sequence | rungs follow the order the model wrote, and an activation does not end before it starts |
+| `system-boundary` | use case | what the model placed inside the system is drawn inside it, and include and extend run between use cases |
+
+Held over a drawing, for the three families that are boxes joined by lines:
+
+| Name | What it holds |
+|---|---|
+| `endpoint-side` | a route leaves and arrives on the edges it claims, and its ends sit on the boxes it names |
+| `pass-through` | no route enters a box that is not one of its ends |
+| `separation` | no route runs closer than 8px to a box it is not attached to |
+| `crossing` | no proper intersection between routes sharing no end |
+| `minimum-segment` | no run between bends shorter than 16px |
+| `label-clearance` | a connection's text stays 10px clear of every route but its own |
+| `border-run` | no route travels more than 24px along a band's border |
+
+Held over a drawn ladder:
+
+| Name | What it holds |
+|---|---|
+| `rung-distinct` | every message has a rung of its own |
+| `message-span` | an arrow's ends sit on the lifelines it names |
+| `activation-on-lifeline` | an execution bar sits on the lifeline it names, and has height |
+| `inside-canvas` | nothing reaches outside the page |
+
+A test reads these names out of the code and fails when one of them is missing
+here, so the table cannot fall behind what the checkers actually do.
+
 ## The release gate
 
 `make verify` exiting zero is the only automated gate, and it is what authorises
