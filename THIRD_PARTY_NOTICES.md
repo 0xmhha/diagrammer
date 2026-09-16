@@ -16,15 +16,63 @@ MIT license. Archify is a Node.js project; diagrammer is a separate Go program
 and is not a fork.
 
 Reimplementing behaviour observed in an MIT project creates no obligation on
-its own. Copying material does. The table below records what was copied, if
-anything.
+its own. Copying material does. What follows is what was actually taken, and
+what was deliberately not.
+
+**Nothing of Archify's is copied into this repository.** That is a stronger
+claim than "no rows below", so here is what it rests on.
+
+### What was taken, and why it carries no obligation
+
+`internal/analyze/goast/goast.go` is a copy of `analyzers/go/goscan.go` from the
+working tree this project was developed alongside. Its walk, its node-id scheme
+and its type and call resolution are recognisable line by line; the output layer
+and the diagnostics are new.
+
+That file is not Archify's. It does not exist on Archify's `origin/main`, and
+every commit that has ever touched it is by this project's author. The same is
+true of `pyscan.py`, `jsscan.mjs`, `codegraph.mjs` and
+`renderers/architecture/layers.mjs`, none of which are upstream and all of which
+are the author's own. `docs/licensing.md` records how that was checked and lists
+them.
+
+The file says so in its own header, so a reader does not have to find this page
+to learn where it came from.
+
+### What would have needed a row, and was avoided
+
+Two things were settled early as copies and then were not copied, each for a
+reason recorded in `docs/decisions.md`:
+
+- **The viewer asset.** Round 3 decided to embed Archify's `assets/template.html`
+  verbatim, 780 KB, which would have needed a row here and the copyright notice
+  below shipped with every distribution. It was not embedded: 47 of the 195
+  `data-*` attributes its viewer reads serve features this project has no
+  equivalent of, and the rest assume a document format the design later
+  replaced. The viewer here is this project's own, 155 lines.
+- **The full-width character table.** A single regular expression of roughly 46
+  ranges in `renderers/shared/utils.mjs`, with deliberate departures from the
+  Unicode standard. Transcribing it exactly was only ever required to match that
+  implementation's output byte for byte, and that comparison was removed from
+  the contract. Character width here is derived from the Unicode standard
+  through `golang.org/x/text/width`, which produces different widths and is the
+  right basis for a renderer that is not imitating another one.
+
+### What was learned rather than taken
+
+The composition rules, the level-splitting and unfold rules, the thresholds and
+the idea of recording every relationship a drawing could not hold were all
+understood from Archify and written here from scratch. Behaviour, algorithms and
+naming conventions are not copyrightable on their own, and `docs/licensing.md`
+says so in more detail.
 
 | Material | Taken from | Status |
 |---|---|---|
-| (none yet) | | |
+| (none) | | |
 
-When a row is added here, the Archify copyright notice below must ship with the
-distribution, because MIT requires it for copies and substantial portions.
+The table is empty and the notice below is kept anyway, so that adding a row
+later is a one-line change rather than a change that also has to remember to
+bring a licence with it.
 
 ```
 MIT License

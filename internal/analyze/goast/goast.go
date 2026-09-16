@@ -1,16 +1,3 @@
-// Package goast reads Go source with go/ast and returns a stage-1 code graph.
-//
-// Only the standard library is used. An analyzer that needed `go get` would
-// break the self-contained binary this project is built around, and go/ast is
-// always current with the compiler that builds it, so a Go 1.27 build
-// understands Go 1.27 on the day it ships.
-//
-// That is also why tree-sitter is not used for Go, though it is used for the
-// other languages. The tree-sitter Go grammar's method_declaration rule
-// carries no type parameters, so a generic method does not parse; and
-// tree-sitter fails soft, emitting an ERROR node and continuing, so the method
-// would simply be missing from the graph with nothing to say it was ever
-// there. No later stage can restore what was never extracted.
 package goast
 
 import (
