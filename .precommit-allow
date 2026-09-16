@@ -1,0 +1,15 @@
+# Paths exempt from the pre-commit filename check.
+#
+# The exemption covers the filename pattern only. Content scanning still runs
+# over every one of these, and nothing here is exempt from that.
+#
+# All four are vendored third-party source whose names contain "token" because
+# they handle OAuth tokens or tokenize JSON. Each carries its project's
+# copyright header and none contains a credential; all four were read before
+# being listed here. They arrive through the MCP SDK's HTTP and authorisation
+# transports, which this program does not use, and they are in the repository
+# because the release gate runs with no network.
+vendor/github.com/modelcontextprotocol/go-sdk/oauthex/token_exchange.go
+vendor/github.com/segmentio/encoding/json/token.go
+vendor/golang.org/x/oauth2/internal/token.go
+vendor/golang.org/x/oauth2/token.go

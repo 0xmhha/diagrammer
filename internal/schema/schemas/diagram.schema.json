@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/0xmhha/diagrammer/schemas/diagram.schema.json",
+  "title": "diagrammer stage-3 diagram source",
+  "description": "One diagram family, laid out but not yet drawn. Boxes carry the cell they sit in rather than a pixel position, and connections carry their endpoints rather than a route. Where a box sits is a layout decision and belongs here; how large it is, where its edges meet and which way a line bends are rendering decisions and belong to stage 4. A document that carried pixels could not be read or diffed by a person, and a stage that owned routing would own the composition rules with it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "family", "meta", "provenance", "levels", "accounting"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "family": {
+      "description": "Which family this document is. One document holds one family; compose emits a file per family the model declares. The list grows as each family's composer lands, so a value missing here names a family that is not built yet rather than one that is not allowed.",
+      "enum": ["component", "sequence", "state", "usecase"]
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "subtitle": { "type": "string", "maxLength": 400 }
+      }
+    },
+    "provenance": {
+      "description": "Where this document came from. It names the stage-2 model rather than the source tree, because that model is what compose actually read.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "generatedBy": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "levels": {
+      "description": "Every page of the diagram, sorted by id. The first level with no parent is the overview; the rest are drilled down into from a box above them.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/level" }
+    },
+    "accounting": { "$ref": "#/$defs/accounting" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\x00-\\x20\\x7f]+$"
+    },
+    "accounting": {
+      "description": "The relationships this document was responsible for. drawn plus dropped equals proven exactly, at the document level and on every level within it. That is the whole point of the record: a relationship that is not drawn has to be somewhere a reader can find it, or the diagram quietly lies about what it shows.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proven", "drawn", "dropped"],
+      "properties": {
+        "proven": {
+          "description": "Relationships the model asserted for this scope, after rolling each one up to the boxes that stand for its ends.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "drawn": { "type": "integer", "minimum": 0 },
+        "dropped": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "level": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "grid", "boxes", "connections", "accounting"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "parent": {
+          "description": "The level this one is reached from, absent on the overview.",
+          "$ref": "#/$defs/id"
+        },
+        "opensFrom": {
+          "description": "The box on the parent level that opens this one. Present exactly when parent is.",
+          "$ref": "#/$defs/id"
+        },
+        "grid": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rows", "cols"],
+          "properties": {
+            "rows": { "type": "integer", "minimum": 1 },
+            "cols": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "boxes": {
+          "description": "Sorted by id. Every box sits in a distinct cell of the grid.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/box" }
+        },
+        "regions": {
+          "description": "Bands framing the generation an unfolded level skipped. When a level is too thin to be worth a page, it unfolds a generation; if that leaves its boxes' real parent with no box of its own, a region draws the frame that parent would have been, so the page reads as a structure rather than a flat list.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/region" }
+        },
+        "connections": {
+          "description": "Sorted by id. Endpoints only: the route is stage 4's to decide.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/connection" }
+        },
+        "activations": {
+          "description": "Executions on a lifeline, for the sequence family. Each spans the rows of the messages that start and end it. Empty for every other family.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/activation" }
+        },
+        "fragments": {
+          "description": "Combined fragments, for the sequence family. Each covers a run of rows and a span of columns. Empty for every other family.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/fragment" }
+        },
+        "accounting": { "$ref": "#/$defs/accounting" }
+      }
+    },
+    "box": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "row", "col"],
+      "properties": {
+        "id": {
+          "description": "The id of the component this box stands for, so a reader can trace a box back to the model it came from.",
+          "$ref": "#/$defs/id"
+        },
+        "label": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "stereotype": { "type": "string", "maxLength": 64 },
+        "row": { "type": "integer", "minimum": 0 },
+        "col": { "type": "integer", "minimum": 0 },
+        "opens": {
+          "description": "The level reached by drilling into this box, when it has one.",
+          "$ref": "#/$defs/id"
+        },
+        "region": {
+          "description": "The region band this box belongs to, when the level has regions.",
+          "$ref": "#/$defs/id"
+        },
+        "ports": {
+          "description": "The interfaces this component provides and requires, carried through so stage 4 can draw them on the box edge.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "kind", "interface"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "name": { "type": "string", "maxLength": 200 },
+              "kind": { "enum": ["provided", "required"] },
+              "interface": { "type": "string", "minLength": 1, "maxLength": 200 }
+            }
+          }
+        },
+        "dropped": {
+          "description": "Every relationship belonging to this box that the level could not draw, each with the reason. This is the record the accounting invariant is checked against, and the reason no relationship can go missing without leaving a trace on the box it belonged to.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/droppedRelationship" }
+        }
+      }
+    },
+    "droppedRelationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["to", "kind", "reason"],
+      "properties": {
+        "to": {
+          "description": "The other end, named by the box it rolled up to, or by the component itself when that box is this one.",
+          "$ref": "#/$defs/id"
+        },
+        "kind": { "$ref": "#/$defs/relationshipKind" },
+        "reason": {
+          "description": "selfReference means both ends roll up to this same box on this level, so drawing it would be a loop that says nothing; the relationship is drawn on the level below, where the two ends are separate boxes.",
+          "enum": ["selfReference"]
+        }
+      }
+    },
+    "relationshipKind": {
+      "description": "What a connection stands for. Each family uses its own subset and its completeness rule refuses the rest, so one vocabulary serves every family without any of them accepting a kind that means nothing to it. component: dependency, stated by the model outright, and assembly, derived where one component requires an interface another provides. sequence: message. state: transition. usecase: association, include and extend.",
+      "enum": ["dependency", "assembly", "message", "transition", "association", "include", "extend"]
+    },
+    "activation": {
+      "description": "One execution on a lifeline, as a bar spanning rows.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "box", "fromRow", "toRow"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "box": {
+          "description": "The lifeline this execution runs on, named by its box.",
+          "$ref": "#/$defs/id"
+        },
+        "fromRow": { "type": "integer", "minimum": 0 },
+        "toRow": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "fragment": {
+      "description": "One combined fragment, as a frame over a run of rows and a span of columns.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "fromRow", "toRow", "fromCol", "toCol", "operands"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["alt", "opt", "loop", "par", "critical", "break", "strict", "seq"] },
+        "fromRow": { "type": "integer", "minimum": 0 },
+        "toRow": { "type": "integer", "minimum": 0 },
+        "fromCol": { "type": "integer", "minimum": 0 },
+        "toCol": { "type": "integer", "minimum": 0 },
+        "operands": {
+          "description": "One entry per branch, each naming the row it starts at so stage 4 can draw the divider above it.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["fromRow"],
+            "properties": {
+              "guard": { "type": "string", "maxLength": 200 },
+              "fromRow": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "region": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "stereotype": { "type": "string", "maxLength": 64 }
+      }
+    },
+    "connection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from", "to", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "from": {
+          "description": "A box on this level.",
+          "$ref": "#/$defs/id"
+        },
+        "to": { "$ref": "#/$defs/id" },
+        "kind": { "$ref": "#/$defs/relationshipKind" },
+        "label": { "type": "string", "maxLength": 200 },
+        "interface": {
+          "description": "The interface an assembly connector passes through, so stage 4 can name the socket it draws.",
+          "type": "string",
+          "maxLength": 200
+        },
+        "order": {
+          "description": "Where this connection sits in a sequence, counting from zero. A sequence diagram is a ladder and its messages are ordered; a component or use case diagram's connections are not, and omit this.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "variant": {
+          "description": "How the line is drawn, when the kind alone does not say. A sequence message may be synchronous, asynchronous, a reply, or the one that creates or destroys a lifeline.",
+          "enum": ["sync", "async", "reply", "create", "destroy"]
+        }
+      }
+    }
+  }
+}

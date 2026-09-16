@@ -1,0 +1,417 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/0xmhha/diagrammer/schemas/codegraph.schema.json",
+  "title": "diagrammer stage-2 UML codegraph",
+  "description": "A UML model of a code graph, produced outside this binary by a plugin's skill. It is not a generic node-and-edge graph: each family carries the vocabulary its UML diagram is defined in, and that vocabulary is the instruction the model works to. Nothing here is placed; geometry belongs to stage 3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "meta", "provenance", "families"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Bumped when a change would make an older reader misread a newer document. A plugin that does not recognise the value says so rather than half-consuming the document.",
+      "const": 1
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "subtitle": { "type": "string", "maxLength": 400 }
+      }
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "families": {
+      "description": "Which diagram families this model can support. A family is declared here only if its section is present and carries content. validate enforces that agreement, so a model claiming sequence support without lifelines is refused at the boundary rather than three stages later. compose emits every declared family unless --family narrows it.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["component", "sequence", "state", "usecase"] }
+    },
+    "component": { "$ref": "#/$defs/componentModel" },
+    "sequence": { "$ref": "#/$defs/sequenceModel" },
+    "state": { "$ref": "#/$defs/stateModel" },
+    "usecase": { "$ref": "#/$defs/usecaseModel" }
+  },
+  "$defs": {
+    "id": {
+      "description": "Unique within its family section. Authored rather than derived, so the pattern is deliberately narrow: a model that invents ids under a predictable rule is easier to hold to a contract.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "provenance": {
+      "description": "How this document came to exist. Recorded because a fixture written by hand and a fixture a model produced once are different kinds of evidence, and a later reader cannot otherwise tell them apart.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["origin"],
+      "properties": {
+        "origin": {
+          "description": "handwritten is authored by a person; model is emitted by an LLM and not reviewed; modelReviewed is emitted by an LLM and checked by a person, which is what a committed fixture should normally be.",
+          "enum": ["handwritten", "model", "modelReviewed"]
+        },
+        "note": { "type": "string", "maxLength": 1000 },
+        "sourceGraph": {
+          "description": "The stage-1 graph this model was derived from, if one was used.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    },
+
+    "componentModel": {
+      "description": "UML component diagram vocabulary: components, the interfaces they provide and require through ports, and the dependencies between them.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["components"],
+      "properties": {
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/component" }
+        },
+        "interfaces": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/interface" }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/dependency" }
+        }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "stereotype": {
+          "description": "UML stereotype without the guillemets, such as service or subsystem.",
+          "type": "string",
+          "maxLength": 64
+        },
+        "description": { "type": "string", "maxLength": 1000 },
+        "parent": {
+          "description": "The component this one is nested inside, absent at the top level. The nesting is what stage 3 turns into levels and drill-down pages: without it a component diagram is one flat page, and a model of any size is unreadable. Choosing the decomposition is the model's job, because it is a judgement about meaning rather than a fact about the code.",
+          "$ref": "#/$defs/id"
+        },
+        "ports": {
+          "description": "A component's provided interfaces are its ports of kind provided, and its required interfaces are the ports of kind required. There is no second way to say the same thing.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/port" }
+        }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "interface"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "kind": { "enum": ["provided", "required"] },
+        "interface": {
+          "description": "Must name an entry in interfaces. validate refuses a port that points at nothing.",
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "interface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": { "$ref": "#/$defs/name" },
+              "signature": { "type": "string", "maxLength": 500 }
+            }
+          }
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from", "to"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "from": {
+          "description": "A component or interface id.",
+          "$ref": "#/$defs/id"
+        },
+        "to": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["use", "realize", "substitute"] },
+        "name": { "$ref": "#/$defs/name" }
+      }
+    },
+
+    "sequenceModel": {
+      "description": "UML sequence diagram vocabulary: lifelines, messages, the executions they activate, and combined fragments. Message order is the order of the messages array; there is no separate ordering field to disagree with it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lifelines", "messages"],
+      "properties": {
+        "lifelines": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/lifeline" }
+        },
+        "messages": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/message" }
+        },
+        "activations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/activation" }
+        },
+        "fragments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fragment" }
+        }
+      }
+    },
+    "lifeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "represents": {
+          "description": "The component this lifeline stands for, when the model also carries a component family.",
+          "$ref": "#/$defs/id"
+        },
+        "actor": {
+          "description": "Drawn as a stick figure rather than a box. An actor lifeline is the one outside the system.",
+          "type": "boolean"
+        }
+      }
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from", "to", "name", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "kind": {
+          "description": "sync blocks the sender, async does not, reply returns from a sync call, create brings a lifeline into existence and destroy ends it.",
+          "enum": ["sync", "async", "reply", "create", "destroy"]
+        },
+        "note": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "activation": {
+      "description": "One execution on a lifeline, spanning from the message that starts it to the message that ends it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "lifeline", "start", "end"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "lifeline": { "$ref": "#/$defs/id" },
+        "start": {
+          "description": "Message id. validate refuses an activation whose start comes after its end in the messages array.",
+          "$ref": "#/$defs/id"
+        },
+        "end": { "$ref": "#/$defs/id" }
+      }
+    },
+    "fragment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "operands"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["alt", "opt", "loop", "par", "critical", "break", "strict", "seq"] },
+        "operands": {
+          "description": "alt has one operand per branch; opt, loop, critical and break have exactly one. Each operand names the messages it covers.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["messages"],
+            "properties": {
+              "guard": { "type": "string", "maxLength": 200 },
+              "messages": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/id" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "stateModel": {
+      "description": "UML state machine vocabulary: states including pseudostates, and transitions carrying trigger, guard and effect.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["states", "transitions"],
+      "properties": {
+        "states": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/state" }
+        },
+        "transitions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/transition" }
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/name" },
+        "kind": {
+          "description": "simple and composite are real states; the rest are pseudostates. A composite state is the parent of the states nested in it.",
+          "enum": ["simple", "composite", "initial", "final", "choice", "junction", "history"]
+        },
+        "parent": {
+          "description": "Names a state of kind composite. Absent for a top-level state.",
+          "$ref": "#/$defs/id"
+        },
+        "entry": { "type": "string", "maxLength": 300 },
+        "exit": { "type": "string", "maxLength": 300 },
+        "activity": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "transition": {
+      "description": "Reads as trigger [guard] / effect. All three are optional: a transition with none is taken as soon as its source state completes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from", "to"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "trigger": { "type": "string", "maxLength": 200 },
+        "guard": { "type": "string", "maxLength": 200 },
+        "effect": { "type": "string", "maxLength": 200 }
+      }
+    },
+
+    "usecaseModel": {
+      "description": "UML use case vocabulary: a system boundary, the actors outside it, the use cases inside it, and the associations, includes and extends between them.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "actors", "usecases", "associations"],
+      "properties": {
+        "system": {
+          "description": "The boundary. Every use case listed below sits inside it and every actor sits outside it; that placement is the model's claim and stage 4 must honour it.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "name"],
+          "properties": {
+            "id": { "$ref": "#/$defs/id" },
+            "name": { "$ref": "#/$defs/name" }
+          }
+        },
+        "actors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "name": { "$ref": "#/$defs/name" },
+              "kind": {
+                "description": "primary actors start a use case; secondary actors are called on by one.",
+                "enum": ["primary", "secondary"]
+              }
+            }
+          }
+        },
+        "usecases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "name": { "$ref": "#/$defs/name" },
+              "description": { "type": "string", "maxLength": 1000 }
+            }
+          }
+        },
+        "associations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "actor", "usecase"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "actor": { "$ref": "#/$defs/id" },
+              "usecase": { "$ref": "#/$defs/id" }
+            }
+          }
+        },
+        "includes": {
+          "description": "from always performs to. Both must name declared use cases.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "from", "to"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "from": { "$ref": "#/$defs/id" },
+              "to": { "$ref": "#/$defs/id" }
+            }
+          }
+        },
+        "extends": {
+          "description": "from may add behaviour to to, under condition, at extensionPoint. The arrow points from the extending use case to the extended one, which is the direction UML defines and the one most often drawn backwards.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "from", "to"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "from": { "$ref": "#/$defs/id" },
+              "to": { "$ref": "#/$defs/id" },
+              "extensionPoint": { "type": "string", "maxLength": 200 },
+              "condition": { "type": "string", "maxLength": 300 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
