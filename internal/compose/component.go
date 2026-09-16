@@ -387,7 +387,11 @@ func composeLevel(l plannedLevel, t *componentTree, relationships []relationship
 	}
 	sort.Slice(connections, func(i, j int) bool { return connections[i].ID < connections[j].ID })
 
-	boxes := placeBoxes(l, t, regionOf, dropped)
+	adjacency := make([][2]string, 0, len(connections))
+	for _, c := range connections {
+		adjacency = append(adjacency, [2]string{c.From, c.To})
+	}
+	boxes := placeBoxes(l, t, regionOf, dropped, adjacency)
 	grid := gridFor(len(boxes))
 
 	regions := make([]diagram.Region, 0, len(l.regions))
@@ -416,15 +420,10 @@ func composeLevel(l plannedLevel, t *componentTree, relationships []relationship
 // every run. Which cell a box lands in is deliberately simple: the rules that
 // decide what to draw are the contract, and the ones that decide where to put
 // it are free to improve without breaking anything.
-func placeBoxes(l plannedLevel, t *componentTree, regionOf map[string]string, dropped map[string][]diagram.DroppedRelationship) []diagram.Box {
-	ordered := append([]string(nil), l.members...)
-	sort.Slice(ordered, func(i, j int) bool {
-		ri, rj := regionOf[ordered[i]], regionOf[ordered[j]]
-		if ri != rj {
-			return ri < rj
-		}
-		return ordered[i] < ordered[j]
-	})
+func placeBoxes(l plannedLevel, t *componentTree, regionOf map[string]string, dropped map[string][]diagram.DroppedRelationship, adjacency [][2]string) []diagram.Box {
+	sorted := append([]string(nil), l.members...)
+	sort.Strings(sorted)
+	ordered := orderByAdjacency(sorted, adjacency, func(id string) string { return regionOf[id] })
 
 	grid := gridFor(len(ordered))
 	placed := make(map[string][2]int, len(ordered))

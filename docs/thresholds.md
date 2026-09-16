@@ -53,7 +53,7 @@ defended rather than merely recorded.
 - **`separation` = 8px.** How far a route keeps from a box it is not attached
   to. Closer, and at ordinary zoom the line and the box border merge into one
   stroke, which says the two are connected when they are not.
-- **`labelClearance` = 10px.** How far a connection's text stays from another
+- **`LabelClearance` = 10px.** How far a connection's text stays from another
   route. A label is read as belonging to the nearest line, so this is the
   distance at which "nearest" stops being ambiguous. It is larger than
   separation because text has height of its own.
@@ -70,6 +70,57 @@ The last point is worth stating plainly, because it is the trap. The router and
 the rules are two halves of one design. A channel too narrow for its lanes does
 not draw a worse diagram; it draws nothing, and every relationship lands in the
 record instead.
+
+### `drawnFloor` = 0.80
+
+The share of a model's relationships a drawing must actually show.
+
+This one is measured rather than inherited, and it is the only number here with
+a before and after.
+
+The accounting invariant says nothing about this. A page that draws one
+relationship and records nine is perfectly consistent and perfectly useless, so
+the ratio is measured separately and held above a floor.
+
+**A floor, not an equality.** The rules that decide what to draw are the
+contract; the ones that decide where to put things are free to improve. Freezing
+the ratio would turn every layout improvement into a failing test, which is how
+a tuning knob becomes an API.
+
+What the layout scored before the placement work, and after:
+
+| | before | after |
+|---|---|---|
+| state / diagrammer | 22.2% | 88.9% |
+| usecase / diagrammer | 57.1% | 85.7% |
+| state / order-service | 57.1% | 85.7% |
+| component / order-service | 75.0% | 100% |
+| usecase / order-service | 80.0% | 100% |
+| component / diagrammer | 85.7% | 100% |
+| component / nested-platform | 100% | 100% |
+| sequence, both fixtures | 100% | 100% |
+
+Three changes account for it, in the order they were made and measured:
+
+1. **Placement follows the relationships.** Boxes used to be laid out in sorted
+   id order, which ignores the lines entirely: two things that talk to each
+   other constantly could land at opposite corners, and the route between them
+   then crossed the whole page. Arranging connected things next to each other
+   was the single largest cause.
+2. **A label goes where there is room.** It used to go to the middle of its
+   route's longest run and stay there; if anything passed close to that one
+   point, the relationship was refused for want of a few pixels on a line with
+   plenty of other places to write on.
+3. **Boxes one above the other spread across their facing edges.** A route
+   between them runs straight down, so a lane taken in the channel moved
+   nothing: two relationships between the same pair came out as one line drawn
+   twice.
+
+The floor is 0.80 because the worst case after the work is 0.857, and a floor
+should sit below what the code achieves rather than at it — a floor equal to the
+current score fails on the next fixture that is merely a little harder. It is
+not a target: three of the nine cases are below 100% and each has a concrete
+reason recorded in its page.
 
 ## Not in use yet
 

@@ -86,8 +86,14 @@ func svgFor(scene artifact.Scene) string {
 		if r.LabelText == "" {
 			continue
 		}
+		// x and y are the label's own position, and the lift off the line is a
+		// dy. A reader of the artifact needs to know where the label is, and
+		// baking the visual offset into y would mean it read back six pixels
+		// from where the renderer decided to put it — enough to flip a
+		// clearance verdict that was measured against ten.
 		b.WriteString(`  <text class="edge-label" ` + attrEdgeLabelFor + `="` + esc(r.ID) +
-			`" x="` + num(r.LabelAt.X) + `" y="` + num(r.LabelAt.Y-6) + `">` + esc(r.LabelText) + `</text>` + "\n")
+			`" x="` + num(r.LabelAt.X) + `" y="` + num(r.LabelAt.Y) + `" dy="-6">` +
+			esc(r.LabelText) + `</text>` + "\n")
 	}
 
 	b.WriteString("</svg>")

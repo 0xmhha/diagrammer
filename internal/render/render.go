@@ -92,6 +92,11 @@ func buildScene(family diagram.Family, level diagram.Level) (artifact.Scene, []D
 		scene.Routes = append(scene.Routes, toArtifactRoute(p))
 	}
 
+	// Labels are placed before the rules are consulted, so a relationship is
+	// only refused when there is nowhere on its route to write on, rather than
+	// when the middle happens to be taken.
+	placeLabels(&scene)
+
 	var drops []Drop
 	// A route with no lane left never became a line at all, so it is recorded
 	// before the rules are consulted: there is nothing for them to judge.

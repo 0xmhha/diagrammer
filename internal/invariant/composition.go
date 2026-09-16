@@ -38,9 +38,14 @@ const (
 	// separation is how far a route keeps from a box it is not attached to.
 	// Closer than this and the line looks joined to it.
 	separation = 8
-	// labelClearance is how far a connection's text stays from a route that is
+	// LabelClearance is how far a connection's text stays from a route that is
 	// not its own, so a reader cannot attach the label to the wrong line.
-	labelClearance = 10
+	//
+	// Exported because the renderer places labels against the same number. Two
+	// copies of it would let the placer aim at one distance while the rule
+	// tested another, and the difference would only show as relationships the
+	// drawing could not hold.
+	LabelClearance = 10
 	// borderRun is how long a route may travel alongside a band's border
 	// before it reads as tracing the border instead of crossing it.
 	borderRun = 24
@@ -273,8 +278,8 @@ next:
 				continue
 			}
 			for i := 0; i+1 < len(other.Points); i++ {
-				if pointSegmentDistance(r.LabelAt, other.Points[i], other.Points[i+1]) < labelClearance {
-					add(r.ID, RuleLabelClear, "its label sits within %dpx of %s", labelClearance, other.ID)
+				if pointSegmentDistance(r.LabelAt, other.Points[i], other.Points[i+1]) < LabelClearance {
+					add(r.ID, RuleLabelClear, "its label sits within %dpx of %s", LabelClearance, other.ID)
 					continue next
 				}
 			}
