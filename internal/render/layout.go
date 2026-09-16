@@ -21,9 +21,14 @@ const (
 
 	// Channels are the space routes travel in. Nothing is routed through a
 	// cell that is not an endpoint, so they have to be wide enough to hold
-	// several lanes side by side.
+	// several lanes side by side. These two are the smallest a channel gets;
+	// one that more routes want is widened to hold them.
 	channelX = 112
 	channelY = 96
+	// channelMaxLanes is the most lanes a channel is widened to hold. Past it
+	// the page is mostly empty channel, and the routes that do not fit are
+	// refused and recorded as usual.
+	channelMaxLanes = 12
 	// laneGap keeps two routes sharing a channel far enough apart to read as
 	// two lines rather than one thick one.
 	laneGap = 14
@@ -86,40 +91,110 @@ type placedRegion struct {
 	rect
 }
 
+// channel is one gap between cells, with the number of routes it can hold.
+// The two travel together because a caller that knows where a channel is and
+// not how full it may get would have to look the second answer up somewhere
+// else, and the two answers come from the same measurement.
+type channel struct {
+	centre float64
+	lanes  int
+}
+
 // grid holds where each row and column starts, so a route can find the channel
 // beside a cell without recomputing the layout.
+//
+// Channels are not all one size. gapW[c] is the vertical channel to the left of
+// column c and gapH[r] the horizontal channel above row r, each with one more
+// entry past the last cell for the channel on the far side.
 type grid struct {
 	colX   []float64 // left edge of each column's cell
 	colW   []float64
+	gapW   []float64
 	rowY   []float64
 	rowH   []float64
+	gapH   []float64
 	width  float64
 	height float64
 }
 
-// channelLeftOf returns the centre of the vertical channel to the left of a
-// column. Column zero has the left margin, which is a channel too.
-func (g *grid) channelLeftOf(col int) float64 {
-	if col == 0 {
-		return g.colX[0] - channelX/2
+// channelLeftOf returns the vertical channel to the left of a column. Column
+// zero has the left margin, which is a channel too.
+func (g *grid) channelLeftOf(col int) channel {
+	left := g.colX[0] - g.gapW[0]
+	if col > 0 {
+		left = g.colX[col-1] + g.colW[col-1]
 	}
-	prev := g.colX[col-1] + g.colW[col-1]
-	return prev + (g.colX[col]-prev)/2
+	return channel{centre: left + g.gapW[col]/2, lanes: lanesPerChannel(g.gapW[col])}
 }
 
-func (g *grid) channelAbove(row int) float64 {
-	if row == 0 {
-		return g.rowY[0] - channelY/2
+func (g *grid) channelAbove(row int) channel {
+	top := g.rowY[0] - g.gapH[0]
+	if row > 0 {
+		top = g.rowY[row-1] + g.rowH[row-1]
 	}
-	prev := g.rowY[row-1] + g.rowH[row-1]
-	return prev + (g.rowY[row]-prev)/2
+	return channel{centre: top + g.gapH[row]/2, lanes: lanesPerChannel(g.gapH[row])}
 }
 
-func (g *grid) channelBelow(row int) float64 {
-	if row >= len(g.rowY)-1 {
-		return g.rowY[row] + g.rowH[row] + channelY/2
+func (g *grid) channelBelow(row int) channel {
+	top := g.rowY[row] + g.rowH[row]
+	return channel{centre: top + g.gapH[row+1]/2, lanes: lanesPerChannel(g.gapH[row+1])}
+}
+
+// channelSizes decides how wide each channel is from how many routes will use
+// it.
+//
+// Sizing every channel alike is sizing them for the average, and a hub is where
+// the average stops being a guide: a component nine others depend on puts nine
+// routes in one channel and none in its neighbours. The counting reads the
+// cells the connections join, never a pixel, which is what lets it run before
+// the pixels exist.
+//
+// The plain size is the floor, so a page with nothing crowded looks as it
+// always did, and channelMaxLanes is the ceiling. A route that still finds its
+// channel full is refused and recorded, as it was before.
+func channelSizes(level diagram.Level, cols, rows int) (vertical, horizontal []float64) {
+	cell := make(map[string][2]int, len(level.Boxes))
+	for _, b := range level.Boxes {
+		cell[b.ID] = [2]int{clamp(b.Row, rows), clamp(b.Col, cols)}
 	}
-	return g.channelAbove(row + 1)
+
+	wantV, wantH := make([]int, cols+1), make([]int, rows+1)
+	for _, c := range level.Connections {
+		from, ok := cell[c.From]
+		if !ok {
+			continue
+		}
+		to, ok := cell[c.To]
+		if !ok {
+			continue
+		}
+		v, h := channelsWanted(from[0], from[1], to[0], to[1])
+		for _, i := range v {
+			wantV[i]++
+		}
+		for _, i := range h {
+			wantH[i]++
+		}
+	}
+
+	vertical = make([]float64, cols+1)
+	for i, n := range wantV {
+		vertical[i] = sizeForLanes(channelX, n)
+	}
+	horizontal = make([]float64, rows+1)
+	for i, n := range wantH {
+		horizontal[i] = sizeForLanes(channelY, n)
+	}
+	return vertical, horizontal
+}
+
+// sizeForLanes inverts lanesPerChannel: the size at which a channel holds n
+// lanes, held between the plain size and the ceiling.
+func sizeForLanes(base float64, n int) float64 {
+	if n > channelMaxLanes {
+		n = channelMaxLanes
+	}
+	return math.Max(base, 2*stub+float64(n)*laneGap)
 }
 
 // layOut turns a level's cells into pixels.
@@ -152,26 +227,29 @@ func layOut(family diagram.Family, level diagram.Level) ([]placedBox, []placedRe
 		}
 	}
 
+	gapW, gapH := channelSizes(level, cols, rows)
 	g := &grid{
 		colX: make([]float64, cols),
 		colW: colWidth,
+		gapW: gapW,
 		rowY: make([]float64, rows),
 		rowH: make([]float64, rows),
+		gapH: gapH,
 	}
-	x := float64(margin + channelX)
+	x := margin + gapW[0]
 	for c := range cols {
 		g.colX[c] = x
-		x += colWidth[c] + channelX
+		x += colWidth[c] + gapW[c+1]
 	}
-	g.width = x - channelX + channelX + margin
+	g.width = x + margin
 
-	y := float64(margin + channelY)
+	y := margin + gapH[0]
 	for r := range rows {
 		g.rowY[r] = y
 		g.rowH[r] = boxHeight
-		y += boxHeight + channelY
+		y += boxHeight + gapH[r+1]
 	}
-	g.height = y - channelY + channelY + margin
+	g.height = y + margin
 
 	boxes := make([]placedBox, 0, len(level.Boxes))
 	for _, b := range level.Boxes {

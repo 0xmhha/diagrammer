@@ -266,6 +266,16 @@ equals proven at each stage.
 That is also why stage 4 has drop reasons stage 3 does not. A grid that cannot
 route a line is a geometric problem, and geometry lives here.
 
+A drop being permitted is not the same as a drop being right, and one class of
+them turned out to be avoidable. Channels used to be one size everywhere, which
+is one size for the average, and a hub is where the average stops being a guide:
+every component depending on one box sends its route through the same channel
+while the neighbouring channels sit empty. Channels are now sized from the
+routes that will use them, which is what `channelsWanted` in
+`internal/render/route.go` is for. It came out of comparing two real projects,
+and `docs/thresholds.md` has the measurements and the ceiling that widening
+stops at.
+
 ### Floating point (round 4)
 
 The premise of this round was withdrawn; its measurements were not.

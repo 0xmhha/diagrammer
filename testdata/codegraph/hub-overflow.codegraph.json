@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Hub past what one channel holds",
+    "subtitle": "Sixteen components on one, which is more than a channel is widened to carry"
+  },
+  "provenance": {
+    "origin": "handwritten",
+    "note": "The companion to hub.codegraph.json. That one fits once channels follow demand; this one does not, and exists so the ceiling on that widening is seen to fire. A ceiling never observed refusing anything is indistinguishable from one never written."
+  },
+  "families": [
+    "component"
+  ],
+  "component": {
+    "components": [
+      {
+        "id": "hub",
+        "name": "Shared",
+        "stereotype": "hub",
+        "ports": [
+          {
+            "id": "hub.p.geo",
+            "kind": "provided",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s00",
+        "name": "Spoke 00",
+        "ports": [
+          {
+            "id": "s00.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s01",
+        "name": "Spoke 01",
+        "ports": [
+          {
+            "id": "s01.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s02",
+        "name": "Spoke 02",
+        "ports": [
+          {
+            "id": "s02.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s03",
+        "name": "Spoke 03",
+        "ports": [
+          {
+            "id": "s03.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s04",
+        "name": "Spoke 04",
+        "ports": [
+          {
+            "id": "s04.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s05",
+        "name": "Spoke 05",
+        "ports": [
+          {
+            "id": "s05.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s06",
+        "name": "Spoke 06",
+        "ports": [
+          {
+            "id": "s06.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s07",
+        "name": "Spoke 07",
+        "ports": [
+          {
+            "id": "s07.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s08",
+        "name": "Spoke 08",
+        "ports": [
+          {
+            "id": "s08.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s09",
+        "name": "Spoke 09",
+        "ports": [
+          {
+            "id": "s09.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s10",
+        "name": "Spoke 10",
+        "ports": [
+          {
+            "id": "s10.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s11",
+        "name": "Spoke 11",
+        "ports": [
+          {
+            "id": "s11.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s12",
+        "name": "Spoke 12",
+        "ports": [
+          {
+            "id": "s12.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s13",
+        "name": "Spoke 13",
+        "ports": [
+          {
+            "id": "s13.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s14",
+        "name": "Spoke 14",
+        "ports": [
+          {
+            "id": "s14.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s15",
+        "name": "Spoke 15",
+        "ports": [
+          {
+            "id": "s15.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      }
+    ],
+    "interfaces": [
+      {
+        "id": "Geometry",
+        "name": "Geometry",
+        "operations": [
+          {
+            "name": "route",
+            "signature": "route(relations)"
+          }
+        ]
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "dep.s00",
+        "from": "s00",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s01",
+        "from": "s01",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s02",
+        "from": "s02",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s03",
+        "from": "s03",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s04",
+        "from": "s04",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s05",
+        "from": "s05",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s06",
+        "from": "s06",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s07",
+        "from": "s07",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s08",
+        "from": "s08",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s09",
+        "from": "s09",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s10",
+        "from": "s10",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s11",
+        "from": "s11",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s12",
+        "from": "s12",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s13",
+        "from": "s13",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s14",
+        "from": "s14",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s15",
+        "from": "s15",
+        "to": "hub",
+        "kind": "use"
+      }
+    ]
+  }
+}

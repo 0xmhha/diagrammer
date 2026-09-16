@@ -65,11 +65,56 @@ defended rather than merely recorded.
   each edge is what keeps the turn into the outermost lane longer than
   `minSegment`. These four are one decision rather than four: changing any of
   them without the others makes the router produce routes its own rules refuse.
+- **`channelMaxLanes` = 12.** The most lanes a channel is widened to hold. The
+  two channel sizes above are now the smallest a channel gets rather than the
+  size it always is; a channel more routes want is widened to `2*stub + n*laneGap`
+  until it reaches this. See the hub section below for where the number came
+  from.
 
-The last point is worth stating plainly, because it is the trap. The router and
-the rules are two halves of one design. A channel too narrow for its lanes does
-not draw a worse diagram; it draws nothing, and every relationship lands in the
-record instead.
+The last point but one is worth stating plainly, because it is the trap. The
+router and the rules are two halves of one design. A channel too narrow for its
+lanes does not draw a worse diagram; it draws nothing, and every relationship
+lands in the record instead.
+
+### Channels follow demand, up to `channelMaxLanes`
+
+One size for every channel is one size for the average, and comparing two real
+projects is what showed where the average stops being a guide.
+
+The diagrammer model is layered: what depends on what runs mostly in one
+direction and no component collects many dependents. Its busiest component has
+two. archify is hub-and-spoke: `renderers/shared` has nine dependents and a
+`Geometry` interface has six. Nine routes head for one box, so nine of them want
+the same channel, and a channel of 96px holds `(96 - 40) / 14` = four. The other
+five were recorded rather than drawn, and the neighbouring channels sat empty.
+
+So each channel is now sized from the routes that will use it. The count reads
+the cells stage 3 assigned, never a pixel, which is what lets it run before the
+pixels exist; `channelsWanted` in `route.go` is the one place that knows which
+channels a route wants, and both the sizing and the router read it.
+
+| | before | after |
+|---|---|---|
+| component / hub (fixture, 8 dependents) | 10/16 | 16/16 |
+| component / archify, all levels | 13/18 | 15/18 |
+| component / diagrammer | 14/14 | 14/14 |
+
+Every drop that said "no lane left" is gone. What archify still loses is three
+crossings, which is a different cause and not addressed here.
+
+**Why 12 and not more.** The widening has to stop somewhere, or one
+over-connected box turns a page into mostly empty channel. The ceiling sits
+above every demand that has actually been measured: archify's busiest channel
+asks for six lanes, and the hub fixture, which was written to be the bad case,
+asks for eight. Nothing observed is refused by the ceiling; it is there for a
+model nobody has produced yet.
+
+That leaves a ceiling nothing hits, which is a rule that may as well not exist.
+`testdata/codegraph/hub-overflow.codegraph.json` puts sixteen components on one
+and is drawn 22 of 32, with ten refused for want of a lane.
+`TestTheChannelCeilingRefusesInTheOpen` is what proves the limit still fires. It
+is deliberately past the limit and so is not in the drawn-ratio table, which
+asks a different question: whether ordinary models are drawn well.
 
 ### `drawnFloor` = 0.80
 

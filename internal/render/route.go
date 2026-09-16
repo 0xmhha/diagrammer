@@ -88,10 +88,32 @@ func (r *router) route(c diagram.Connection) (routed, error) {
 	switch {
 	case from.Row == to.Row && abs(from.Col-to.Col) == 1:
 		return r.straight(c, from, to)
+	case abs(from.Row-to.Row) == 1 && from.Col == to.Col:
+		return r.stacked(c, from, to)
 	case abs(from.Row-to.Row) == 1:
 		return r.overOneRow(c, from, to)
 	default:
 		return r.detour(c, from, to)
+	}
+}
+
+// channelsWanted names the channels a route between two cells will travel in,
+// as indices into the grid's gaps.
+//
+// It reads the cells rather than the pixels, which is what lets the channels be
+// sized before any of them exists. Its four cases are route's four cases in the
+// same order, and they have to stay that way: a channel sized for fewer routes
+// than arrive refuses them, which is the failure this exists to prevent.
+func channelsWanted(fromRow, fromCol, toRow, toCol int) (vertical, horizontal []int) {
+	switch {
+	case fromRow == toRow && abs(fromCol-toCol) == 1:
+		return nil, nil // side by side, and the lane sits on the facing edges
+	case abs(fromRow-toRow) == 1 && fromCol == toCol:
+		return nil, nil // one above the other, and likewise
+	case abs(fromRow-toRow) == 1:
+		return nil, []int{max(fromRow, toRow)}
+	default:
+		return []int{toCol}, []int{fromRow + 1, toRow}
 	}
 }
 
@@ -124,6 +146,31 @@ func (r *router) straight(c diagram.Connection, from, to placedBox) (routed, err
 	return finish(c, []point{start, end}, fromSide, toSide), nil
 }
 
+// stacked joins two boxes one above the other, in the same column.
+//
+// The lane goes across their facing edges rather than along the channel. A
+// route between them runs straight down, so its horizontal legs have no length
+// and a lane taken in the channel moves nothing: two relationships between the
+// same pair came out as one line drawn twice, and a label on either sat exactly
+// on the other.
+func (r *router) stacked(c diagram.Connection, from, to placedBox) (routed, error) {
+	downward := to.Row > from.Row
+	fromSide, toSide := sideBottom, sideTop
+	if !downward {
+		fromSide, toSide = sideTop, sideBottom
+	}
+	lane, err := r.takeEdge(from.ID+"|"+to.ID, math.Min(from.W, to.W))
+	if err != nil {
+		return routed{}, err
+	}
+	x := from.centerX() + lane
+	start, end := point{X: x, Y: from.bottom()}, point{X: x, Y: to.Y}
+	if !downward {
+		start, end = point{X: x, Y: from.Y}, point{X: x, Y: to.bottom()}
+	}
+	return finish(c, []point{start, end}, fromSide, toSide), nil
+}
+
 // overOneRow joins boxes in neighbouring rows through the single channel
 // between them.
 //
@@ -132,31 +179,13 @@ func (r *router) straight(c diagram.Connection, from, to placedBox) (routed, err
 func (r *router) overOneRow(c diagram.Connection, from, to placedBox) (routed, error) {
 	downward := to.Row > from.Row
 	fromSide, toSide := sideBottom, sideTop
-	channel := r.grid.channelBelow(from.Row)
+	ch := r.grid.channelBelow(from.Row)
 	if !downward {
 		fromSide, toSide = sideTop, sideBottom
-		channel = r.grid.channelAbove(from.Row)
+		ch = r.grid.channelAbove(from.Row)
 	}
 
-	// Boxes one above the other need the lane across their facing edges rather
-	// than along the channel. A route between them runs straight down, so its
-	// horizontal legs have no length and a lane taken in the channel moves
-	// nothing: two relationships between the same pair came out as one line
-	// drawn twice, and a label on either sat exactly on the other.
-	if near(from.centerX(), to.centerX()) {
-		lane, err := r.takeEdge(from.ID+"|"+to.ID, math.Min(from.W, to.W))
-		if err != nil {
-			return routed{}, err
-		}
-		x := from.centerX() + lane
-		start, end := point{X: x, Y: from.bottom()}, point{X: x, Y: to.Y}
-		if !downward {
-			start, end = point{X: x, Y: from.Y}, point{X: x, Y: to.bottom()}
-		}
-		return finish(c, []point{start, end}, fromSide, toSide), nil
-	}
-
-	lane, err := r.takeHorizontal(channel)
+	lane, err := r.takeHorizontal(ch)
 	if err != nil {
 		return routed{}, err
 	}
@@ -217,22 +246,22 @@ func (r *router) takeEdge(pair string, height float64) (float64, error) {
 }
 
 // takeVertical hands out the next free lane in a vertical channel.
-func (r *router) takeVertical(centre float64) (float64, error) {
-	used := r.takenV[centre]
-	if used >= lanesPerChannel(channelX) {
+func (r *router) takeVertical(ch channel) (float64, error) {
+	used := r.takenV[ch.centre]
+	if used >= ch.lanes {
 		return 0, &laneFail{channel: "vertical"}
 	}
-	r.takenV[centre] = used + 1
-	return centre + laneOffset(used), nil
+	r.takenV[ch.centre] = used + 1
+	return ch.centre + laneOffset(used), nil
 }
 
-func (r *router) takeHorizontal(centre float64) (float64, error) {
-	used := r.takenH[centre]
-	if used >= lanesPerChannel(channelY) {
+func (r *router) takeHorizontal(ch channel) (float64, error) {
+	used := r.takenH[ch.centre]
+	if used >= ch.lanes {
 		return 0, &laneFail{channel: "horizontal"}
 	}
-	r.takenH[centre] = used + 1
-	return centre + laneOffset(used), nil
+	r.takenH[ch.centre] = used + 1
+	return ch.centre + laneOffset(used), nil
 }
 
 // laneOffset spreads lanes outward from the channel's centre, alternating
