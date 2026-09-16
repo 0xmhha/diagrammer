@@ -13,7 +13,7 @@ GO          ?= go
 GOLANGCI    := golangci-lint
 
 .DEFAULT_GOAL := build
-.PHONY: build test race cover fmt fmt-check vet lint tidy clean install run linux check verify fixtures
+.PHONY: build test race cover fmt fmt-check vet lint tidy clean install run linux check verify fixtures vendor-check
 
 ## build: compile the binary for this machine
 build:
@@ -40,11 +40,13 @@ fmt:
 
 ## fmt-check: fail if anything is unformatted, rather than fixing it
 #
-# testdata is excluded on purpose. The Go files under it are fixture input
-# rather than code this project maintains, and one of them is deliberately
-# malformed so the analyzer has a parse failure to report.
+# testdata and vendor are excluded on purpose. The Go files under testdata are
+# fixture input rather than code this project maintains, and one of them is
+# deliberately malformed so the analyzer has a parse failure to report. The ones
+# under vendor belong to somebody else and are not ours to reformat.
 fmt-check:
-	@unformatted=$$(gofmt -l $$(find . -name '*.go' -not -path './testdata/*' -not -path './bin/*')); \
+	@unformatted=$$(gofmt -l $$(find . -name '*.go' \
+		-not -path './testdata/*' -not -path './vendor/*' -not -path './bin/*')); \
 	if [ -n "$$unformatted" ]; then \
 		echo "these files are not gofmt'd:"; \
 		echo "$$unformatted"; \
@@ -62,12 +64,32 @@ lint:
 		|| { echo "$(GOLANGCI) not installed: brew install golangci-lint"; exit 1; }
 	$(GOLANGCI) run
 
-## tidy: reconcile go.mod and go.sum with the imports
+## tidy: reconcile go.mod, go.sum and vendor/ with the imports
+#
+# vendor/ is committed so that `make verify` needs no network, which is what
+# the release gate asks for. It has to be regenerated whenever a dependency
+# changes, and `make verify` fails if it is stale.
 tidy:
 	$(GO) mod tidy
+	$(GO) mod vendor
 
 ## check: what must pass before a commit
 check: fmt vet test
+
+## vendor-check: fail if vendor/ has drifted from go.mod
+#
+# The gate depends on vendor/ being complete, so a stale one would turn an
+# offline machine's build failure into somebody else's afternoon.
+vendor-check:
+	@$(GO) mod verify >/dev/null
+	@if [ ! -d vendor ]; then \
+		echo "vendor/ is missing; run 'make tidy'"; \
+		exit 1; \
+	fi
+	@$(GO) list -mod=vendor ./... >/dev/null 2>&1 || { \
+		echo "vendor/ does not satisfy the imports; run 'make tidy'"; \
+		exit 1; \
+	}
 
 ## fixtures: run the shipped binary over every committed fixture
 #
@@ -142,7 +164,7 @@ fixtures: build
 # Green here is what authorises a tag, and it is the only automated gate. It
 # must run offline on a clean macOS machine with only Go and make installed;
 # anything it needs that such a machine lacks is a defect, not a prerequisite.
-verify: fmt-check vet test fixtures
+verify: vendor-check fmt-check vet test fixtures
 	@echo "verify: ok"
 
 ## install: put the binary on PATH via GOBIN

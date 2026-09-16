@@ -51,12 +51,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Go modules compiled into the binary
+## Go modules vendored into this repository
 
-The table above records material copied into this repository. The modules below
-are not in the repository, but they are compiled into the binary that ships, and
-every one of their licences requires the notice to travel with a distribution.
-They are listed here for that reason.
+These are in the repository, under `vendor/`, as well as compiled into the
+binary that ships. Both facts oblige attribution, and every one of their
+licences requires the notice to travel with a copy.
+
+They are vendored rather than fetched because the release gate is defined as
+running on a clean machine with no network. `go build` would otherwise reach for
+the module proxy, which is exactly the kind of prerequisite that definition
+exists to forbid. Each module keeps its own `LICENSE` file where it sits.
 
 Versions are the ones `go.mod` pins. All of these licences are permissive and
 none of them restricts what this project may do; the obligation is attribution.
@@ -88,7 +92,8 @@ has to be attributed, not what runs.
 
 This table is regenerated rather than remembered. `go list -deps ./cmd/diagrammer`
 names every package the binary links, and anything new in that list belongs here
-in the same commit that adds it.
+in the same commit that adds it. `make tidy` regenerates `vendor/` alongside it,
+and `make verify` refuses to run against a stale one.
 
 ## No affiliation
 
