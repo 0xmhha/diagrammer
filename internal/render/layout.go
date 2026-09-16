@@ -28,7 +28,7 @@ const (
 	// channelMaxLanes is the most lanes a channel is widened to hold. Past it
 	// the page is mostly empty channel, and the routes that do not fit are
 	// refused and recorded as usual.
-	channelMaxLanes = 12
+	channelMaxLanes = 24
 	// laneGap keeps two routes sharing a channel far enough apart to read as
 	// two lines rather than one thick one.
 	laneGap = 14

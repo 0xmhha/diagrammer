@@ -65,7 +65,7 @@ defended rather than merely recorded.
   each edge is what keeps the turn into the outermost lane longer than
   `minSegment`. These four are one decision rather than four: changing any of
   them without the others makes the router produce routes its own rules refuse.
-- **`channelMaxLanes` = 12.** The most lanes a channel is widened to hold. The
+- **`channelMaxLanes` = 24.** The most lanes a channel is widened to hold. The
   two channel sizes above are now the smallest a channel gets rather than the
   size it always is; a channel more routes want is widened to `2*stub + n*laneGap`
   until it reaches this. See the hub section below for where the number came
@@ -102,16 +102,44 @@ channels a route wants, and both the sizing and the router read it.
 Every drop that said "no lane left" is gone. What archify still loses is three
 crossings, which is a different cause and not addressed here.
 
-**Why 12 and not more.** The widening has to stop somewhere, or one
-over-connected box turns a page into mostly empty channel. The ceiling sits
-above every demand that has actually been measured: archify's busiest channel
-asks for six lanes, and the hub fixture, which was written to be the bad case,
-asks for eight. Nothing observed is refused by the ceiling; it is there for a
-model nobody has produced yet.
+**Why 24.** The first answer here was 12, justified as sitting above every
+demand measured. That justification was wrong, and it was wrong because only the
+committed fixtures had been measured. Running the analyser over fifteen
+repositories in the neighbouring tree and grouping each one the way archify's
+`analyze` groups, package by package, gives this:
 
-That leaves a ceiling nothing hits, which is a rule that may as well not exist.
-`testdata/codegraph/hub-overflow.codegraph.json` puts sixteen components on one
-and is drawn 22 of 32, with ten refused for want of a lane.
+| model | relationships on the level | widest horizontal channel |
+|---|---|---|
+| ego-lite | 8 | 3 |
+| mythril | 9 | 5 |
+| archify | 25 | 10 |
+| diagrammer | 28 | 14 |
+| OpenMMO | 63 | 35 |
+| cmux | 531 | 172 |
+| claude-code-reference | 2,842 | 505 |
+
+There is no number that sits above all of it. Demand grows with the model and
+has no bound, so a ceiling chosen to clear every case is a ceiling that does not
+exist. A ceiling of 12 also refused this repository's own model, which is the
+plainest possible sign the number was picked from too little.
+
+What the ceiling has to do instead is not refuse a model worth drawing. The
+table has a gap in it: everything that fits on one page at all asks for under
+fifteen lanes, and everything above that is dense all over rather than
+hub-shaped. Widening a channel does not rescue a page with five hundred
+relationships on it; nothing does, and the honest answer there is that stage 2
+put too much on one level.
+
+24 sits above that band and is also `expandedMaxBoxes`, the most boxes the
+composer will unfold onto a page. On such a page one box can collect at most
+23 others, so a hub the composer itself created can never exceed the ceiling.
+That tie is partial and worth saying so: `expandedMaxBoxes` bounds unfolded
+levels, not the overview, whose size comes from how many top-level components
+stage 2 declared.
+
+`testdata/codegraph/hub-overflow.codegraph.json` puts thirty components on one,
+past both the ceiling and the page size the composer contemplates, and is drawn
+38 of 60 with twenty-two refused for want of a lane.
 `TestTheChannelCeilingRefusesInTheOpen` is what proves the limit still fires. It
 is deliberately past the limit and so is not in the drawn-ratio table, which
 asks a different question: whether ordinary models are drawn well.

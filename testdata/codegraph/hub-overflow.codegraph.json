@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "meta": {
     "title": "Hub past what one channel holds",
-    "subtitle": "Sixteen components on one, which is more than a channel is widened to carry"
+    "subtitle": "Thirty components on one, which is past both the ceiling and the page size the composer contemplates"
   },
   "provenance": {
     "origin": "handwritten",
-    "note": "The companion to hub.codegraph.json. That one fits once channels follow demand; this one does not, and exists so the ceiling on that widening is seen to fire. A ceiling never observed refusing anything is indistinguishable from one never written."
+    "note": "The companion to hub.codegraph.json. That one fits once channels follow demand; this one does not, and exists so the ceiling on that widening is seen to fire. A ceiling never observed refusing anything is indistinguishable from one never written. The count is above expandedMaxBoxes on purpose: a page this dense is not a hub, it is a page nothing would rescue."
   },
   "families": [
     "component"
@@ -200,6 +200,160 @@
             "interface": "Geometry"
           }
         ]
+      },
+      {
+        "id": "s16",
+        "name": "Spoke 16",
+        "ports": [
+          {
+            "id": "s16.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s17",
+        "name": "Spoke 17",
+        "ports": [
+          {
+            "id": "s17.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s18",
+        "name": "Spoke 18",
+        "ports": [
+          {
+            "id": "s18.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s19",
+        "name": "Spoke 19",
+        "ports": [
+          {
+            "id": "s19.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s20",
+        "name": "Spoke 20",
+        "ports": [
+          {
+            "id": "s20.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s21",
+        "name": "Spoke 21",
+        "ports": [
+          {
+            "id": "s21.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s22",
+        "name": "Spoke 22",
+        "ports": [
+          {
+            "id": "s22.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s23",
+        "name": "Spoke 23",
+        "ports": [
+          {
+            "id": "s23.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s24",
+        "name": "Spoke 24",
+        "ports": [
+          {
+            "id": "s24.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s25",
+        "name": "Spoke 25",
+        "ports": [
+          {
+            "id": "s25.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s26",
+        "name": "Spoke 26",
+        "ports": [
+          {
+            "id": "s26.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s27",
+        "name": "Spoke 27",
+        "ports": [
+          {
+            "id": "s27.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s28",
+        "name": "Spoke 28",
+        "ports": [
+          {
+            "id": "s28.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "s29",
+        "name": "Spoke 29",
+        "ports": [
+          {
+            "id": "s29.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
       }
     ],
     "interfaces": [
@@ -308,6 +462,90 @@
       {
         "id": "dep.s15",
         "from": "s15",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s16",
+        "from": "s16",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s17",
+        "from": "s17",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s18",
+        "from": "s18",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s19",
+        "from": "s19",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s20",
+        "from": "s20",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s21",
+        "from": "s21",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s22",
+        "from": "s22",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s23",
+        "from": "s23",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s24",
+        "from": "s24",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s25",
+        "from": "s25",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s26",
+        "from": "s26",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s27",
+        "from": "s27",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s28",
+        "from": "s28",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.s29",
+        "from": "s29",
         "to": "hub",
         "kind": "use"
       }
