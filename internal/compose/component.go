@@ -352,7 +352,11 @@ func composeLevel(l plannedLevel, t *componentTree, relationships []relationship
 	}
 
 	dropped := make(map[string][]diagram.DroppedRelationship)
-	var connections []diagram.Connection
+	// Built empty rather than nil. A level that draws nothing is a perfectly
+	// ordinary page — a container whose children have no relationships among
+	// them — and a nil slice encodes as null, which the schema refuses. The
+	// difference never shows up until a model has such a level.
+	connections := []diagram.Connection{}
 	accounting := diagram.Accounting{}
 
 	for _, r := range relationships {

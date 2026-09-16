@@ -257,6 +257,13 @@ func crosses(a, b artifact.Route) bool {
 // sitting on another line attaches itself to the wrong relationship, and the
 // reader has no way to tell.
 func checkLabels(scene *artifact.Scene, add func(string, string, string, ...any)) {
+	// One report per label, and every label examined. An earlier version
+	// returned from the whole function at the first finding, which meant a page
+	// with two misplaced labels reported one: the caller dropped that route,
+	// drew the rest, and the check over the emitted artifact then found the
+	// other. A checker has to report everything it can see in one pass, or the
+	// caller acting on its answer is acting on a fragment of it.
+next:
 	for _, r := range scene.Routes {
 		if r.LabelText == "" {
 			continue
@@ -268,7 +275,7 @@ func checkLabels(scene *artifact.Scene, add func(string, string, string, ...any)
 			for i := 0; i+1 < len(other.Points); i++ {
 				if pointSegmentDistance(r.LabelAt, other.Points[i], other.Points[i+1]) < labelClearance {
 					add(r.ID, RuleLabelClear, "its label sits within %dpx of %s", labelClearance, other.ID)
-					return
+					continue next
 				}
 			}
 		}

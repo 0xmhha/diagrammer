@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0xmhha/diagrammer/internal/compose"
@@ -157,5 +158,63 @@ func TestRefusesAModelWithoutTheFamily(t *testing.T) {
 	model := &uml.Model{Families: []uml.Family{uml.FamilySequence}}
 	if _, err := compose.Component("test", model); err == nil {
 		t.Error("want a refusal, got a document")
+	}
+}
+
+// TestALevelThatDrawsNothingIsStillAnArray is about JSON rather than geometry.
+//
+// A container whose children have no relationships among them is an ordinary
+// page that happens to draw no lines. Built as a nil slice, its connections
+// encode as null, and the schema refuses null where it wants an array. Nothing
+// caught it until a model with such a level came along, because every fixture
+// until then drew something on every page.
+func TestALevelThatDrawsNothingIsStillAnArray(t *testing.T) {
+	model := &uml.Model{
+		SchemaVersion: 1,
+		Meta:          uml.Meta{Title: "t"},
+		Provenance:    uml.Provenance{Origin: uml.OriginHandwritten},
+		Families:      []uml.Family{uml.FamilyComponent},
+		Component: &uml.ComponentModel{
+			Components: []uml.Component{
+				{ID: "box", Name: "Box"},
+				{ID: "holder", Name: "Holder"},
+				// Two children with nothing between them, so the page inside
+				// Holder has boxes and no connections at all.
+				{ID: "a", Name: "A", Parent: "holder"},
+				{ID: "b", Name: "B", Parent: "holder"},
+			},
+			Dependencies: []uml.Dependency{
+				{ID: "d", From: "box", To: "holder"},
+			},
+		},
+	}
+
+	doc, err := compose.Component("test", model)
+	if err != nil {
+		t.Fatalf("compose: %v", err)
+	}
+
+	empty := 0
+	for _, l := range doc.Levels {
+		if len(l.Connections) == 0 {
+			empty++
+			if l.Connections == nil {
+				t.Errorf("%s draws nothing and carries a nil slice, which encodes as null", l.ID)
+			}
+		}
+	}
+	if empty == 0 {
+		t.Fatal("no level drew nothing, so this test proves nothing")
+	}
+
+	encoded, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	if strings.Contains(string(encoded), `"connections": null`) {
+		t.Error("the document carries a null where the schema wants an array")
+	}
+	if err := schema.Validate(schema.Diagram, append(encoded, '\n')); err != nil {
+		t.Errorf("the document does not satisfy the schema: %v", err)
 	}
 }
