@@ -71,6 +71,11 @@ check: fmt vet test
 
 ## fixtures: run the shipped binary over every committed fixture
 #
+# compose is asked for the component family by name rather than for everything
+# a model declares. A fixture declaring four families is composed only for the
+# one whose composer exists, and asking for the rest is refused on purpose
+# rather than skipped in silence. Drop the flag once every family is built.
+#
 # This exercises the binary a second person would get, not the library the
 # tests link against, because "the tests pass" and "the program works" are
 # different claims.
@@ -103,7 +108,21 @@ fixtures: build
 		echo "no fixtures under testdata/codegraph; the stage-2 gate would pass by doing nothing"; \
 		exit 1; \
 	fi; \
-	echo "$$found model fixture(s) validated"
+	echo "$$found model fixture(s) validated"; \
+	found=0; \
+	for f in testdata/codegraph/*.codegraph.json; do \
+		[ -e "$$f" ] || continue; \
+		found=$$((found + 1)); \
+		name=$$(basename "$$f" .codegraph.json); \
+		$(BIN_DIR)/$(BINARY) compose "$$f" --family component -o "$$work/$$name.1" >/dev/null; \
+		$(BIN_DIR)/$(BINARY) compose "$$f" --family component -o "$$work/$$name.2" >/dev/null; \
+		for doc in "$$work/$$name.1"/*.diagram.json; do \
+			[ -e "$$doc" ] || continue; \
+			cmp -s "$$doc" "$$work/$$name.2/$$(basename "$$doc")" \
+				|| { echo "$$name: two compose runs produced different bytes"; exit 1; }; \
+		done; \
+	done; \
+	echo "$$found model fixture(s) composed: schema valid, complete, byte-identical across runs"
 
 ## verify: the release gate
 #

@@ -103,6 +103,10 @@
           "maxLength": 64
         },
         "description": { "type": "string", "maxLength": 1000 },
+        "parent": {
+          "description": "The component this one is nested inside, absent at the top level. The nesting is what stage 3 turns into levels and drill-down pages: without it a component diagram is one flat page, and a model of any size is unreadable. Choosing the decomposition is the model's job, because it is a judgement about meaning rather than a fact about the code.",
+          "$ref": "#/$defs/id"
+        },
         "ports": {
           "description": "A component's provided interfaces are its ports of kind provided, and its required interfaces are the ports of kind required. There is no second way to say the same thing.",
           "type": "array",

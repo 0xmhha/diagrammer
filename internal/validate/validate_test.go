@@ -345,3 +345,45 @@ func hasFullTransition(m *uml.Model) bool {
 	}
 	return false
 }
+
+// Component nesting is what stage 3 turns into levels, so it gets the same
+// resolution and cycle checks the state family has.
+func TestComponentNesting(t *testing.T) {
+	refused := []struct {
+		name string
+		doc  []byte
+		want string
+	}{
+		{
+			"parent names nothing",
+			doc(`"component"`, `"component":{"components":[{"id":"a","name":"A","parent":"ghost"}]}`),
+			`names component "ghost", which is not declared`,
+		}, {
+			"parent is the component itself",
+			doc(`"component"`, `"component":{"components":[{"id":"a","name":"A","parent":"a"}]}`),
+			"names the component itself",
+		}, {
+			"components contain each other",
+			doc(`"component"`, `"component":{"components":[{"id":"a","name":"A","parent":"b"},`+
+				`{"id":"b","name":"B","parent":"a"}]}`),
+			"containment cycle",
+		},
+	}
+	for _, c := range refused {
+		t.Run(c.name, func(t *testing.T) {
+			if _, err := validate.Codegraph("test", c.doc); err == nil {
+				t.Fatal("want refused, got accepted")
+			} else if !strings.Contains(err.Error(), c.want) {
+				t.Errorf("report does not mention %q:\n%s", c.want, err)
+			}
+		})
+	}
+
+	t.Run("a nested component is accepted", func(t *testing.T) {
+		d := doc(`"component"`, `"component":{"components":[{"id":"sys","name":"System"},`+
+			`{"id":"a","name":"A","parent":"sys"}]}`)
+		if _, err := validate.Codegraph("test", d); err != nil {
+			t.Fatalf("want accepted, got %v", err)
+		}
+	})
+}

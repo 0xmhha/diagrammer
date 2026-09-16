@@ -109,6 +109,14 @@ type Component struct {
 	// Stereotype is written without guillemets, such as service or subsystem.
 	Stereotype  string `json:"stereotype,omitempty"`
 	Description string `json:"description,omitempty"`
+	// Parent is the component this one is nested inside, and is empty at the
+	// top level.
+	//
+	// The nesting is what stage 3 turns into levels and drill-down pages.
+	// Without it a component diagram is one flat page, and a model of any size
+	// is unreadable. Choosing the decomposition is the model's job, because it
+	// is a judgement about meaning rather than a fact about the code.
+	Parent string `json:"parent,omitempty"`
 	// Ports carry both directions: the provided interfaces are the ports of
 	// kind provided and the required ones are the rest. There is no second way
 	// to say the same thing.

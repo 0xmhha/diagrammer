@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0xmhha/diagrammer/internal/diagram"
 	"github.com/0xmhha/diagrammer/internal/graph"
 	"github.com/0xmhha/diagrammer/internal/schema"
 	"github.com/0xmhha/diagrammer/internal/uml"
@@ -66,6 +67,19 @@ var bindings = map[schema.Name]map[string]reflect.Type{
 		"#/$defs/usecaseModel/properties/associations/items": reflect.TypeOf(uml.Association{}),
 		"#/$defs/usecaseModel/properties/includes/items":     reflect.TypeOf(uml.Include{}),
 		"#/$defs/usecaseModel/properties/extends/items":      reflect.TypeOf(uml.Extend{}),
+	},
+	schema.Diagram: {
+		"#":                                  reflect.TypeOf(diagram.Document{}),
+		"#/properties/meta":                  reflect.TypeOf(diagram.Meta{}),
+		"#/properties/provenance":            reflect.TypeOf(diagram.Provenance{}),
+		"#/$defs/accounting":                 reflect.TypeOf(diagram.Accounting{}),
+		"#/$defs/level":                      reflect.TypeOf(diagram.Level{}),
+		"#/$defs/level/properties/grid":      reflect.TypeOf(diagram.Grid{}),
+		"#/$defs/box":                        reflect.TypeOf(diagram.Box{}),
+		"#/$defs/box/properties/ports/items": reflect.TypeOf(diagram.Port{}),
+		"#/$defs/droppedRelationship":        reflect.TypeOf(diagram.DroppedRelationship{}),
+		"#/$defs/region":                     reflect.TypeOf(diagram.Region{}),
+		"#/$defs/connection":                 reflect.TypeOf(diagram.Connection{}),
 	},
 }
 

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Nested Platform",
+    "subtitle": "A model shaped so that stage 3 has to drop relationships and draw a region"
+  },
+  "provenance": {
+    "origin": "handwritten",
+    "note": "Written by hand to exercise the paths a flat model never reaches. Components are nested three deep, siblings depend on each other so those relationships collapse to a self-reference on the page above and are recorded on the box rather than drawn, and one container has no relationships of its own so a thin page unfolds it into a region band."
+  },
+  "families": ["component"],
+
+  "component": {
+    "components": [
+      { "id": "web", "name": "Web", "stereotype": "subsystem" },
+      { "id": "web.ui", "name": "UI", "parent": "web" },
+      { "id": "web.gateway", "name": "Gateway", "parent": "web" },
+      { "id": "web.assets", "name": "Assets", "stereotype": "subsystem", "parent": "web" },
+      { "id": "web.assets.css", "name": "Stylesheets", "parent": "web.assets" },
+      { "id": "web.assets.js", "name": "Scripts", "parent": "web.assets" },
+
+      { "id": "core", "name": "Core", "stereotype": "subsystem" },
+      {
+        "id": "core.orders",
+        "name": "Orders",
+        "parent": "core",
+        "ports": [
+          { "id": "core.orders.p.api", "name": "api", "kind": "provided", "interface": "OrderAPI" },
+          { "id": "core.orders.r.store", "name": "store", "kind": "required", "interface": "OrderStore" }
+        ]
+      },
+      { "id": "core.billing", "name": "Billing", "parent": "core" },
+      { "id": "core.audit", "name": "Audit", "parent": "core" },
+
+      { "id": "data", "name": "Data", "stereotype": "subsystem" },
+      {
+        "id": "data.sql",
+        "name": "SQL",
+        "parent": "data",
+        "ports": [
+          { "id": "data.sql.p.store", "name": "store", "kind": "provided", "interface": "OrderStore" }
+        ]
+      },
+      { "id": "data.cache", "name": "Cache", "parent": "data" }
+    ],
+    "interfaces": [
+      {
+        "id": "OrderAPI",
+        "name": "OrderAPI",
+        "operations": [{ "name": "place", "signature": "place(Order) (OrderID, error)" }]
+      },
+      {
+        "id": "OrderStore",
+        "name": "OrderStore",
+        "operations": [{ "name": "save", "signature": "save(Order) error" }]
+      }
+    ],
+    "dependencies": [
+      { "id": "dep.web.core", "from": "web", "to": "core", "kind": "use" },
+      { "id": "dep.core.data", "from": "core", "to": "data", "kind": "use" },
+
+      { "id": "dep.ui.gateway", "from": "web.ui", "to": "web.gateway", "kind": "use" },
+      { "id": "dep.orders.billing", "from": "core.orders", "to": "core.billing", "kind": "use" },
+      { "id": "dep.billing.audit", "from": "core.billing", "to": "core.audit", "kind": "use" },
+      { "id": "dep.cache.sql", "from": "data.cache", "to": "data.sql", "kind": "use" }
+    ]
+  }
+}

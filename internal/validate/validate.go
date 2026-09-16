@@ -185,6 +185,30 @@ func checkComponent(m *uml.ComponentModel, r *Report) {
 			}
 		}
 	}
+	// Nesting is what stage 3 turns into levels, so a parent that names nothing
+	// would put a whole subtree on no page at all.
+	parents := make(map[string]string, len(m.Components))
+	for i, c := range m.Components {
+		if c.Parent == "" {
+			continue
+		}
+		at := fmt.Sprintf("/component/components/%d/parent", i)
+		switch {
+		case !components[c.Parent]:
+			r.add(at, "names component %q, which is not declared", c.Parent)
+		case c.Parent == c.ID:
+			r.add(at, "names the component itself")
+		default:
+			parents[c.ID] = c.Parent
+		}
+	}
+	for _, id := range sortedKeys(parents) {
+		if path, looped := parentCycle(parents, id); looped {
+			r.add("/component/components", "components %s form a containment cycle", strings.Join(path, " -> "))
+			break // one report is enough; every member would produce the same cycle
+		}
+	}
+
 	// A dependency may run between components, between interfaces, or across
 	// the two, so both ends are resolved against the union rather than against
 	// one kind.

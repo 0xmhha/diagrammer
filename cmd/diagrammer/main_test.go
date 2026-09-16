@@ -64,7 +64,7 @@ func TestRun(t *testing.T) {
 // distinguishable from one that does not exist. Someone typing `compose` should
 // be told it is coming, not that they mistyped.
 func TestUnbuiltCommandsAreNamed(t *testing.T) {
-	for _, name := range []string{"compose", "render", "serve"} {
+	for _, name := range []string{"render", "serve"} {
 		t.Run(name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
 			err := run([]string{name}, &stdout, &stderr)
@@ -187,6 +187,67 @@ func TestGraphCommand(t *testing.T) {
 		err := run([]string{"graph", "main.go"}, &stdout, &stderr)
 		if err == nil || !strings.Contains(err.Error(), "not a directory") {
 			t.Errorf("want a complaint about the source, got %v", err)
+		}
+	})
+}
+
+const nestedModel = "../../testdata/codegraph/nested-platform.codegraph.json"
+
+func TestComposeCommand(t *testing.T) {
+	t.Run("writes a schema-valid document per family", func(t *testing.T) {
+		dir := t.TempDir()
+		var stdout, stderr bytes.Buffer
+		if err := run([]string{"compose", nestedModel, "-o", dir}, &stdout, &stderr); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		raw, err := os.ReadFile(filepath.Join(dir, "component.diagram.json"))
+		if err != nil {
+			t.Fatalf("read output: %v", err)
+		}
+		if err := schema.Validate(schema.Diagram, raw); err != nil {
+			t.Errorf("written document does not satisfy the schema: %v", err)
+		}
+		if !strings.Contains(stdout.String(), "proven") {
+			t.Errorf("no accounting on stdout: %q", stdout.String())
+		}
+	})
+
+	t.Run("says it validated the model rather than doing it quietly", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		if err := run([]string{"compose", nestedModel, "-o", t.TempDir()}, &stdout, &stderr); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !strings.Contains(stderr.String(), "validated") {
+			t.Errorf("compose did not say it ran the stage-2 check: %q", stderr.String())
+		}
+	})
+
+	t.Run("refuses a family the model does not declare", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run([]string{"compose", nestedModel, "-family", "sequence", "-o", t.TempDir()}, &stdout, &stderr)
+		if err == nil || !strings.Contains(err.Error(), "does not declare") {
+			t.Errorf("want a refusal naming the undeclared family, got %v", err)
+		}
+	})
+
+	t.Run("refuses a declared family whose composer is not built", func(t *testing.T) {
+		// order-service declares all four. Asking for everything must say so
+		// rather than quietly emitting only what exists.
+		var stdout, stderr bytes.Buffer
+		err := run([]string{"compose", fixture, "-o", t.TempDir()}, &stdout, &stderr)
+		if err == nil || !strings.Contains(err.Error(), "not built yet") {
+			t.Errorf("want a refusal naming the unbuilt composer, got %v", err)
+		}
+	})
+
+	t.Run("refuses a model that does not validate", func(t *testing.T) {
+		broken := filepath.Join(t.TempDir(), "broken.codegraph.json")
+		if err := os.WriteFile(broken, []byte(`{"schemaVersion":1}`), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		var stdout, stderr bytes.Buffer
+		if err := run([]string{"compose", broken, "-o", t.TempDir()}, &stdout, &stderr); err == nil {
+			t.Error("want the invalid model refused, got success")
 		}
 	})
 }

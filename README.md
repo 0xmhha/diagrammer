@@ -33,12 +33,15 @@ extend. That vocabulary is what stage 2 is held to.
 
 Early, and honest about it.
 
-Working: `graph` for Go, `validate`, the embedded schemas for stages 1 and 2,
-and the drift guard that keeps the Go types matching them.
+Working: `graph` for Go, `validate`, `compose` for the component family, the
+embedded schemas for all three stage boundaries, and the drift guard that keeps
+the Go types matching them.
 
-Not built yet: `compose`, `render` and `serve`, and `graph` for Python and
-JS/TS. Each unbuilt command is named in the command list and reports that it is
-not implemented rather than pretending not to exist.
+Not built yet: `render` and `serve`, `graph` for Python and JS/TS, and `compose`
+for the sequence, state and use case families. Each unbuilt command is named in
+the command list and reports that it is not implemented rather than pretending
+not to exist; asking `compose` for a family it cannot build is refused by name
+rather than quietly skipped.
 
 ## Build
 
@@ -61,7 +64,8 @@ compiling, so that the binary that ships is the binary that was tested.
 ## The schemas are the contract
 
 Three JSON Schema files define the stage boundaries, and they are embedded in
-the binary. Go types are checked against them by a test that fails the build on
+the binary: the stage-1 code graph, the stage-2 UML model, and the stage-3
+diagram source. Go types are checked against them by a test that fails the build on
 divergence, not the other way round.
 
 The reason is stage 2. It runs outside this program, so whatever a plugin's
@@ -72,6 +76,10 @@ documentation is what gets corrected.
 
 ## Documents
 
+- [docs/invariants.md](docs/invariants.md) — the correctness contract: what
+  every stage must prove, and what each family means by completeness.
+- [docs/thresholds.md](docs/thresholds.md) — every number that decides what a
+  page shows, and where it came from.
 - [docs/decisions.md](docs/decisions.md) — what the design settled on, what was
   withdrawn along the way, and what is still open. Read this before changing
   anything structural.

@@ -51,7 +51,7 @@ func commands() []command {
 	return []command{
 		{"graph", "parse a source tree into a code graph", runGraph},
 		{"validate", "check a UML codegraph against the stage-2 contract", runValidate},
-		{"compose", "turn a UML codegraph into diagram-source documents", notImplemented},
+		{"compose", "turn a UML codegraph into diagram-source documents", runCompose},
 		{"render", "turn a diagram-source document into a self-contained page", notImplemented},
 		{"serve", "expose the same capabilities as a local MCP server", notImplemented},
 		{"version", "print the version and build details", runVersion},

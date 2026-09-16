@@ -36,6 +36,8 @@ const (
 	Graph Name = "graph"
 	// Codegraph is the stage-2 UML model a plugin's skill returns.
 	Codegraph Name = "codegraph"
+	// Diagram is the stage-3 diagram source compose emits, one per family.
+	Diagram Name = "diagram"
 )
 
 const (
@@ -50,7 +52,7 @@ const (
 // walk it, so a schema added to the directory but not to this list is caught by
 // a test rather than discovered at run time.
 func All() []Name {
-	return []Name{Graph, Codegraph}
+	return []Name{Graph, Codegraph, Diagram}
 }
 
 // Filename returns the name of n's file within the embedded directory.
