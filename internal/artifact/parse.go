@@ -86,7 +86,11 @@ func parseScene(block string) (Scene, error) {
 		scene.Height = number(fields[3])
 	}
 
-	labels := map[string]string{}
+	type labelAt struct {
+		text string
+		at   Point
+	}
+	labels := map[string]labelAt{}
 	var walk func(e svgElement)
 	walk = func(e svgElement) {
 		switch {
@@ -97,7 +101,10 @@ func parseScene(block string) (Scene, error) {
 		case e.attr("data-edge-id") != "":
 			scene.Routes = append(scene.Routes, parseRoute(e))
 		case e.attr("data-edge-label-for") != "":
-			labels[e.attr("data-edge-label-for")] = strings.TrimSpace(e.Text)
+			labels[e.attr("data-edge-label-for")] = labelAt{
+				text: strings.TrimSpace(e.Text),
+				at:   Point{X: number(e.attr("x")), Y: number(e.attr("y"))},
+			}
 		case e.attr("data-bar-id") != "":
 			scene.Bars = append(scene.Bars, Bar{
 				ID: e.attr("data-bar-id"), Box: e.attr("data-bar-box"),
@@ -115,10 +122,15 @@ func parseScene(block string) (Scene, error) {
 
 	// Labels are separate elements, so they are attached once every route is
 	// known rather than guessed at from document order.
+	//
+	// The position is read rather than recomputed. The renderer moves a label
+	// along its route to wherever there is room, so deriving it from the route
+	// again would put it back where it would have gone if nothing were in the
+	// way, and the clearance rule would then judge a position nobody drew.
 	for i := range scene.Routes {
-		if text, ok := labels[scene.Routes[i].ID]; ok {
-			scene.Routes[i].LabelText = text
-			scene.Routes[i].LabelAt = labelPosition(scene.Routes[i])
+		if label, ok := labels[scene.Routes[i].ID]; ok {
+			scene.Routes[i].LabelText = label.text
+			scene.Routes[i].LabelAt = label.at
 		}
 	}
 	return scene, nil
@@ -206,25 +218,6 @@ func parsePoints(value string) []Point {
 		out = append(out, Point{X: number(x), Y: number(y)})
 	}
 	return out
-}
-
-// labelPosition recovers where a label sits, which is the middle of the route's
-// longest straight run. The renderer puts it there and the checker has to look
-// for it in the same place.
-func labelPosition(r Route) Point {
-	if len(r.Points) < 2 {
-		return Point{}
-	}
-	best, bestLen := 0, -1.0
-	for i := 0; i+1 < len(r.Points); i++ {
-		dx := r.Points[i+1].X - r.Points[i].X
-		dy := r.Points[i+1].Y - r.Points[i].Y
-		if l := dx*dx + dy*dy; l > bestLen {
-			best, bestLen = i, l
-		}
-	}
-	a, b := r.Points[best], r.Points[best+1]
-	return Point{X: (a.X + b.X) / 2, Y: (a.Y + b.Y) / 2}
 }
 
 func number(s string) float64 {

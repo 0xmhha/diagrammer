@@ -25,16 +25,29 @@ func State(source string, model *uml.Model) (*diagram.Document, error) {
 		return nil, fmt.Errorf("the model carries no state section")
 	}
 
-	// Ordering by containment first puts a composite state's children together,
-	// so the frame around them covers a run rather than a scatter.
-	ordered := make([]uml.State, len(m.States))
-	copy(ordered, m.States)
-	sort.Slice(ordered, func(i, j int) bool {
-		if ordered[i].Parent != ordered[j].Parent {
-			return ordered[i].Parent < ordered[j].Parent
-		}
-		return ordered[i].ID < ordered[j].ID
-	})
+	// States joined by a transition go near each other, and containment wins
+	// where the two disagree: a frame drawn around a scatter is not a frame.
+	// Ordering by id alone put states that talk to each other at opposite
+	// corners, and the long routes between them crossed everything in between.
+	byID := make(map[string]uml.State, len(m.States))
+	ids := make([]string, 0, len(m.States))
+	parentOf := make(map[string]string, len(m.States))
+	for _, st := range m.States {
+		byID[st.ID] = st
+		ids = append(ids, st.ID)
+		parentOf[st.ID] = st.Parent
+	}
+	sort.Strings(ids)
+
+	adjacency := make([][2]string, 0, len(m.Transitions))
+	for _, t := range m.Transitions {
+		adjacency = append(adjacency, [2]string{t.From, t.To})
+	}
+
+	ordered := make([]uml.State, 0, len(m.States))
+	for _, id := range orderByAdjacency(ids, adjacency, func(id string) string { return parentOf[id] }) {
+		ordered = append(ordered, byID[id])
+	}
 
 	grid := gridFor(len(ordered))
 	boxes := make([]diagram.Box, 0, len(ordered))

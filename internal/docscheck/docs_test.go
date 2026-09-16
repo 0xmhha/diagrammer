@@ -79,7 +79,7 @@ func TestEveryThresholdIsDocumentedWithItsValue(t *testing.T) {
 	// than a decision does not belong in a document about decisions.
 	documented := map[string]bool{
 		"minBoxesPerLevel": true, "expandedMaxBoxes": true,
-		"minSegment": true, "separation": true, "labelClearance": true, "borderRun": true,
+		"minSegment": true, "separation": true, "LabelClearance": true, "borderRun": true,
 		"channelX": true, "channelY": true, "laneGap": true, "stub": true,
 	}
 

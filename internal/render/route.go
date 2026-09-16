@@ -137,6 +137,25 @@ func (r *router) overOneRow(c diagram.Connection, from, to placedBox) (routed, e
 		fromSide, toSide = sideTop, sideBottom
 		channel = r.grid.channelAbove(from.Row)
 	}
+
+	// Boxes one above the other need the lane across their facing edges rather
+	// than along the channel. A route between them runs straight down, so its
+	// horizontal legs have no length and a lane taken in the channel moves
+	// nothing: two relationships between the same pair came out as one line
+	// drawn twice, and a label on either sat exactly on the other.
+	if near(from.centerX(), to.centerX()) {
+		lane, err := r.takeEdge(from.ID+"|"+to.ID, math.Min(from.W, to.W))
+		if err != nil {
+			return routed{}, err
+		}
+		x := from.centerX() + lane
+		start, end := point{X: x, Y: from.bottom()}, point{X: x, Y: to.Y}
+		if !downward {
+			start, end = point{X: x, Y: from.Y}, point{X: x, Y: to.bottom()}
+		}
+		return finish(c, []point{start, end}, fromSide, toSide), nil
+	}
+
 	lane, err := r.takeHorizontal(channel)
 	if err != nil {
 		return routed{}, err

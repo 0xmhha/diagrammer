@@ -1,0 +1,594 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "diagrammer",
+    "subtitle": "Read from its own code graph: 14 packages, 435 nodes, 383 edges"
+  },
+  "provenance": {
+    "origin": "modelReviewed",
+    "note": "Produced by a model reading a stage-1 graph of this repository, then kept as a fixture because it is the first document that was not written to please the composer. It found two defects on its first run. It is the densest model committed here and the one the drawn-ratio floor is measured against."
+  },
+  "families": [
+    "component",
+    "sequence",
+    "state",
+    "usecase"
+  ],
+  "component": {
+    "components": [
+      {
+        "id": "cli",
+        "name": "CLI",
+        "stereotype": "surface",
+        "ports": [
+          {
+            "id": "cli.r.ops",
+            "kind": "required",
+            "interface": "Capabilities"
+          }
+        ]
+      },
+      {
+        "id": "mcp",
+        "name": "MCP server",
+        "stereotype": "surface",
+        "ports": [
+          {
+            "id": "mcp.r.ops",
+            "kind": "required",
+            "interface": "Capabilities"
+          }
+        ]
+      },
+      {
+        "id": "command",
+        "name": "Capability registry",
+        "stereotype": "subsystem",
+        "ports": [
+          {
+            "id": "command.p.ops",
+            "kind": "provided",
+            "interface": "Capabilities"
+          },
+          {
+            "id": "command.r.analyze",
+            "kind": "required",
+            "interface": "Analyzer"
+          }
+        ]
+      },
+      {
+        "id": "pipeline",
+        "name": "Pipeline",
+        "stereotype": "subsystem"
+      },
+      {
+        "id": "stage1",
+        "name": "graph",
+        "parent": "pipeline",
+        "stereotype": "stage",
+        "ports": [
+          {
+            "id": "stage1.r.analyzer",
+            "kind": "required",
+            "interface": "Analyzer"
+          }
+        ]
+      },
+      {
+        "id": "stage2",
+        "name": "validate",
+        "parent": "pipeline",
+        "stereotype": "boundary"
+      },
+      {
+        "id": "stage3",
+        "name": "compose",
+        "parent": "pipeline",
+        "stereotype": "stage"
+      },
+      {
+        "id": "stage4",
+        "name": "render",
+        "parent": "pipeline",
+        "stereotype": "stage"
+      },
+      {
+        "id": "goast",
+        "name": "Go analyzer",
+        "stereotype": "analyzer",
+        "ports": [
+          {
+            "id": "goast.p.analyzer",
+            "kind": "provided",
+            "interface": "Analyzer"
+          }
+        ]
+      },
+      {
+        "id": "invariant",
+        "name": "Rules",
+        "stereotype": "checker"
+      },
+      {
+        "id": "contracts",
+        "name": "Contracts",
+        "stereotype": "subsystem"
+      },
+      {
+        "id": "schemas",
+        "name": "Embedded schemas",
+        "parent": "contracts"
+      },
+      {
+        "id": "graphType",
+        "name": "Code graph",
+        "parent": "contracts"
+      },
+      {
+        "id": "umlType",
+        "name": "UML model",
+        "parent": "contracts"
+      },
+      {
+        "id": "diagramType",
+        "name": "Diagram source",
+        "parent": "contracts"
+      },
+      {
+        "id": "artifactType",
+        "name": "Drawn page",
+        "parent": "contracts"
+      }
+    ],
+    "interfaces": [
+      {
+        "id": "Capabilities",
+        "name": "Capabilities",
+        "operations": [
+          {
+            "name": "graph",
+            "signature": "graph(source) Graph"
+          },
+          {
+            "name": "validate",
+            "signature": "validate(model) error"
+          },
+          {
+            "name": "compose",
+            "signature": "compose(model) []Document"
+          },
+          {
+            "name": "render",
+            "signature": "render(document) Page"
+          }
+        ]
+      },
+      {
+        "id": "Analyzer",
+        "name": "Analyzer",
+        "operations": [
+          {
+            "name": "Language",
+            "signature": "Language() graph.Language"
+          },
+          {
+            "name": "Analyze",
+            "signature": "Analyze(ctx, root, opts) (*graph.Graph, error)"
+          }
+        ]
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "d.cli",
+        "from": "cli",
+        "to": "command",
+        "kind": "use"
+      },
+      {
+        "id": "d.mcp",
+        "from": "mcp",
+        "to": "command",
+        "kind": "use"
+      },
+      {
+        "id": "d.cmd.pipe",
+        "from": "command",
+        "to": "pipeline",
+        "kind": "use",
+        "name": "runs"
+      },
+      {
+        "id": "d.s1.s2",
+        "from": "stage1",
+        "to": "stage2",
+        "kind": "use",
+        "name": "graph out"
+      },
+      {
+        "id": "d.s2.s3",
+        "from": "stage2",
+        "to": "stage3",
+        "kind": "use",
+        "name": "validated model"
+      },
+      {
+        "id": "d.s3.s4",
+        "from": "stage3",
+        "to": "stage4",
+        "kind": "use",
+        "name": "documents"
+      },
+      {
+        "id": "d.s2.schema",
+        "from": "stage2",
+        "to": "schemas",
+        "kind": "use"
+      },
+      {
+        "id": "d.s3.rules",
+        "from": "stage3",
+        "to": "invariant",
+        "kind": "use"
+      },
+      {
+        "id": "d.s4.rules",
+        "from": "stage4",
+        "to": "invariant",
+        "kind": "use"
+      },
+      {
+        "id": "d.rules.art",
+        "from": "invariant",
+        "to": "artifactType",
+        "kind": "use"
+      }
+    ]
+  },
+  "sequence": {
+    "lifelines": [
+      {
+        "id": "ll.person",
+        "name": "Developer",
+        "actor": true
+      },
+      {
+        "id": "ll.cli",
+        "name": "CLI",
+        "represents": "cli"
+      },
+      {
+        "id": "ll.cmd",
+        "name": "Capabilities",
+        "represents": "command"
+      },
+      {
+        "id": "ll.validate",
+        "name": "validate",
+        "represents": "stage2"
+      },
+      {
+        "id": "ll.compose",
+        "name": "compose",
+        "represents": "stage3"
+      },
+      {
+        "id": "ll.rules",
+        "name": "Rules",
+        "represents": "invariant"
+      }
+    ],
+    "messages": [
+      {
+        "id": "m.run",
+        "from": "ll.person",
+        "to": "ll.cli",
+        "name": "compose model.json",
+        "kind": "sync"
+      },
+      {
+        "id": "m.dispatch",
+        "from": "ll.cli",
+        "to": "ll.cmd",
+        "name": "ComposeRequest.Run()",
+        "kind": "sync"
+      },
+      {
+        "id": "m.gate",
+        "from": "ll.cmd",
+        "to": "ll.validate",
+        "name": "Codegraph(model)",
+        "kind": "sync"
+      },
+      {
+        "id": "m.gateBack",
+        "from": "ll.validate",
+        "to": "ll.cmd",
+        "name": "*uml.Model",
+        "kind": "reply"
+      },
+      {
+        "id": "m.build",
+        "from": "ll.cmd",
+        "to": "ll.compose",
+        "name": "Component(model)",
+        "kind": "sync"
+      },
+      {
+        "id": "m.doc",
+        "from": "ll.compose",
+        "to": "ll.cmd",
+        "name": "*diagram.Document",
+        "kind": "reply"
+      },
+      {
+        "id": "m.check",
+        "from": "ll.cmd",
+        "to": "ll.rules",
+        "name": "Component(model, doc)",
+        "kind": "sync"
+      },
+      {
+        "id": "m.verdict",
+        "from": "ll.rules",
+        "to": "ll.cmd",
+        "name": "no problems",
+        "kind": "reply"
+      },
+      {
+        "id": "m.done",
+        "from": "ll.cmd",
+        "to": "ll.cli",
+        "name": "written",
+        "kind": "reply"
+      },
+      {
+        "id": "m.report",
+        "from": "ll.cli",
+        "to": "ll.person",
+        "name": "proven / drawn / recorded",
+        "kind": "reply"
+      }
+    ],
+    "activations": [
+      {
+        "id": "a.cli",
+        "lifeline": "ll.cli",
+        "start": "m.run",
+        "end": "m.report"
+      },
+      {
+        "id": "a.cmd",
+        "lifeline": "ll.cmd",
+        "start": "m.dispatch",
+        "end": "m.done"
+      },
+      {
+        "id": "a.validate",
+        "lifeline": "ll.validate",
+        "start": "m.gate",
+        "end": "m.gateBack"
+      },
+      {
+        "id": "a.compose",
+        "lifeline": "ll.compose",
+        "start": "m.build",
+        "end": "m.doc"
+      }
+    ],
+    "fragments": [
+      {
+        "id": "f.gate",
+        "kind": "opt",
+        "operands": [
+          {
+            "guard": "refused: report every defect and stop",
+            "messages": [
+              "m.gate",
+              "m.gateBack"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "state": {
+    "states": [
+      {
+        "id": "st.start",
+        "name": "start",
+        "kind": "initial"
+      },
+      {
+        "id": "st.proven",
+        "name": "Proven",
+        "kind": "simple",
+        "entry": "the model asserts it"
+      },
+      {
+        "id": "st.scoped",
+        "name": "In scope for a page",
+        "kind": "composite"
+      },
+      {
+        "id": "st.drawn3",
+        "name": "Drawn by compose",
+        "kind": "simple",
+        "parent": "st.scoped"
+      },
+      {
+        "id": "st.recorded3",
+        "name": "Recorded on a box",
+        "kind": "simple",
+        "parent": "st.scoped"
+      },
+      {
+        "id": "st.routed",
+        "name": "Routed",
+        "kind": "simple",
+        "activity": "composition rules judge it"
+      },
+      {
+        "id": "st.recorded4",
+        "name": "Recorded with a rule",
+        "kind": "simple"
+      },
+      {
+        "id": "st.done",
+        "name": "accounted for",
+        "kind": "final"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "t.start",
+        "from": "st.start",
+        "to": "st.proven"
+      },
+      {
+        "id": "t.scope",
+        "from": "st.proven",
+        "to": "st.scoped",
+        "trigger": "compose",
+        "guard": "both ends on this level"
+      },
+      {
+        "id": "t.draw3",
+        "from": "st.scoped",
+        "to": "st.drawn3",
+        "guard": "ends are different boxes"
+      },
+      {
+        "id": "t.drop3",
+        "from": "st.scoped",
+        "to": "st.recorded3",
+        "guard": "ends roll up to one box",
+        "effect": "reason: selfReference"
+      },
+      {
+        "id": "t.route",
+        "from": "st.drawn3",
+        "to": "st.routed",
+        "trigger": "render"
+      },
+      {
+        "id": "t.drop4",
+        "from": "st.routed",
+        "to": "st.recorded4",
+        "guard": "a rule refuses the route",
+        "effect": "record the rule on the box"
+      },
+      {
+        "id": "t.ok",
+        "from": "st.routed",
+        "to": "st.done",
+        "guard": "every rule passes"
+      },
+      {
+        "id": "t.close3",
+        "from": "st.recorded3",
+        "to": "st.done"
+      },
+      {
+        "id": "t.close4",
+        "from": "st.recorded4",
+        "to": "st.done"
+      }
+    ]
+  },
+  "usecase": {
+    "system": {
+      "id": "sys",
+      "name": "diagrammer"
+    },
+    "actors": [
+      {
+        "id": "ac.dev",
+        "name": "Developer",
+        "kind": "primary"
+      },
+      {
+        "id": "ac.plugin",
+        "name": "Plugin",
+        "kind": "primary"
+      },
+      {
+        "id": "ac.model",
+        "name": "LLM",
+        "kind": "secondary"
+      }
+    ],
+    "usecases": [
+      {
+        "id": "uc.graph",
+        "name": "Read a source tree",
+        "description": "Parse Go with go/ast into a code graph."
+      },
+      {
+        "id": "uc.check",
+        "name": "Check a returned model",
+        "description": "The one gate at the stage-2 boundary."
+      },
+      {
+        "id": "uc.compose",
+        "name": "Compose diagrams"
+      },
+      {
+        "id": "uc.render",
+        "name": "Draw a page"
+      },
+      {
+        "id": "uc.record",
+        "name": "Record what could not be drawn"
+      },
+      {
+        "id": "uc.interpret",
+        "name": "Attribute meaning to a graph"
+      }
+    ],
+    "associations": [
+      {
+        "id": "as.dev.graph",
+        "actor": "ac.dev",
+        "usecase": "uc.graph"
+      },
+      {
+        "id": "as.dev.render",
+        "actor": "ac.dev",
+        "usecase": "uc.render"
+      },
+      {
+        "id": "as.plugin.compose",
+        "actor": "ac.plugin",
+        "usecase": "uc.compose"
+      },
+      {
+        "id": "as.model.interpret",
+        "actor": "ac.model",
+        "usecase": "uc.interpret"
+      }
+    ],
+    "includes": [
+      {
+        "id": "in.compose.check",
+        "from": "uc.compose",
+        "to": "uc.check"
+      },
+      {
+        "id": "in.render.record",
+        "from": "uc.render",
+        "to": "uc.record"
+      }
+    ],
+    "extends": [
+      {
+        "id": "ex.record.compose",
+        "from": "uc.record",
+        "to": "uc.compose",
+        "extensionPoint": "after laying out a level",
+        "condition": "a page cannot hold every relationship"
+      }
+    ]
+  }
+}

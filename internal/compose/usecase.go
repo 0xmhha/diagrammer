@@ -28,19 +28,115 @@ func Usecase(source string, model *uml.Model) (*diagram.Document, error) {
 	copy(actors, m.Actors)
 	sort.Slice(actors, func(i, j int) bool { return actors[i].ID < actors[j].ID })
 
-	usecases := make([]uml.Usecase, len(m.Usecases))
-	copy(usecases, m.Usecases)
-	sort.Slice(usecases, func(i, j int) bool { return usecases[i].ID < usecases[j].ID })
+	// A use case sits in the row of the actor that reaches it.
+	//
+	// The actors stand in one column, one per row, so a line to something in
+	// the same row runs straight across and a line to another row has to climb
+	// past whatever is between. Aligning the rows is what removes most of the
+	// crossings; ordering by id alone, or clustering use cases by actor without
+	// regard to which row that actor is on, both measured worse.
+	byID := make(map[string]uml.Usecase, len(m.Usecases))
+	for _, u := range m.Usecases {
+		byID[u.ID] = u
+	}
+	actorRow := make(map[string]int, len(actors))
+	for i, a := range actors {
+		actorRow[a.ID] = i
+	}
+
+	// The first actor to reach a use case claims its row. Ties break on the
+	// actor's own order, which is by id, so the result does not depend on the
+	// order associations happen to be written in.
+	rowOf := map[string]int{}
+	associations := append([]uml.Association(nil), m.Associations...)
+	sort.Slice(associations, func(i, j int) bool { return associations[i].ID < associations[j].ID })
+	for _, a := range associations {
+		row, ok := actorRow[a.Actor]
+		if !ok {
+			continue
+		}
+		if existing, claimed := rowOf[a.Usecase]; !claimed || row < existing {
+			rowOf[a.Usecase] = row
+		}
+	}
+
+	// A use case no actor reaches follows whatever includes or extends it, so
+	// it lands beside the thing it belongs to rather than at the end.
+	related := map[string][]string{}
+	for _, inc := range m.Includes {
+		related[inc.From] = append(related[inc.From], inc.To)
+		related[inc.To] = append(related[inc.To], inc.From)
+	}
+	for _, ext := range m.Extends {
+		related[ext.From] = append(related[ext.From], ext.To)
+		related[ext.To] = append(related[ext.To], ext.From)
+	}
+	unplaced := []string{}
+	for _, u := range m.Usecases {
+		if _, ok := rowOf[u.ID]; !ok {
+			unplaced = append(unplaced, u.ID)
+		}
+	}
+	sort.Strings(unplaced)
+	for changed := true; changed; {
+		changed = false
+		for _, id := range unplaced {
+			if _, ok := rowOf[id]; ok {
+				continue
+			}
+			best, found := 0, false
+			for _, other := range related[id] {
+				if row, ok := rowOf[other]; ok && (!found || row < best) {
+					best, found = row, true
+				}
+			}
+			if found {
+				rowOf[id] = best
+				changed = true
+			}
+		}
+	}
+
+	// Anything still unplaced goes on the shortest row, so the page stays as
+	// square as the associations allow.
+	rows := map[int][]string{}
+	for id, row := range rowOf {
+		rows[row] = append(rows[row], id)
+	}
+	for _, u := range m.Usecases {
+		if _, ok := rowOf[u.ID]; ok {
+			continue
+		}
+		shortest, size := 0, -1
+		for r := range max(len(actors), 1) {
+			if size < 0 || len(rows[r]) < size {
+				shortest, size = r, len(rows[r])
+			}
+		}
+		rowOf[u.ID] = shortest
+		rows[shortest] = append(rows[shortest], u.ID)
+	}
+	for r := range rows {
+		sort.Strings(rows[r])
+	}
 
 	// The first column is reserved for the actors, which is what puts them
 	// outside the system band rather than merely near it.
-	inner := gridFor(len(usecases))
+	widest := 0
+	for _, ids := range rows {
+		if len(ids) > widest {
+			widest = len(ids)
+		}
+	}
+	if widest < 1 {
+		widest = 1
+	}
 	grid := diagram.Grid{
-		Rows: max(inner.Rows, len(actors)),
-		Cols: inner.Cols + 1,
+		Rows: max(len(rows), max(len(actors), 1)),
+		Cols: widest + 1,
 	}
 
-	boxes := make([]diagram.Box, 0, len(actors)+len(usecases))
+	boxes := make([]diagram.Box, 0, len(actors)+len(m.Usecases))
 	for i, a := range actors {
 		kind := a.Kind
 		if kind == "" {
@@ -54,14 +150,17 @@ func Usecase(source string, model *uml.Model) (*diagram.Document, error) {
 			Col:        0,
 		})
 	}
-	for i, u := range usecases {
-		boxes = append(boxes, diagram.Box{
-			ID:     u.ID,
-			Label:  u.Name,
-			Row:    i / inner.Cols,
-			Col:    1 + i%inner.Cols,
-			Region: m.System.ID,
-		})
+	for row := range grid.Rows {
+		for col, id := range rows[row] {
+			u := byID[id]
+			boxes = append(boxes, diagram.Box{
+				ID:     u.ID,
+				Label:  u.Name,
+				Row:    row,
+				Col:    1 + col,
+				Region: m.System.ID,
+			})
+		}
 	}
 	sort.Slice(boxes, func(i, j int) bool { return boxes[i].ID < boxes[j].ID })
 

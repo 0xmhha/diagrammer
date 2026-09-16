@@ -27,6 +27,10 @@ func families() []struct {
 		Fixture string
 	}{
 		{diagram.FamilyComponent, "nested-platform"},
+		{diagram.FamilyComponent, "diagrammer"},
+		{diagram.FamilySequence, "diagrammer"},
+		{diagram.FamilyState, "diagrammer"},
+		{diagram.FamilyUsecase, "diagrammer"},
 		{diagram.FamilyComponent, "order-service"},
 		{diagram.FamilySequence, "order-service"},
 		{diagram.FamilyState, "order-service"},
