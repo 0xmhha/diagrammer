@@ -74,6 +74,21 @@ is what correctness requires, is copying. When that lands it takes a notices
 row; deriving an equivalent table from Unicode data instead is the only way to
 avoid one, and it will not produce the same widths.
 
+## Where the record lives
+
+Three places, each for a different reader:
+
+- **`THIRD_PARTY_NOTICES.md`** is for somebody who received a copy and wants to
+  know what is in it. It says what was taken, what carries no obligation and
+  why, and what would have needed a row and was deliberately not copied.
+- **A file header** is for somebody reading that file. `goast.go` says in its
+  own package comment that most of it came from elsewhere, because a reader of
+  eleven hundred lines should not have to find this page to learn that.
+- **This page** is for somebody deciding whether a new thing may be brought in.
+
+The three say the same thing at different distances. If they ever disagree, the
+notices file is what ships with a copy and therefore wins.
+
 ## What to do when unsure
 
 Write the origin down. A line in `THIRD_PARTY_NOTICES.md` costs nothing and is

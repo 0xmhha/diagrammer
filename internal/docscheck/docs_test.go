@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -244,3 +245,85 @@ func TestEveryShippedDocumentExists(t *testing.T) {
 		}
 	}
 }
+
+// TestEveryPackageHasADocFile keeps the package documentation where Go's own
+// convention puts it.
+//
+// A doc comment long enough to be worth reading belongs in a file of its own,
+// so that it is the first thing found rather than something sitting above
+// whichever source file happened to be alphabetically first. It also stops the
+// documentation from moving every time that file is split or renamed.
+//
+// Exactly one file per package may carry it: two package comments is a
+// compile-time error in Go, but one in doc.go and a second left behind in a
+// source file is the kind of thing that survives a careless move.
+func TestEveryPackageHasADocFile(t *testing.T) {
+	root := repoRoot(t)
+	packages := map[string]bool{}
+
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			return nil
+		}
+		name := entry.Name()
+		if path != root && (name == "vendor" || name == "testdata" || name == "bin" ||
+			name == "out" || strings.HasPrefix(name, ".")) {
+			return filepath.SkipDir
+		}
+		matches, err := filepath.Glob(filepath.Join(path, "*.go"))
+		if err != nil {
+			return err
+		}
+		for _, m := range matches {
+			if !strings.HasSuffix(m, "_test.go") {
+				packages[path] = true
+				break
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk: %v", err)
+	}
+	if len(packages) == 0 {
+		t.Fatal("no packages were found, so this test is watching nothing")
+	}
+
+	for dir := range packages {
+		rel, _ := filepath.Rel(root, dir)
+		docPath := filepath.Join(dir, "doc.go")
+		raw, err := os.ReadFile(docPath)
+		if err != nil {
+			t.Errorf("%s has no doc.go", rel)
+			continue
+		}
+		if !packageComment.Match(raw) {
+			t.Errorf("%s/doc.go carries no package comment", rel)
+		}
+
+		// The comment lives in one place. A second one left in a source file
+		// would not compile, but a source file whose top comment merely looks
+		// like one is a real trap, so the check names the file it found.
+		others, _ := filepath.Glob(filepath.Join(dir, "*.go"))
+		for _, other := range others {
+			if other == docPath || strings.HasSuffix(other, "_test.go") {
+				continue
+			}
+			body, err := os.ReadFile(other)
+			if err != nil {
+				continue
+			}
+			if packageComment.Match(body) {
+				name, _ := filepath.Rel(root, other)
+				t.Errorf("%s also opens with a package comment; it belongs in doc.go", name)
+			}
+		}
+	}
+}
+
+// packageComment matches a doc comment at the very top of a file, immediately
+// above the package clause.
+var packageComment = regexp.MustCompile(`\A(// [^\n]*\n)*// (Package|Command) [^\n]*\n(//[^\n]*\n)*package `)
