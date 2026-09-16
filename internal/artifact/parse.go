@@ -77,8 +77,9 @@ func parseScene(block string) (Scene, error) {
 	}
 
 	scene := Scene{
-		Level: root.attr("data-level"),
-		Title: root.attr("data-level-title"),
+		Family: root.attr("data-family"),
+		Level:  root.attr("data-level"),
+		Title:  root.attr("data-level-title"),
 	}
 	if fields := strings.Fields(root.attr("viewBox")); len(fields) == 4 {
 		scene.Width = number(fields[2])
@@ -97,6 +98,14 @@ func parseScene(block string) (Scene, error) {
 			scene.Routes = append(scene.Routes, parseRoute(e))
 		case e.attr("data-edge-label-for") != "":
 			labels[e.attr("data-edge-label-for")] = strings.TrimSpace(e.Text)
+		case e.attr("data-bar-id") != "":
+			scene.Bars = append(scene.Bars, Bar{
+				ID: e.attr("data-bar-id"), Box: e.attr("data-bar-box"),
+				X: number(e.attr("x")), Y: number(e.attr("y")),
+				W: number(e.attr("width")), H: number(e.attr("height")),
+			})
+		case e.attr("data-frame-id") != "":
+			scene.Frames = append(scene.Frames, parseFrame(e))
 		}
 		for _, child := range e.Children {
 			walk(child)
@@ -117,16 +126,34 @@ func parseScene(block string) (Scene, error) {
 
 func parseBox(e svgElement) Box {
 	box := Box{ID: e.attr("data-box-id"), Opens: e.attr("data-opens")}
+	// The rectangle is read from the attribute rather than from whatever shape
+	// was drawn. A final state is a ringed circle and a use case an ellipse, so
+	// recovering bounds from the drawing would mean understanding every shape
+	// the renderer might choose, and failing silently on the next one.
+	if bounds := parseBounds(e.attr("data-box-bounds")); bounds != nil {
+		box.X, box.Y, box.W, box.H = bounds[0], bounds[1], bounds[2], bounds[3]
+	}
 	for _, child := range e.Children {
-		switch child.XMLName.Local {
-		case "rect":
-			box.X, box.Y = number(child.attr("x")), number(child.attr("y"))
-			box.W, box.H = number(child.attr("width")), number(child.attr("height"))
-		case "text":
+		if child.XMLName.Local == "text" {
 			box.Label = strings.TrimSpace(child.Text)
 		}
 	}
 	return box
+}
+
+// parseBounds reads four comma-separated numbers, and reports nothing when the
+// attribute is missing or malformed rather than inventing a rectangle at the
+// origin that every rule would then judge.
+func parseBounds(value string) []float64 {
+	parts := strings.Split(value, ",")
+	if len(parts) != 4 {
+		return nil
+	}
+	out := make([]float64, 4)
+	for i, p := range parts {
+		out[i] = number(p)
+	}
+	return out
 }
 
 func parseRegion(e svgElement) Region {
@@ -141,6 +168,20 @@ func parseRegion(e svgElement) Region {
 		}
 	}
 	return region
+}
+
+func parseFrame(e svgElement) Frame {
+	frame := Frame{ID: e.attr("data-frame-id"), Kind: e.attr("data-frame-kind")}
+	for _, child := range e.Children {
+		switch child.XMLName.Local {
+		case "rect":
+			frame.X, frame.Y = number(child.attr("x")), number(child.attr("y"))
+			frame.W, frame.H = number(child.attr("width")), number(child.attr("height"))
+		case "text":
+			frame.Label = strings.TrimSpace(child.Text)
+		}
+	}
+	return frame
 }
 
 func parseRoute(e svgElement) Route {

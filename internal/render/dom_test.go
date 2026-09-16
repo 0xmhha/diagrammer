@@ -46,13 +46,11 @@ func TestViewerContractMatchesTheViewer(t *testing.T) {
 // the reader; if the renderer stops writing one of these, the page draws and
 // the interaction dies.
 func TestRendererWritesTheContract(t *testing.T) {
-	// Both fixtures are read: an attribute only appears when the thing it
-	// describes does, and no single fixture has every kind of thing on it.
+	// Every family is drawn: an attribute only appears when the thing it
+	// describes does, and a ladder has furniture a grid does not.
 	written := map[string]bool{}
-	for _, name := range []string{"order-service", "nested-platform"} {
-		for _, attr := range attributesIn(buildFixture(t, name).HTML()) {
-			written[attr] = true
-		}
+	for _, attr := range attributesAcrossEveryFamily(t) {
+		written[attr] = true
 	}
 	for _, name := range DOMContract() {
 		if !written[name] {
@@ -68,13 +66,33 @@ func TestRendererWritesNothingUndeclared(t *testing.T) {
 	for _, name := range DOMContract() {
 		declared[name] = true
 	}
-	for _, fixture := range []string{"order-service", "nested-platform"} {
-		for _, name := range attributesIn(buildFixture(t, fixture).HTML()) {
-			if !declared[name] {
-				t.Errorf("%s: the renderer writes %q, which is in no contract", fixture, name)
-			}
+	for _, name := range attributesAcrossEveryFamily(t) {
+		if !declared[name] {
+			t.Errorf("the renderer writes %q, which is in no contract", name)
 		}
 	}
+}
+
+// attributesAcrossEveryFamily collects what the renderer writes when it has
+// drawn one of everything.
+func attributesAcrossEveryFamily(t *testing.T) []string {
+	t.Helper()
+	seen := map[string]bool{}
+	for _, f := range families() {
+		page, err := Build(composeFor(t, f.Family, f.Fixture))
+		if err != nil {
+			t.Fatalf("render %s: %v", f.Family, err)
+		}
+		for _, attr := range attributesIn(page.HTML()) {
+			seen[attr] = true
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for name := range seen {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func attributesIn(source string) []string {

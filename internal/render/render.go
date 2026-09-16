@@ -39,13 +39,20 @@ type Drop struct {
 // is the same bargain stage 3 makes: a relationship may go undrawn, but never
 // untraced.
 func Build(doc *diagram.Document) (*Page, error) {
-	if doc.Family != diagram.FamilyComponent {
+	switch doc.Family {
+	case diagram.FamilyComponent, diagram.FamilyState, diagram.FamilyUsecase:
+		// These three are boxes joined by lines. What differs between them is
+		// which shape a box takes and what a line means, and neither changes
+		// where anything goes.
+	case diagram.FamilySequence:
+		return buildLadder(doc)
+	default:
 		return nil, fmt.Errorf("rendering the %q family is not implemented yet", doc.Family)
 	}
 
 	page := &Page{Title: doc.Meta.Title, Subtitle: doc.Meta.Subtitle, Family: doc.Family}
 	for _, level := range doc.Levels {
-		scene, drops := buildScene(level)
+		scene, drops := buildScene(doc.Family, level)
 		page.Scenes = append(page.Scenes, scene)
 		page.Dropped = append(page.Dropped, drops...)
 
@@ -58,11 +65,12 @@ func Build(doc *diagram.Document) (*Page, error) {
 }
 
 // buildScene draws one level.
-func buildScene(level diagram.Level) (artifact.Scene, []Drop) {
-	boxes, regions, g := layOut(level)
+func buildScene(family diagram.Family, level diagram.Level) (artifact.Scene, []Drop) {
+	boxes, regions, g := layOut(family, level)
 	paths, refused := routeAll(level, g, boxes)
 
 	scene := artifact.Scene{
+		Family: string(family),
 		Level:  level.ID,
 		Title:  level.Title,
 		Width:  quantize(g.width),
@@ -70,7 +78,7 @@ func buildScene(level diagram.Level) (artifact.Scene, []Drop) {
 	}
 	for _, b := range boxes {
 		scene.Boxes = append(scene.Boxes, artifact.Box{
-			ID: b.ID, Label: b.ShortLabel, Opens: b.Opens,
+			ID: b.ID, Label: b.ShortLabel, Opens: b.Opens, Stereotype: b.Stereotype,
 			X: quantize(b.X), Y: quantize(b.Y), W: quantize(b.W), H: quantize(b.H),
 		})
 	}

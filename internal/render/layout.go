@@ -33,7 +33,22 @@ const (
 	// Without it the first bend sits on the border and the arrow looks like it
 	// grew sideways out of the box.
 	stub = 20
+
+	// markerSize is how wide a pseudostate is drawn. A start and an end are
+	// points in a state machine rather than places it rests, and drawing them
+	// the size of a state would say otherwise.
+	markerSize = 26
 )
+
+// isMarker reports whether a box is drawn as a dot rather than as a shape with
+// a label inside it.
+func isMarker(family diagram.Family, stereotype string) bool {
+	if family != diagram.FamilyState {
+		return false
+	}
+	return stereotype == "initial" || stereotype == "final" ||
+		stereotype == "choice" || stereotype == "junction"
+}
 
 // side names the edge of a box a route meets.
 type side string
@@ -118,7 +133,7 @@ func (g *grid) channelBelow(row int) float64 {
 //
 // Column widths follow the widest label in the column, so a long name widens
 // its own column rather than every box on the page.
-func layOut(level diagram.Level) ([]placedBox, []placedRegion, *grid) {
+func layOut(family diagram.Family, level diagram.Level) ([]placedBox, []placedRegion, *grid) {
 	cols, rows := level.Grid.Cols, level.Grid.Rows
 	if cols < 1 {
 		cols = 1
@@ -134,6 +149,9 @@ func layOut(level diagram.Level) ([]placedBox, []placedRegion, *grid) {
 	for _, b := range level.Boxes {
 		if b.Col < 0 || b.Col >= cols {
 			continue
+		}
+		if isMarker(family, b.Stereotype) {
+			continue // a pseudostate is a dot; it should not widen a column
 		}
 		want := textWidth(b.Label, labelSize) + textPadding*2
 		if want > colWidth[b.Col] {
@@ -165,10 +183,17 @@ func layOut(level diagram.Level) ([]placedBox, []placedRegion, *grid) {
 	boxes := make([]placedBox, 0, len(level.Boxes))
 	for _, b := range level.Boxes {
 		col, row := clamp(b.Col, cols), clamp(b.Row, rows)
-		w := colWidth[col]
+		w, h := colWidth[col], float64(boxHeight)
+		x, y := g.colX[col], g.rowY[row]
+		if isMarker(family, b.Stereotype) {
+			// A start or an end is a dot, not a box. It keeps the centre of its
+			// cell so the lines still meet it where a reader expects.
+			x, y = x+(w-markerSize)/2, y+(boxHeight-markerSize)/2
+			w, h = markerSize, markerSize
+		}
 		p := placedBox{
 			Box:  b,
-			rect: rect{X: g.colX[col], Y: g.rowY[row], W: w, H: boxHeight},
+			rect: rect{X: x, Y: y, W: w, H: h},
 			Row:  row,
 			Col:  col,
 		}

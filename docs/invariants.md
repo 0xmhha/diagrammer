@@ -189,7 +189,7 @@ Nothing is dropped.
 
 ## Stage 4, rendering
 
-Built for the component family.
+Built for all four families.
 
 - The composition rules pass, checked by reading the routed polylines back out
   of the emitted document rather than off the renderer's working state. A
@@ -217,9 +217,16 @@ is a hard problem and nothing requires one; what is required is that nothing
 goes missing without a trace. The record is written beside the drawing in the
 page itself, because the reader who needs it is the one looking at the diagram.
 
-### The composition rules
+### The composition rules, per family
 
-Seven, each with a drawing that breaks it:
+A ladder is not judged like a grid. Messages cross lifelines constantly and that
+is how a sequence diagram works; a crossing rule applied there would refuse
+every one ever drawn. So each family names the rules it is held to, and a
+drawing whose family has none is refused rather than quietly judged by
+another's.
+
+Component, state and use case share one set, because all three are boxes joined
+by routed lines. Seven rules, each with a drawing that breaks it:
 
 - **endpoint-side** — a route leaves and arrives on the edges it claims, and its
   ends sit on the boxes it names. A line that says it leaves the right edge and
@@ -237,11 +244,30 @@ Seven, each with a drawing that breaks it:
   of crossing it, which would read as the band having a side the diagram never
   meant.
 
-Two of them hold by construction rather than by luck. Routes travel only in the
+**sequence** has four of its own, each with a drawing that breaks it: every
+message has a rung of its own, because two on one rung destroys the ordering
+that is the diagram's whole content; an arrow's ends sit on the lifelines it
+names; an execution bar sits on the lifeline it names and has height; and
+nothing reaches outside the page.
+
+Two of the grid rules hold by construction rather than by luck. Routes travel only in the
 channels between cells, so pass-through cannot happen; and the side a route
 leaves on is derived from where the two boxes sit, so endpoint-side agrees
 unless something else has gone wrong. They are checked anyway, because a rule
 that holds by construction today holds by accident tomorrow.
+
+### Shape is meaning
+
+UML gives each thing a shape and the shape is half of what it says. A ringed
+circle is an end, an ellipse is something the system does for somebody, a stick
+figure is the somebody, a dashed vertical line is time passing. Drawing them all
+as rectangles would be perfectly legible and would say the wrong thing.
+
+So a box carries its stereotype into the drawing, and the drawing carries its
+rectangle in an attribute of its own rather than leaving it to be recovered from
+whichever shape was chosen. A reader of the artifact needs the geometry; making
+it understand every shape the renderer might pick would mean it fails silently
+on the next one.
 
 ### What is not checked
 

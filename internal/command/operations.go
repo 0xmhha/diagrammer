@@ -278,7 +278,7 @@ func (r *RenderRequest) Run(context.Context) (*Result, error) {
 		return nil, fmt.Errorf("read back the artifact: %w", err)
 	}
 	for i := range scenes {
-		if problems := invariant.Composition(&scenes[i]); len(problems) > 0 {
+		if problems := invariant.CompositionFor(&scenes[i]); len(problems) > 0 {
 			return nil, fmt.Errorf("the drawing of %s breaks composition rules that the renderer thought it had satisfied, which is a defect in the renderer:\n  %s",
 				scenes[i].Level, joinRouteProblems(problems))
 		}

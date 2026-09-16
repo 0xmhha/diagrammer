@@ -123,7 +123,7 @@ fixtures: build
 	done; \
 	echo "$$found model fixture(s) composed: schema valid, complete, byte-identical across runs"; \
 	found=0; \
-	for doc in "$$work"/*.1/component.diagram.json; do \
+	for doc in "$$work"/*.1/*.diagram.json; do \
 		[ -e "$$doc" ] || continue; \
 		found=$$((found + 1)); \
 		$(BIN_DIR)/$(BINARY) render "$$doc" -o "$$doc.1.html" >/dev/null; \

@@ -19,6 +19,10 @@ type Point struct{ X, Y float64 }
 type Box struct {
 	ID    string
 	Label string
+	// Stereotype is what the model called this thing, carried so the drawing
+	// can give it a shape a reader recognises: a final state is a ringed
+	// circle, an actor a figure, a use case an ellipse.
+	Stereotype string
 	// Opens names the level reached by following this box, and is empty when
 	// there is none.
 	Opens string
@@ -58,8 +62,34 @@ type Route struct {
 	LabelText string
 }
 
+// Bar is one execution drawn on a lifeline, in the sequence family.
+type Bar struct {
+	ID string
+	// Box is the lifeline this execution runs on.
+	Box  string
+	X, Y float64
+	W, H float64
+}
+
+func (b Bar) Bottom() float64 { return b.Y + b.H }
+
+// Frame is one combined fragment drawn around part of a ladder.
+type Frame struct {
+	ID    string
+	Kind  string
+	Label string
+	X, Y  float64
+	W, H  float64
+}
+
+func (f Frame) Right() float64  { return f.X + f.W }
+func (f Frame) Bottom() float64 { return f.Y + f.H }
+
 // Scene is one page as drawn.
 type Scene struct {
+	// Family says which kind of diagram this is, because the rules a drawing is
+	// held to differ by family and a scene travels without its document.
+	Family  string
 	Level   string
 	Title   string
 	Width   float64
@@ -67,6 +97,10 @@ type Scene struct {
 	Boxes   []Box
 	Regions []Region
 	Routes  []Route
+	// Bars and Frames are the sequence family's own furniture, and are empty
+	// for every other.
+	Bars   []Bar
+	Frames []Frame
 }
 
 // BoxByID finds a box on this page.

@@ -41,12 +41,10 @@ extend. That vocabulary is what stage 2 is held to.
 
 Early, and honest about it.
 
-Working end to end for Go source and the component family: `graph`, `validate`,
-`compose`, `render` and `serve`. `compose` handles all four families; `render`
-draws the component one.
+Working end to end for Go source and all four families: `graph`, `validate`,
+`compose`, `render` and `serve`.
 
-Not built yet: `graph` for Python and JS/TS, and `render` for the sequence,
-state and use case families.
+Not built yet: `graph` for Python and JS/TS.
 
 ## Build
 

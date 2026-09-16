@@ -13,14 +13,27 @@ package render
 // navigating between levels and following a box into the one below it — rather
 // than a vocabulary inherited from a viewer built for a different document.
 const (
+	// attrFamily says which kind of diagram a page holds. It is read back by
+	// the checker, because the rules a drawing is judged by differ per family
+	// and a page that arrived on its own has nothing else to say which it is.
+	attrFamily = "data-family"
+
 	attrLevel      = "data-level"
 	attrLevelTitle = "data-level-title"
 	attrLevelLink  = "data-level-link"
 	attrLevelBack  = "data-level-back"
 
-	attrBoxID    = "data-box-id"
-	attrBoxOpens = "data-opens"
-	attrRegionID = "data-region-id"
+	attrBoxID = "data-box-id"
+	// attrBoxBounds carries a box's rectangle, written out rather than left to
+	// be recovered from whatever shape was drawn.
+	//
+	// The same reasoning as data-composition-points: a final state is a ringed
+	// circle and a use case an ellipse, so a reader working from the drawing
+	// would have to understand every shape this renderer might choose. The
+	// geometry the checker needs is stated instead.
+	attrBoxBounds = "data-box-bounds"
+	attrBoxOpens  = "data-opens"
+	attrRegionID  = "data-region-id"
 
 	attrEdgeID       = "data-edge-id"
 	attrEdgeFrom     = "data-edge-from"
@@ -28,6 +41,14 @@ const (
 	attrEdgeFromSide = "data-edge-from-side"
 	attrEdgeToSide   = "data-edge-to-side"
 	attrEdgeLabelFor = "data-edge-label-for"
+
+	// The sequence family's own furniture. A bar has to say which lifeline it
+	// runs on and a frame what it is, because a rectangle on its own says
+	// neither and the checker has only the artifact to go on.
+	attrBarID     = "data-bar-id"
+	attrBarBox    = "data-bar-box"
+	attrFrameID   = "data-frame-id"
+	attrFrameKind = "data-frame-kind"
 
 	// attrCompositionPoints carries the routed polyline, unrounded.
 	//
@@ -56,9 +77,10 @@ func ViewerContract() []string {
 // CheckerContract lists what reading the artifact back depends on.
 func CheckerContract() []string {
 	return []string{
-		attrLevel, attrLevelTitle, attrBoxID, attrBoxOpens, attrRegionID,
+		attrFamily, attrLevel, attrLevelTitle, attrBoxID, attrBoxBounds, attrBoxOpens, attrRegionID,
 		attrEdgeID, attrEdgeFrom, attrEdgeTo, attrEdgeFromSide, attrEdgeToSide,
 		attrEdgeLabelFor, attrCompositionPoints,
+		attrBarID, attrBarBox, attrFrameID, attrFrameKind,
 	}
 }
 

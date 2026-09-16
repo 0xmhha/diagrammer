@@ -106,7 +106,10 @@ func (r *router) straight(c diagram.Connection, from, to placedBox) (routed, err
 	if from.Col > to.Col {
 		fromSide, toSide = sideLeft, sideRight
 	}
-	lane, err := r.takeEdge(from.ID + "|" + to.ID)
+	// The lane is spread along the shorter of the two facing edges. A state
+	// machine's start and end are drawn as dots, and a lane sized for a full
+	// box would put the line's end beside the dot rather than on it.
+	lane, err := r.takeEdge(from.ID+"|"+to.ID, math.Min(from.H, to.H))
 	if err != nil {
 		return routed{}, err
 	}
@@ -183,11 +186,11 @@ func (r *router) detour(c diagram.Connection, from, to placedBox) (routed, error
 
 // takeEdge spreads routes between the same pair of boxes along their facing
 // edges, so two relationships do not land on one line.
-func (r *router) takeEdge(pair string) (float64, error) {
+func (r *router) takeEdge(pair string, height float64) (float64, error) {
 	used := r.takenEdge[pair]
 	// The box is only so tall, and a line leaving near its corner stops looking
 	// attached to it.
-	if used >= lanesPerChannel(boxHeight) {
+	if used >= lanesPerChannel(height) {
 		return 0, &laneFail{channel: "box edge"}
 	}
 	r.takenEdge[pair] = used + 1

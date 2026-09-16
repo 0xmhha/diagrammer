@@ -9,10 +9,122 @@ import (
 	"github.com/0xmhha/diagrammer/internal/compose"
 	"github.com/0xmhha/diagrammer/internal/diagram"
 	"github.com/0xmhha/diagrammer/internal/invariant"
+	"github.com/0xmhha/diagrammer/internal/uml"
 	"github.com/0xmhha/diagrammer/internal/validate"
 )
 
 var fixtures = []string{"order-service", "nested-platform"}
+
+// families are the four the composer emits, each drawn from the fixture that
+// declares it. order-service declares all four; nested-platform is the dense
+// component one.
+func families() []struct {
+	Family  diagram.Family
+	Fixture string
+} {
+	return []struct {
+		Family  diagram.Family
+		Fixture string
+	}{
+		{diagram.FamilyComponent, "nested-platform"},
+		{diagram.FamilyComponent, "order-service"},
+		{diagram.FamilySequence, "order-service"},
+		{diagram.FamilyState, "order-service"},
+		{diagram.FamilyUsecase, "order-service"},
+	}
+}
+
+func composeFor(t *testing.T, family diagram.Family, fixture string) *diagram.Document {
+	t.Helper()
+	path := filepath.Join("..", "..", "testdata", "codegraph", fixture+".codegraph.json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", fixture, err)
+	}
+	model, err := validate.Codegraph(path, raw)
+	if err != nil {
+		t.Fatalf("%s does not validate: %v", fixture, err)
+	}
+	build := map[diagram.Family]func(string, *uml.Model) (*diagram.Document, error){
+		diagram.FamilyComponent: compose.Component,
+		diagram.FamilySequence:  compose.Sequence,
+		diagram.FamilyState:     compose.State,
+		diagram.FamilyUsecase:   compose.Usecase,
+	}[family]
+	doc, err := build(path, model)
+	if err != nil {
+		t.Fatalf("compose %s: %v", family, err)
+	}
+	return doc
+}
+
+// TestEveryFamilyDraws is what closes the pipeline: a family the composer emits
+// and the renderer cannot draw is a gap inside our own work.
+func TestEveryFamilyDraws(t *testing.T) {
+	for _, f := range families() {
+		t.Run(string(f.Family)+" from "+f.Fixture, func(t *testing.T) {
+			page, err := Build(composeFor(t, f.Family, f.Fixture))
+			if err != nil {
+				t.Fatalf("render: %v", err)
+			}
+			scenes, err := artifact.Parse([]byte(page.HTML()))
+			if err != nil {
+				t.Fatalf("read back the artifact: %v", err)
+			}
+			if len(scenes) == 0 {
+				t.Fatal("the artifact holds no drawing")
+			}
+			for _, scene := range scenes {
+				if scene.Family != string(f.Family) {
+					t.Errorf("%s: the drawing says it is a %q diagram", scene.Level, scene.Family)
+				}
+				for _, p := range invariant.CompositionFor(&scene) {
+					t.Errorf("%s: %s", scene.Level, p)
+				}
+			}
+			if page.Accounting.Drawn+page.Accounting.Dropped != page.Accounting.Proven {
+				t.Errorf("drawn %d plus dropped %d is not proven %d",
+					page.Accounting.Drawn, page.Accounting.Dropped, page.Accounting.Proven)
+			}
+		})
+	}
+}
+
+// TestSequenceKeepsItsRungsInOrder is the ladder's own concern carried into the
+// drawing: the same messages on different rungs describe a different
+// interaction.
+func TestSequenceKeepsItsRungsInOrder(t *testing.T) {
+	doc := composeFor(t, diagram.FamilySequence, "order-service")
+	page, err := Build(doc)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	scenes, err := artifact.Parse([]byte(page.HTML()))
+	if err != nil {
+		t.Fatalf("read back the artifact: %v", err)
+	}
+
+	y := map[string]float64{}
+	for _, scene := range scenes {
+		for _, r := range scene.Routes {
+			if len(r.Points) > 0 {
+				y[r.ID] = r.Points[0].Y
+			}
+		}
+	}
+	previous := -1.0
+	for _, c := range doc.Levels[0].Connections {
+		got, ok := y[c.ID]
+		if !ok {
+			t.Errorf("message %q was not drawn", c.ID)
+			continue
+		}
+		if got <= previous {
+			t.Errorf("message %q sits at %.0f, not below the one before it at %.0f", c.ID, got, previous)
+		}
+		previous = got
+	}
+}
 
 func composeFixture(t *testing.T, name string) *diagram.Document {
 	t.Helper()
@@ -55,7 +167,7 @@ func TestTheDrawingObeysItsOwnRules(t *testing.T) {
 				t.Fatal("the artifact holds no drawing")
 			}
 			for _, scene := range scenes {
-				for _, p := range invariant.Composition(&scene) {
+				for _, p := range invariant.CompositionFor(&scene) {
 					t.Errorf("%s: %s", scene.Level, p)
 				}
 			}
