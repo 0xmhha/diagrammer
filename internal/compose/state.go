@@ -53,8 +53,14 @@ func State(source string, model *uml.Model) (*diagram.Document, error) {
 		ordered = append(ordered, byID[id])
 	}
 
+	band := func(id string) string { return parentOf[id] }
 	rank := ranksOf(orderedIDs, adjacency)
-	placed, grid := cellsByRank(orderedIDs, rank, func(id string) string { return parentOf[id] })
+	orderedIDs = orderWithin(orderedIDs, rank, band, adjacency)
+	ordered = ordered[:0]
+	for _, id := range orderedIDs {
+		ordered = append(ordered, byID[id])
+	}
+	placed, grid := cellsByRank(orderedIDs, rank, band)
 	boxes := make([]diagram.Box, 0, len(ordered))
 	hasChildren := make(map[string]bool, len(ordered))
 	for _, s := range ordered {

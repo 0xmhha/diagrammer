@@ -179,3 +179,126 @@ func itoa(n int) string {
 	}
 	return string(b)
 }
+
+// orderWithin reorders each row so that boxes joined by a line sit near each
+// other in the rows above and below.
+//
+// The rows say which way things depend; they say nothing about which column
+// anything takes, and a column chosen without looking at the neighbouring rows
+// is what makes a run long. A long run is the thing that crosses: on this
+// repository's own diagram one line travelled 560px along a row channel, and
+// every route descending through that channel met it.
+//
+// This is the barycentre heuristic. A box wants to sit above the average of
+// what it points at and below the average of what points at it, so each row is
+// sorted by that average, and the sweep is repeated in both directions because
+// moving one row invalidates the averages of its neighbours. The arrangement
+// with the fewest crossings is kept, which is why doing it badly cannot make
+// the page worse than not doing it.
+//
+// Bands are respected: a box only ever moves among the columns its own band
+// owns, because a band that gave up its block would stop being a frame.
+func orderWithin(ordered []string, rank map[string]int, bandOf func(string) string, edges [][2]string) []string {
+	present := make(map[string]bool, len(ordered))
+	for _, id := range ordered {
+		present[id] = true
+	}
+	var live [][2]string
+	up := make(map[string][]string, len(ordered))
+	down := make(map[string][]string, len(ordered))
+	for _, e := range edges {
+		if !present[e[0]] || !present[e[1]] || e[0] == e[1] {
+			continue
+		}
+		live = append(live, e)
+		down[e[0]] = append(down[e[0]], e[1])
+		up[e[1]] = append(up[e[1]], e[0])
+	}
+	if len(live) == 0 {
+		return ordered
+	}
+
+	best := append([]string(nil), ordered...)
+	bestCrossings := crossingProxy(best, live)
+	current := append([]string(nil), ordered...)
+
+	// Four passes each way. Beyond that the arrangement stopped moving on every
+	// fixture measured, and a heuristic that is still wandering after eight
+	// sweeps is not going to settle on the ninth.
+	const sweeps = 4
+	for i := range sweeps * 2 {
+		side := down
+		if i%2 == 1 {
+			side = up
+		}
+		current = sweep(current, rank, bandOf, side)
+		if n := crossingProxy(current, live); n < bestCrossings {
+			bestCrossings = n
+			best = append(best[:0], current...)
+		}
+	}
+	return best
+}
+
+// sweep sorts every row by where each box's neighbours on one side sit.
+func sweep(ordered []string, rank map[string]int, bandOf func(string) string, side map[string][]string) []string {
+	position := make(map[string]int, len(ordered))
+	for i, id := range ordered {
+		position[id] = i
+	}
+	key := func(id string) float64 {
+		nb := side[id]
+		if len(nb) == 0 {
+			// Nothing to be near. It keeps the place it had, so a box with no
+			// neighbours on this side does not drift about between sweeps.
+			return float64(position[id])
+		}
+		sum := 0
+		for _, n := range nb {
+			sum += position[n]
+		}
+		return float64(sum) / float64(len(nb))
+	}
+
+	out := append([]string(nil), ordered...)
+	sort.SliceStable(out, func(a, b int) bool {
+		x, y := out[a], out[b]
+		if rank[x] != rank[y] {
+			return rank[x] < rank[y]
+		}
+		if bandOf(x) != bandOf(y) {
+			return position[x] < position[y]
+		}
+		kx, ky := key(x), key(y)
+		if kx != ky {
+			return kx < ky
+		}
+		return x < y
+	})
+	return out
+}
+
+// crossingProxy counts pairs of lines whose ends are ordered one way at the top
+// and the other way at the bottom, which is what a crossing looks like before
+// there is any geometry to measure.
+func crossingProxy(ordered []string, edges [][2]string) int {
+	position := make(map[string]int, len(ordered))
+	for i, id := range ordered {
+		position[id] = i
+	}
+	n := 0
+	for i := range edges {
+		for j := i + 1; j < len(edges); j++ {
+			a, b := edges[i], edges[j]
+			if a[0] == b[0] || a[0] == b[1] || a[1] == b[0] || a[1] == b[1] {
+				continue
+			}
+			top := position[a[0]] - position[b[0]]
+			bottom := position[a[1]] - position[b[1]]
+			if (top > 0) != (bottom > 0) {
+				n++
+			}
+		}
+	}
+	return n
+}

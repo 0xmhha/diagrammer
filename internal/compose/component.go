@@ -419,8 +419,10 @@ func placeBoxes(l plannedLevel, t *componentTree, regionOf map[string]string, dr
 	sort.Strings(sorted)
 	ordered := orderByAdjacency(sorted, adjacency, func(id string) string { return regionOf[id] })
 
+	band := func(id string) string { return regionOf[id] }
 	rank := ranksOf(ordered, adjacency)
-	placed, grid := cellsByRank(ordered, rank, func(id string) string { return regionOf[id] })
+	ordered = orderWithin(ordered, rank, band, adjacency)
+	placed, grid := cellsByRank(ordered, rank, band)
 
 	boxes := make([]diagram.Box, 0, len(ordered))
 	for _, id := range ordered {

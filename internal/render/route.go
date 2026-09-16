@@ -28,16 +28,23 @@ type routed struct {
 type router struct {
 	grid  *grid
 	boxes map[string]placedBox
-	// taken counts how many lanes each channel has handed out. A channel is
+	// taken records which lanes of each channel are spoken for. A channel is
 	// identified by its centre line, which is stable and unique.
-	takenV map[float64]int
-	takenH map[float64]int
+	//
+	// Which lanes rather than how many: a route picks the lane crossing the
+	// least of what is already drawn, so it has to ask what is still free
+	// rather than simply take the next one.
+	takenV map[float64]map[int]bool
+	takenH map[float64]map[int]bool
 	// takenSide records which positions along one side of one box are taken,
 	// and placed counts how many routes have met it. One allocator serves every
 	// shape, so a route leaving a side and a route arriving at it cannot be
 	// handed the same place.
 	takenSide map[string]map[int]bool
 	placed    map[string]int
+	// drawn is what has already been routed on this level, so a route still
+	// choosing its way can see what it would have to cross.
+	drawn []routed
 }
 
 func newRouter(g *grid, boxes []placedBox) *router {
@@ -47,7 +54,7 @@ func newRouter(g *grid, boxes []placedBox) *router {
 	}
 	return &router{
 		grid: g, boxes: byID,
-		takenV: map[float64]int{}, takenH: map[float64]int{},
+		takenV: map[float64]map[int]bool{}, takenH: map[float64]map[int]bool{},
 		takenSide: map[string]map[int]bool{}, placed: map[string]int{},
 	}
 }
@@ -196,16 +203,17 @@ func (r *router) overOneRow(c diagram.Connection, from, to placedBox) (routed, e
 		ch = r.grid.channelAbove(from.Row)
 	}
 
-	lane, err := r.takeHorizontal(ch)
-	if err != nil {
-		return routed{}, err
-	}
-
 	startX, endX := r.stubs(from, fromSide, to, toSide)
 	start := point{X: startX, Y: from.bottom()}
 	end := point{X: endX, Y: to.Y}
 	if !downward {
 		start.Y, end.Y = from.Y, to.bottom()
+	}
+	lane, err := r.takeLaneAvoiding(c, ch, func(lane float64) []point {
+		return simplify([]point{start, {X: start.X, Y: lane}, {X: end.X, Y: lane}, end})
+	})
+	if err != nil {
+		return routed{}, err
 	}
 	points := []point{start, {X: start.X, Y: lane}, {X: end.X, Y: lane}, end}
 	return finish(c, simplify(points), fromSide, toSide), nil
@@ -237,15 +245,7 @@ func (r *router) detour(c diagram.Connection, from, to placedBox) (routed, error
 		startY, endY = from.Y, to.bottom()
 	}
 
-	first, err := r.takeHorizontal(nearFrom)
-	if err != nil {
-		return routed{}, err
-	}
-	vertical, err := r.takeVertical(r.grid.channelLeftOf(to.Col))
-	if err != nil {
-		return routed{}, err
-	}
-	second, err := r.takeHorizontal(nearTo)
+	w, err := r.chooseWay(c, from, to, nearFrom, nearTo, startY, endY)
 	if err != nil {
 		return routed{}, err
 	}
@@ -255,10 +255,10 @@ func (r *router) detour(c diagram.Connection, from, to placedBox) (routed, error
 	end := point{X: endX, Y: endY}
 	points := simplify([]point{
 		start,
-		{X: start.X, Y: first},
-		{X: vertical, Y: first},
-		{X: vertical, Y: second},
-		{X: end.X, Y: second},
+		{X: start.X, Y: w.first},
+		{X: w.x, Y: w.first},
+		{X: w.x, Y: w.second},
+		{X: end.X, Y: w.second},
 		end,
 	})
 	return finish(c, points, fromSide, toSide), nil
@@ -271,13 +271,15 @@ func (r *router) detour(c diagram.Connection, from, to placedBox) (routed, error
 // channel to the channel above the row and come down into the target's top,
 // which is a lap around the row for a relationship that never leaves it.
 func (r *router) alongRow(c diagram.Connection, from, to placedBox) (routed, error) {
-	lane, err := r.takeHorizontal(r.grid.channelBelow(from.Row))
-	if err != nil {
-		return routed{}, err
-	}
 	startX, endX := r.stubs(from, sideBottom, to, sideBottom)
 	start := point{X: startX, Y: from.bottom()}
 	end := point{X: endX, Y: to.bottom()}
+	lane, err := r.takeLaneAvoiding(c, r.grid.channelBelow(from.Row), func(lane float64) []point {
+		return []point{start, {X: start.X, Y: lane}, {X: end.X, Y: lane}, end}
+	})
+	if err != nil {
+		return routed{}, err
+	}
 	points := []point{start, {X: start.X, Y: lane}, {X: end.X, Y: lane}, end}
 	return finish(c, simplify(points), sideBottom, sideBottom), nil
 }
@@ -360,23 +362,184 @@ func (r *router) takeEdgeLane(extent float64, sides ...string) (float64, error) 
 	return 0, &laneFail{channel: "box edge"}
 }
 
-// takeVertical hands out the next free lane in a vertical channel.
-func (r *router) takeVertical(ch channel) (float64, error) {
-	used := r.takenV[ch.centre]
-	if used >= ch.lanes {
-		return 0, &laneFail{channel: "vertical"}
+// freeLanes lists the lanes of a channel nobody has taken, nearest the middle
+// first, which is the order they were handed out in before anything chose.
+func freeLanes(taken map[float64]map[int]bool, ch channel) []int {
+	used := taken[ch.centre]
+	out := make([]int, 0, ch.lanes)
+	for i := range ch.lanes {
+		if !used[i] {
+			out = append(out, i)
+		}
 	}
-	r.takenV[ch.centre] = used + 1
-	return ch.centre + laneOffset(used), nil
+	return out
 }
 
-func (r *router) takeHorizontal(ch channel) (float64, error) {
-	used := r.takenH[ch.centre]
-	if used >= ch.lanes {
+func claim(taken map[float64]map[int]bool, centre float64, lane int) {
+	if taken[centre] == nil {
+		taken[centre] = map[int]bool{}
+	}
+	taken[centre][lane] = true
+}
+
+// way is one set of choices a detour can make.
+type way struct {
+	first, second, x float64
+}
+
+// chooseWay picks where a detour travels.
+//
+// Three things are open to it: which lane of the channel beside the source it
+// drops into, which vertical channel it climbs, and which lane of the channel
+// beside the target it arrives in. All three were settled blind. Lanes were
+// handed out in the order routes arrived and the vertical was always the one
+// left of the target, so a detour crossing a row went through whatever happened
+// to be in the way.
+//
+// Every combination still free is tried and the one crossing the least of what
+// is already drawn wins. Ties go to the lane nearest the middle of its channel
+// and the vertical nearest the target, which is what this always chose, so a
+// page with nothing in the way is routed exactly as it was.
+//
+// routeAll draws the routes with no choice first. That is what makes looking
+// worth doing: what a detour can see is everything that could not have gone
+// anywhere else.
+func (r *router) chooseWay(c diagram.Connection, from, to placedBox, nearFrom, nearTo channel, startY, endY float64) (way, error) {
+	firsts := freeLanes(r.takenH, nearFrom)
+	seconds := freeLanes(r.takenH, nearTo)
+	if len(firsts) == 0 || len(seconds) == 0 {
+		return way{}, &laneFail{channel: "horizontal"}
+	}
+
+	type choice struct {
+		w                  way
+		firstI, secondI, v int
+		centre             float64
+	}
+	var best choice
+	bestScore, found := 0, false
+	for _, col := range r.columnsNearest(to.Col) {
+		ch := r.grid.channelLeftOf(col)
+		for _, v := range freeLanes(r.takenV, ch) {
+			for _, f := range firsts {
+				for _, sc := range seconds {
+					cand := choice{
+						w: way{
+							first:  nearFrom.centre + laneOffset(f),
+							second: nearTo.centre + laneOffset(sc),
+							x:      ch.centre + laneOffset(v),
+						},
+						firstI: f, secondI: sc, v: v, centre: ch.centre,
+					}
+					score := r.crossingsOf(c, from, to, cand.w, startY, endY)
+					if !found || score < bestScore {
+						found, bestScore, best = true, score, cand
+					}
+					if bestScore == 0 {
+						goto done
+					}
+				}
+			}
+		}
+	}
+done:
+	if !found {
+		return way{}, &laneFail{channel: "vertical"}
+	}
+	claim(r.takenH, nearFrom.centre, best.firstI)
+	claim(r.takenH, nearTo.centre, best.secondI)
+	claim(r.takenV, best.centre, best.v)
+	return best.w, nil
+}
+
+// takeLaneAvoiding picks a lane for a route that travels in one channel only,
+// by the same rule: the free lane crossing the least of what is drawn.
+func (r *router) takeLaneAvoiding(c diagram.Connection, ch channel, path func(lane float64) []point) (float64, error) {
+	lanes := freeLanes(r.takenH, ch)
+	if len(lanes) == 0 {
 		return 0, &laneFail{channel: "horizontal"}
 	}
-	r.takenH[ch.centre] = used + 1
-	return ch.centre + laneOffset(used), nil
+	best, bestScore := lanes[0], -1
+	for _, i := range lanes {
+		score := r.crossings(c, path(ch.centre+laneOffset(i)))
+		if bestScore < 0 || score < bestScore {
+			best, bestScore = i, score
+		}
+		if bestScore == 0 {
+			break
+		}
+	}
+	claim(r.takenH, ch.centre, best)
+	return ch.centre + laneOffset(best), nil
+}
+
+// columnsNearest lists every vertical channel, the target's own first and then
+// outward, so a tie keeps the route close to where it is going.
+func (r *router) columnsNearest(preferred int) []int {
+	n := len(r.grid.colX)
+	out := []int{preferred}
+	for d := 1; d <= n; d++ {
+		if preferred-d >= 0 {
+			out = append(out, preferred-d)
+		}
+		if preferred+d <= n {
+			out = append(out, preferred+d)
+		}
+	}
+	return out
+}
+
+func (r *router) crossingsOf(c diagram.Connection, from, to placedBox, w way, startY, endY float64) int {
+	return r.crossings(c, simplify([]point{
+		{X: from.centerX(), Y: startY},
+		{X: from.centerX(), Y: w.first},
+		{X: w.x, Y: w.first},
+		{X: w.x, Y: w.second},
+		{X: to.centerX(), Y: w.second},
+		{X: to.centerX(), Y: endY},
+	}))
+}
+
+// crossings counts how many drawn routes a candidate path would cross. Routes
+// sharing an end with it are not counted: two lines arriving at one box are
+// what a reader expects, and the rule says the same.
+func (r *router) crossings(c diagram.Connection, candidate []point) int {
+	n := 0
+	for _, other := range r.drawn {
+		if other.From == c.From || other.From == c.To || other.To == c.From || other.To == c.To {
+			continue
+		}
+		if pathsCross(candidate, other.Points) {
+			n++
+		}
+	}
+	return n
+}
+
+// pathsCross reports whether two polylines properly intersect anywhere.
+func pathsCross(a, b []point) bool {
+	for i := 0; i+1 < len(a); i++ {
+		for j := 0; j+1 < len(b); j++ {
+			if segmentsCross(a[i], a[i+1], b[j], b[j+1]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func segmentsCross(a, b, c, d point) bool {
+	s1, s2 := turn(c, d, a), turn(c, d, b)
+	s3, s4 := turn(a, b, c), turn(a, b, d)
+	return ((s1 > 0 && s2 < 0) || (s1 < 0 && s2 > 0)) && ((s3 > 0 && s4 < 0) || (s3 < 0 && s4 > 0))
+}
+
+// turn is which way the corner a-b-p bends, and zero when the three are in a
+// line. It is the test the composition checker uses to judge a crossing, which
+// is deliberate: a router choosing a path to avoid one and a rule deciding
+// whether one happened must agree on what a crossing is.
+func turn(a, b, p point) float64 {
+	return (b.X-a.X)*(p.Y-a.Y) - (b.Y-a.Y)*(p.X-a.X)
 }
 
 // laneOffset spreads lanes outward from the channel's centre, alternating
@@ -453,25 +616,53 @@ func routeAll(level diagram.Level, g *grid, boxes []placedBox) ([]routed, map[st
 	copy(ordered, level.Connections)
 	sort.Slice(ordered, func(i, j int) bool { return ordered[i].ID < ordered[j].ID })
 
-	// Routes with no freedom go first. A straight or stacked route has one
-	// position it can occupy on each box side, because both its ends have to
-	// move together; a bent route can take any. Letting the bent ones allocate
-	// first meant a marker, which is narrow enough to hold a single position,
+	// Routes go in order of how much choice they have, least first.
+	//
+	// A straight or stacked route has one shape and one position on each box
+	// side, because both its ends have to move together. Letting the freer ones
+	// allocate first meant a marker, narrow enough to hold a single position,
 	// could have it taken by a route that had somewhere else to go, and the
 	// straight route between two markers was then refused.
-	rigid := func(c diagram.Connection) bool {
+	//
+	// The same argument runs on past the rigid ones. A detour may climb any
+	// vertical channel it likes and picks the one that crosses the least of
+	// what is drawn, so the more that is drawn when it picks, the better it
+	// picks. Going last is what gives it something to look at.
+	freedom := func(c diagram.Connection) int {
 		from, ok := byID[c.From]
 		if !ok {
-			return false
+			return 0
 		}
 		to, ok := byID[c.To]
 		if !ok {
-			return false
+			return 0
 		}
-		return (from.Row == to.Row && abs(from.Col-to.Col) == 1) ||
-			(abs(from.Row-to.Row) == 1 && from.Col == to.Col)
+		switch {
+		case from.Row == to.Row && abs(from.Col-to.Col) == 1,
+			abs(from.Row-to.Row) == 1 && from.Col == to.Col:
+			return 0 // one shape, one place on each box side
+		case abs(from.Row-to.Row) == 1, from.Row == to.Row:
+			return 1 // one channel to travel in, and a lane to pick in it
+		default:
+			return 2 // a lane in two channels, and any vertical channel it likes
+		}
 	}
-	sort.SliceStable(ordered, func(i, j int) bool { return rigid(ordered[i]) && !rigid(ordered[j]) })
+	// Within a tier, the shortest first. A route between neighbours has fewer
+	// ways to go than one across the page, and the same argument that puts the
+	// rigid ones first puts the short ones ahead of the long.
+	span := func(c diagram.Connection) int {
+		from, ok := byID[c.From]
+		if !ok {
+			return 0
+		}
+		to, ok := byID[c.To]
+		if !ok {
+			return 0
+		}
+		return abs(from.Row-to.Row)*len(byID) + abs(from.Col-to.Col)
+	}
+	sort.SliceStable(ordered, func(i, j int) bool { return span(ordered[i]) < span(ordered[j]) })
+	sort.SliceStable(ordered, func(i, j int) bool { return freedom(ordered[i]) < freedom(ordered[j]) })
 
 	r := newRouter(g, boxes)
 	var out []routed
@@ -482,6 +673,7 @@ func routeAll(level diagram.Level, g *grid, boxes []placedBox) ([]routed, map[st
 			refused[c.ID] = err
 			continue
 		}
+		r.drawn = append(r.drawn, path)
 		out = append(out, path)
 	}
 	// Allocation order is not drawing order. The page is emitted by id so that

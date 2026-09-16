@@ -229,6 +229,51 @@ bands, which is what makes a page read downward and a region frame a block
 rather than a scatter. This is what archify's `rankMembers` does, arrived at the
 same way: by looking at a page of ours beside a page of theirs.
 
+### A route picks the way that crosses the least
+
+Laying the page out by dependency depth made the rows mean something and left
+the columns and the lanes still chosen blind.
+
+Three things were open to a route and none of them was chosen. Which column a
+box took within its row was decided by a walk that never looked at the
+neighbouring rows. Which lane of a channel a route travelled in was whichever
+came next. Which vertical channel a detour climbed was always the one left of
+its target. So a line ran 560px along a row channel on this repository's own
+diagram, and four separate detours climbed straight through it.
+
+All three now look at something. Columns are ordered by the barycentre
+heuristic, each row sorted by the average position of its neighbours in the row
+above and below, swept both ways and the arrangement with the fewest crossings
+kept. Lanes and the vertical channel are chosen together, by trying every
+combination still free and taking the one that crosses the least of what is
+already drawn. Ties go to what the code chose before, so a page with nothing in
+the way is routed exactly as it was.
+
+Order is what makes looking worth doing. Routes are drawn in order of how much
+choice they have, least first: a straight or stacked route has one shape and one
+position on each box side, a route between neighbouring rows has one channel,
+and a detour has a lane in two channels and any vertical it likes. By the time a
+detour picks, what it can see is everything that could not have gone anywhere
+else. Within a tier the shortest go first, for the same reason.
+
+Measured on models of real projects, grouped package by package, plus this
+repository's own four-family model:
+
+| model | before | after |
+|---|---|---|
+| archify | 17/25 | 20/25 |
+| diagrammer, packages | 21/28 | 23/28 |
+| diagrammer, four families | 16/25 | 18/25 |
+| OpenMMO | 28/63 | 37/63 |
+| mythril | 8/9 | 6/9 |
+| ego-lite | 8/8 | 8/8 |
+| **total** | **92/158** | **112/158** |
+
+mythril is the one that lost, and it is left in the table rather than out of it.
+A heuristic that improves the total is not a heuristic that improves every case,
+and a table showing only the cases that moved the right way would be an argument
+rather than a measurement.
+
 What the layout scored before the placement work, and after:
 
 | | before | after |

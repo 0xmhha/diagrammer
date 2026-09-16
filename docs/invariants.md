@@ -134,6 +134,10 @@ Also checked:
   diagram reads downward: whatever nothing depends on is at the top and what it
   rests on is beneath it. A cycle has no depth, and the edge that closes one is
   left out of the reckoning rather than followed.
+- The column a box takes within its row follows the barycentre of its
+  neighbours in the rows above and below, so that boxes joined by a line sit
+  near each other and the run between them stays short. A long run is the thing
+  that crosses.
 - A band owns its own columns. Two bands sharing a column would each have to
   reach across the other's boxes, and the two frames would overlap, which says
   the two groups overlap.
