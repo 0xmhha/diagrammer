@@ -121,7 +121,21 @@ fixtures: build
 				|| { echo "$$name: two compose runs produced different bytes"; exit 1; }; \
 		done; \
 	done; \
-	echo "$$found model fixture(s) composed: schema valid, complete, byte-identical across runs"
+	echo "$$found model fixture(s) composed: schema valid, complete, byte-identical across runs"; \
+	found=0; \
+	for doc in "$$work"/*.1/component.diagram.json; do \
+		[ -e "$$doc" ] || continue; \
+		found=$$((found + 1)); \
+		$(BIN_DIR)/$(BINARY) render "$$doc" -o "$$doc.1.html" >/dev/null; \
+		$(BIN_DIR)/$(BINARY) render "$$doc" -o "$$doc.2.html" >/dev/null; \
+		cmp -s "$$doc.1.html" "$$doc.2.html" \
+			|| { echo "$$doc: two render runs produced different bytes"; exit 1; }; \
+	done; \
+	if [ "$$found" -eq 0 ]; then \
+		echo "nothing was rendered; the stage-4 gate would pass by doing nothing"; \
+		exit 1; \
+	fi; \
+	echo "$$found page(s) rendered: composition rules pass, byte-identical across runs"
 
 ## verify: the release gate
 #

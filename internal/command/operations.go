@@ -8,10 +8,12 @@ import (
 	"path/filepath"
 
 	"github.com/0xmhha/diagrammer/internal/analyze/goast"
+	"github.com/0xmhha/diagrammer/internal/artifact"
 	"github.com/0xmhha/diagrammer/internal/compose"
 	"github.com/0xmhha/diagrammer/internal/diagram"
 	"github.com/0xmhha/diagrammer/internal/graph"
 	"github.com/0xmhha/diagrammer/internal/invariant"
+	"github.com/0xmhha/diagrammer/internal/render"
 	"github.com/0xmhha/diagrammer/internal/schema"
 	"github.com/0xmhha/diagrammer/internal/uml"
 	"github.com/0xmhha/diagrammer/internal/validate"
@@ -243,7 +245,64 @@ type RenderRequest struct {
 func (r *RenderRequest) Op() Op { return OpRender }
 
 func (r *RenderRequest) Run(context.Context) (*Result, error) {
-	return nil, &ErrNotImplemented{Op: OpRender}
+	if r.Document == "" {
+		return nil, fmt.Errorf("render needs a diagram source path")
+	}
+	raw, err := os.ReadFile(r.Document)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", r.Document, err)
+	}
+	// The document is checked before it is drawn. compose emits documents that
+	// satisfy the schema, but this command may be handed one from anywhere, and
+	// the geometry would fail in stranger ways than a refusal.
+	if err := schema.Validate(schema.Diagram, raw); err != nil {
+		return nil, fmt.Errorf("%s does not satisfy the diagram schema: %w", r.Document, err)
+	}
+	var doc diagram.Document
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", r.Document, err)
+	}
+
+	page, err := render.Build(&doc)
+	if err != nil {
+		return nil, err
+	}
+	html := []byte(page.HTML())
+
+	// The composition rules are re-run over the emitted document rather than
+	// over what the renderer held in memory. Drawing and then checking the
+	// drawing is what makes the rules mean something; a renderer that only
+	// checked its own working state would prove that it agrees with itself.
+	scenes, err := artifact.Parse(html)
+	if err != nil {
+		return nil, fmt.Errorf("read back the artifact: %w", err)
+	}
+	for i := range scenes {
+		if problems := invariant.Composition(&scenes[i]); len(problems) > 0 {
+			return nil, fmt.Errorf("the drawing of %s breaks composition rules that the renderer thought it had satisfied, which is a defect in the renderer:\n  %s",
+				scenes[i].Level, joinRouteProblems(problems))
+		}
+	}
+
+	out := &Result{}
+	a := page.Accounting
+	out.say("%s: %d page(s), %d proven, %d drawn, %d recorded",
+		r.Document, len(page.Scenes), a.Proven, a.Drawn, a.Dropped)
+	for _, d := range page.Dropped {
+		out.say("  %s on %s: %s", d.Route, d.Level, d.Why)
+	}
+	if err := deliver(out, r.Out, html); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func joinRouteProblems(problems []invariant.RouteProblem) string {
+	lines := make([]string, len(problems))
+	for i, p := range problems {
+		lines[i] = p.String()
+	}
+	return joinLines(lines, "\n  ")
 }
 
 // --- shared -------------------------------------------------------------------

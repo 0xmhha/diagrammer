@@ -17,7 +17,10 @@ them does not happen inside this program.
    model back.
 3. **compose** turns that model into diagram-source documents, one per family:
    component, sequence, state and use case.
-4. **render** turns a document into a self-contained HTML page.
+4. **render** turns a document into a self-contained HTML page: positions,
+   routed lines and an embedded viewer for moving between levels. A relationship
+   the geometry cannot hold is recorded on the page beside the drawing rather
+   than dropped in silence.
 
 `validate` guards the boundary between stages 2 and 3, and `serve` exposes the
 same capabilities as a local MCP server so any plugin can drive them.
@@ -38,13 +41,12 @@ extend. That vocabulary is what stage 2 is held to.
 
 Early, and honest about it.
 
-Working: `graph` for Go, `validate`, `compose` for all four families, `serve`,
-the embedded schemas for all three stage boundaries, and the drift guard that
-keeps the Go types matching them.
+Working end to end for Go source and the component family: `graph`, `validate`,
+`compose`, `render` and `serve`. `compose` handles all four families; `render`
+draws the component one.
 
-Not built yet: `render`, and `graph` for Python and JS/TS. An unbuilt capability
-is named on both surfaces and reports that it is not implemented rather than
-pretending not to exist.
+Not built yet: `graph` for Python and JS/TS, and `render` for the sequence,
+state and use case families.
 
 ## Build
 

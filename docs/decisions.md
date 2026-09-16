@@ -215,6 +215,57 @@ fails loudly rather than skipping a check in silence.
 fires is indistinguishable from a check that was never ported, and that is the
 main risk of reimplementing rather than invoking.
 
+### The viewer is ours, not the reference's (supersedes part of round 3)
+
+Round 3 decided to embed the reference implementation's viewer verbatim as a
+frozen asset, and to pin its 195 `data-*` attributes with a generated test. That
+was decided before round 10 rewrote the goal, and it does not survive the
+rewrite.
+
+Measured before deciding: the viewer is 8,781 lines across 13 files, and 47 of
+its 195 attributes exist for features this project has no equivalent of — guided
+views, story beats, route journeys, semantic radar and lens, reach sharing. The
+rest assume that project's own document format, which round 10 replaced with a
+UML model carrying four families. Embedding it would mean either emitting
+attributes for features that do not exist, or pinning a contract most of which
+we could never satisfy. Pinning a contract we cannot meet pins nothing.
+
+So the viewer is written here, small, and covers what 0.1.0 named: level
+navigation, which is the drill-down capability round 9 listed. The DOM contract
+requirement from round 15 stands unchanged in intent — a missing data attribute
+leaves the page drawing while interaction dies in silence, and no composition
+rule would notice — so our own, smaller vocabulary is pinned by a generated test
+exactly as that round asked.
+
+Two consequences, stated rather than discovered later:
+
+- **Features are lost.** Search, minimap, the passport panel and guided views
+  are real things the reference has and this does not. They are not in any
+  acceptance list for 0.1.0, and they can be added later against a vocabulary we
+  own.
+- **Two attributions are no longer needed.** The 780 KB viewer asset is not
+  copied, so it takes no notices row. Neither does the full-width character
+  table: transcribing it exactly was only ever required to match that
+  implementation's output byte for byte, and round 6 removed that comparison
+  from the contract. Character width is derived from the Unicode standard
+  instead, which produces different widths and is the right basis for a renderer
+  that is not imitating another one.
+
+### Routing failure is a drop, not a defeat (round 7, made concrete)
+
+A router that satisfies every composition rule on every diagram is a hard
+problem, and nothing requires one. The reference draws 800 of 1,355 proven
+relationships and records the rest, which is what the accounting invariant is
+for.
+
+So stage 4 routes what it can and drops what it cannot, recording each drop on
+the box it belonged to with the rule that refused it. The invariant carries
+across the boundary: stage 4's proven is stage 3's drawn, and drawn plus dropped
+equals proven at each stage.
+
+That is also why stage 4 has drop reasons stage 3 does not. A grid that cannot
+route a line is a geometric problem, and geometry lives here.
+
 ### Floating point (round 4)
 
 The premise of this round was withdrawn; its measurements were not.
@@ -360,6 +411,8 @@ automated moves into `make verify` rather than staying a habit.
 | Byte-identical graph output as a cross-implementation contract | 2 | 6, 12 | Byte-identity now means identical across our own runs, not identical to another implementation |
 | Sequence, lifecycle, dataflow and workflow renderers out of scope | 3 | 10 | The rewritten goal puts component, sequence, state and use case all in 0.1.0 |
 | Upstream's golden test as the conformance oracle | 3 | 4 | It hardcodes a Node invocation and byte-compares checked-in HTML; it is that project's self-consistency test and knows nothing about Go |
+| Embedding the reference viewer and pinning its 195 attributes | 3 | stage 4 | Decided before round 10 rewrote the goal; 47 of those attributes serve features this project does not have, and the rest assume a document format round 10 replaced |
+| Transcribing the full-width character table exactly | 3 | 6, stage 4 | The only reason to match it was byte comparison with that implementation, which round 6 removed from the contract |
 | Byte equality as a gate | 4 | 4, 15 | Total sensitivity, near-zero specificity; `Math.hypot` is not bit-guaranteed, so it cannot be promised |
 | A second layout-JSON artifact emitted to feed the checker | 5 | 6 | False premise: the checker reads `data-composition-points` from the HTML, already unrounded, so no second artifact is needed |
 | 0.1.0 reads Go only, Python and JS/TS deferred | 8 | 10, 12 | The rewritten goal states AST-based multi-language parsing, and stage 2 now supplies the meaning that weak call resolution used to owe |

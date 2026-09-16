@@ -41,6 +41,36 @@ abandoned and the thin page is kept: thin is a smaller loss than illegible.
 
 Used in `internal/compose/component.go`.
 
+### The drawing's own numbers
+
+These decide whether a route may be drawn, and every one of them has a test
+that breaks it. They were chosen here rather than inherited, so they are
+defended rather than merely recorded.
+
+- **`minSegment` = 16px.** The shortest run between two bends that still reads
+  as a deliberate turn. Below it the bend looks like a wobble in the line, and a
+  reader stops trusting that the route means anything.
+- **`separation` = 8px.** How far a route keeps from a box it is not attached
+  to. Closer, and at ordinary zoom the line and the box border merge into one
+  stroke, which says the two are connected when they are not.
+- **`labelClearance` = 10px.** How far a connection's text stays from another
+  route. A label is read as belonging to the nearest line, so this is the
+  distance at which "nearest" stops being ambiguous. It is larger than
+  separation because text has height of its own.
+- **`borderRun` = 24px.** How far a route may travel alongside a band's border
+  before it reads as tracing the border rather than crossing it. Shorter runs
+  are the unavoidable consequence of a route passing close by.
+- **`channelX` = 112px, `channelY` = 96px, `laneGap` = 14px, `stub` = 20px.**
+  A channel holds `(size - 2*stub) / laneGap` lanes, and a `stub` of clearance at
+  each edge is what keeps the turn into the outermost lane longer than
+  `minSegment`. These four are one decision rather than four: changing any of
+  them without the others makes the router produce routes its own rules refuse.
+
+The last point is worth stating plainly, because it is the trap. The router and
+the rules are two halves of one design. A channel too narrow for its lanes does
+not draw a worse diagram; it draws nothing, and every relationship lands in the
+record instead.
+
 ## Not in use yet
 
 Recorded because they are part of the same family of decisions and will be
@@ -62,11 +92,10 @@ splitting exists.
 
 Two numbers a reader might expect are deliberately absent.
 
-**A per-level connection ceiling.** A grid cannot route an unbounded number of
-lines, so at some density a relationship has to be dropped for a geometric
-reason. That reason belongs to stage 4, which is where routing happens; a
-number invented here, before anything has been routed, would be a guess dressed
-as a rule.
+**A per-level connection ceiling.** There is no such number, and there does not
+need to be one. A channel hands out lanes until it has none left, and the route
+that asks next is dropped and recorded. The limit is a consequence of the
+geometry rather than a figure someone picked.
 
 **A resolution rate.** How many references an analyzer manages to resolve varies
 by language and is a property of the parser rather than a defect in a document.

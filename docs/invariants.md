@@ -189,28 +189,73 @@ Nothing is dropped.
 
 ## Stage 4, rendering
 
-Not built yet. The rules, settled in advance:
+Built for the component family.
 
-- The family's composition rules pass, checked by our own Go checker reading the
-  emitted artifact rather than the renderer's in-memory state.
-- Document to HTML is structurally lossless: every element in the document is
-  present in the artifact, and the artifact introduces none the document does
-  not account for.
-- The SVG comparison is exact on element order, tag names, classes, text and
-  every non-numeric attribute, with a 1e-6 tolerance on numeric attributes only.
-- The renderer-to-viewer DOM contract is pinned by a generated test. A missing
-  data attribute leaves the page drawing while interaction dies in silence, and
-  no composition rule would notice, because those rules check the drawing rather
-  than the attribute vocabulary.
+- The composition rules pass, checked by reading the routed polylines back out
+  of the emitted document rather than off the renderer's working state. A
+  renderer checking itself proves only that it agrees with itself.
+- Document to HTML is structurally lossless: every box in the document is in the
+  drawing, every relationship is either drawn or recorded, never both and never
+  neither, and the drawing holds nothing the document did not declare.
+- The renderer-to-viewer DOM contract is pinned by a test that extracts the
+  attributes from both sides and compares them. A missing data attribute leaves
+  the page drawing while interaction dies in silence, and no composition rule
+  would notice, because those rules check the drawing rather than the vocabulary
+  underneath it.
 - Output is byte-identical across runs.
+- The page is self-contained: no network, no second file, nothing but itself.
 
-Golden HTML byte comparison runs and reports, but never fails the build. Byte
-equality has total sensitivity and almost no specificity: a good canary and a
-bad specification. A difference is explained or fixed by a person, never
-silenced by regenerating the golden file.
+### The accounting crosses the boundary
 
-The 1e-6 tolerance is chosen because it is far below one device pixel and far
-above accumulated double error at diagram scale.
+Stage 4's proven is stage 3's drawn. What the pages handed over is what the
+drawing was responsible for showing, and **drawn + dropped == proven** holds
+here as it does there.
+
+A relationship the geometry cannot hold is dropped and recorded on the box it
+left, with the rule that refused it. Routing every relationship on every diagram
+is a hard problem and nothing requires one; what is required is that nothing
+goes missing without a trace. The record is written beside the drawing in the
+page itself, because the reader who needs it is the one looking at the diagram.
+
+### The composition rules
+
+Seven, each with a drawing that breaks it:
+
+- **endpoint-side** — a route leaves and arrives on the edges it claims, and its
+  ends sit on the boxes it names. A line that says it leaves the right edge and
+  travels left crosses its own box on the way out.
+- **pass-through** — no route enters a box that is not one of its ends.
+- **separation** — no route runs closer than 8px to a box it is not attached to,
+  where it starts to read as joined to it.
+- **crossing** — no proper intersection between two routes that share no end.
+  Two lines arriving at the same box are not a crossing; a reader expects that.
+- **minimum-segment** — no run between bends shorter than 16px, below which a
+  turn reads as a kink.
+- **label-clearance** — a connection's text stays 10px clear of every route but
+  its own, so it cannot attach itself to the wrong relationship.
+- **border-run** — no route travels more than 24px along a band's border instead
+  of crossing it, which would read as the band having a side the diagram never
+  meant.
+
+Two of them hold by construction rather than by luck. Routes travel only in the
+channels between cells, so pass-through cannot happen; and the side a route
+leaves on is derived from where the two boxes sit, so endpoint-side agrees
+unless something else has gone wrong. They are checked anyway, because a rule
+that holds by construction today holds by accident tomorrow.
+
+### What is not checked
+
+The structural SVG comparison, with its 1e-6 tolerance on numeric attributes,
+compares one drawing against another. There is nothing yet to compare against:
+it becomes meaningful at the first release, when a change can be held against
+what shipped. The tolerance and its justification are recorded in
+docs/thresholds.md so the number is not invented later under pressure.
+
+Golden HTML byte comparison is not run for the same reason. When it is, it
+reports and never fails the build: byte equality has total sensitivity and
+almost no specificity, which makes it a good canary and a bad specification. A
+difference is explained or fixed by a person, never silenced by regenerating
+the golden file.
 
 ## The release gate
 

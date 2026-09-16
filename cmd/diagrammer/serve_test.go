@@ -268,14 +268,43 @@ func TestComposeOverMCP(t *testing.T) {
 	}
 }
 
-// TestUnbuiltToolSaysSo keeps the two surfaces honest about the same gap: a
-// capability named but not built reports that, on both faces.
-func TestUnbuiltToolSaysSo(t *testing.T) {
-	result := call(t, "render", map[string]any{"document": "doc.json"})
-	if !result.IsError {
-		t.Fatal("want render to report that it is not built")
+// TestRenderOverMCP checks the last stage reaches the second surface too, and
+// that a failure arrives as content the caller can act on rather than as a
+// protocol fault.
+func TestRenderOverMCP(t *testing.T) {
+	dir := t.TempDir()
+	if result := call(t, "compose", map[string]any{
+		"model": nestedModel, "family": "component", "out": dir,
+	}); result.IsError {
+		t.Fatalf("compose: %s", textOf(result))
 	}
-	if !strings.Contains(textOf(result), "not implemented") {
-		t.Errorf("unexpected message: %s", textOf(result))
-	}
+	doc := filepath.Join(dir, "component.diagram.json")
+
+	t.Run("draws a page", func(t *testing.T) {
+		out := filepath.Join(dir, "page.html")
+		result := call(t, "render", map[string]any{"document": doc, "out": out})
+		if result.IsError {
+			t.Fatalf("want a page, got %s", textOf(result))
+		}
+		raw, err := os.ReadFile(out)
+		if err != nil {
+			t.Fatalf("read the page: %v", err)
+		}
+		if !strings.Contains(string(raw), "<svg") {
+			t.Error("the page holds no drawing")
+		}
+		if !strings.Contains(textOf(result), "proven") {
+			t.Errorf("no accounting in the result: %s", textOf(result))
+		}
+	})
+
+	t.Run("a refused document comes back as content", func(t *testing.T) {
+		result := call(t, "render", map[string]any{"document": nestedModel})
+		if !result.IsError {
+			t.Fatal("want a UML model refused as a diagram source")
+		}
+		if !strings.Contains(textOf(result), "diagram schema") {
+			t.Errorf("the refusal does not say what was wrong: %s", textOf(result))
+		}
+	})
 }

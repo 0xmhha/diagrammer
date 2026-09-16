@@ -56,7 +56,7 @@
       }
     ],
     "dependencies": [
-      { "id": "dep.web.core", "from": "web", "to": "core", "kind": "use" },
+      { "id": "dep.web.core", "from": "web", "to": "core", "kind": "use", "name": "calls" },
       { "id": "dep.core.data", "from": "core", "to": "data", "kind": "use" },
 
       { "id": "dep.ui.gateway", "from": "web.ui", "to": "web.gateway", "kind": "use" },

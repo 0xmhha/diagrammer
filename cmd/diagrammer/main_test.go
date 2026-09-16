@@ -68,18 +68,20 @@ func TestRun(t *testing.T) {
 	}
 }
 
-// TestUnbuiltCommandsAreNamed keeps a subcommand that 0.1.0 has planned
-// distinguishable from one that does not exist. Someone typing `render` should
-// be told it is coming, not that they mistyped.
-func TestUnbuiltCommandsAreNamed(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	err := run([]string{"render", "doc.json"}, &stdout, &stderr)
-	var notBuilt *command.ErrNotImplemented
-	if !errors.As(err, &notBuilt) {
-		t.Fatalf("want a not-implemented error, got %v", err)
-	}
-	if notBuilt.Op != command.OpRender {
-		t.Errorf("the error names %q rather than render", notBuilt.Op)
+// TestNoCapabilityIsStillUnbuilt records that every operation 0.1.0 named is
+// now behind real code. The not-implemented path stays, because the next family
+// or language added will need it again, but nothing takes it today.
+func TestNoCapabilityIsStillUnbuilt(t *testing.T) {
+	for _, op := range command.Ops() {
+		req, err := command.New(op)
+		if err != nil {
+			t.Fatalf("%s: %v", op, err)
+		}
+		_, err = req.Run(t.Context())
+		var notBuilt *command.ErrNotImplemented
+		if errors.As(err, &notBuilt) {
+			t.Errorf("%s reports that it is not implemented", op)
+		}
 	}
 }
 
@@ -268,6 +270,56 @@ func TestComposeCommand(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		if err := run([]string{"compose", broken, "-o", t.TempDir()}, &stdout, &stderr); err == nil {
 			t.Error("want the invalid model refused, got success")
+		}
+	})
+}
+
+func TestRenderCommand(t *testing.T) {
+	compose := func(t *testing.T) string {
+		t.Helper()
+		dir := t.TempDir()
+		var stdout, stderr bytes.Buffer
+		if err := run([]string{"compose", nestedModel, "-family", "component", "-o", dir}, &stdout, &stderr); err != nil {
+			t.Fatalf("compose: %v", err)
+		}
+		return filepath.Join(dir, "component.diagram.json")
+	}
+
+	t.Run("writes a self-contained page", func(t *testing.T) {
+		doc := compose(t)
+		out := filepath.Join(t.TempDir(), "page.html")
+		var stdout, stderr bytes.Buffer
+		if err := run([]string{"render", doc, "-o", out}, &stdout, &stderr); err != nil {
+			t.Fatalf("render: %v", err)
+		}
+		raw, err := os.ReadFile(out)
+		if err != nil {
+			t.Fatalf("read the page: %v", err)
+		}
+		page := string(raw)
+		for _, want := range []string{"<!DOCTYPE html>", "<svg", "<style>", "<script>"} {
+			if !strings.Contains(page, want) {
+				t.Errorf("the page has no %s", want)
+			}
+		}
+		if !strings.Contains(stderr.String(), "proven") {
+			t.Errorf("no accounting on stderr: %q", stderr.String())
+		}
+	})
+
+	t.Run("refuses a document that is not a diagram source", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run([]string{"render", nestedModel, "-o", filepath.Join(t.TempDir(), "x.html")}, &stdout, &stderr)
+		if err == nil || !strings.Contains(err.Error(), "diagram schema") {
+			t.Errorf("want a refusal naming the schema, got %v", err)
+		}
+	})
+
+	t.Run("needs a document", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := run([]string{"render"}, &stdout, &stderr)
+		if err == nil || !strings.Contains(err.Error(), "diagram source path") {
+			t.Errorf("want a complaint about the missing operand, got %v", err)
 		}
 	})
 }
