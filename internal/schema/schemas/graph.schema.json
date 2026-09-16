@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/0xmhha/diagrammer/schemas/graph.schema.json",
+  "title": "diagrammer stage-1 code graph",
+  "description": "What an AST parser proved about a source tree. Structure and raw references only: no meaning is attributed here, because stage 2 is where meaning is added. This document is the input a plugin's skill reads.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "root", "nodes", "edges", "diagnostics"],
+  "properties": {
+    "schema_version": {
+      "description": "Bumped when a change would make an older reader misread a newer document. A reader that does not recognise the value refuses the document rather than consuming part of it.",
+      "const": 1
+    },
+    "generated_by": {
+      "description": "Free text naming the producer and its version, for provenance. Carries no contractual meaning and is not read by any stage.",
+      "type": "string",
+      "maxLength": 200
+    },
+    "root": {
+      "description": "Id of the single node with no parent. Every other node reaches it by following parent pointers.",
+      "$ref": "#/$defs/nodeId"
+    },
+    "nodes": {
+      "description": "Sorted by id. The order is part of the byte-identity guarantee, not a convenience.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "description": "Sorted by (from, to, kind). References at the finest resolution the analyzer could prove; rolling them up to a coarser level is a later stage's job.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "diagnostics": { "$ref": "#/$defs/diagnostics" }
+  },
+  "$defs": {
+    "nodeId": {
+      "description": "Unique within the document. Conventionally a kind prefix and a path, such as pkg:net/http or fn:net/http.(*Server).Serve. Any printable text without spaces or control characters is accepted, because ids are derived from source paths rather than authored. Uniqueness is checked by validate, since a pattern cannot express it.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[^\\x00-\\x20\\x7f]+$"
+    },
+    "nodeKind": {
+      "description": "group is a directory holding only other directories; package is a directory holding source; file, type and func are what they say. Every analyzer projects its language onto these five, whatever that language calls them.",
+      "enum": ["group", "package", "file", "type", "func"]
+    },
+    "language": {
+      "enum": ["go", "python", "javascript", "typescript"]
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nodeId" },
+        "kind": { "$ref": "#/$defs/nodeKind" },
+        "name": {
+          "description": "For display. Not an identifier: two nodes may share a name.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "parent": {
+          "description": "Absent on the root node and present on every other. validate rejects a parent that names no node, and rejects a cycle.",
+          "$ref": "#/$defs/nodeId"
+        },
+        "language": { "$ref": "#/$defs/language" },
+        "source": { "$ref": "#/$defs/sourceRef" }
+      }
+    },
+    "sourceRef": {
+      "description": "Where the node was found. The path is relative to the analyzed root, so a graph does not leak the machine that produced it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "line": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "edgeKind": {
+      "description": "import is a declared dependency between packages or files; call is one function reaching another. Ordered coarsest to finest evidence.",
+      "enum": ["import", "call"]
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "kind", "weight"],
+      "properties": {
+        "from": { "$ref": "#/$defs/nodeId" },
+        "to": { "$ref": "#/$defs/nodeId" },
+        "kind": { "$ref": "#/$defs/edgeKind" },
+        "weight": {
+          "description": "How many times the reference was observed. One edge per (from, to, kind); repeated references raise the weight rather than adding a row.",
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "diagnostics": {
+      "description": "What the analyzer could not do. This block exists because tree-sitter fails soft: it emits an ERROR node and carries on, so code can vanish from a graph that otherwise looks complete. A failure that is not recorded here is indistinguishable from source that was never there.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files_parsed", "parse_failures"],
+      "properties": {
+        "files_parsed": {
+          "description": "Files the analyzer read, whether or not they parsed. Compare against the length of parse_failures to get the success count; the count is not stored twice.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "parse_failures": {
+          "description": "One entry per file that failed, sorted by path. An empty array asserts that every file parsed, which is a claim the fixtures test.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/parseFailure" }
+        },
+        "unresolved_references": {
+          "description": "References seen but not resolved to a node, grouped by reason. Reported rather than gated: resolution rates differ by language and a low rate is a known property of the parser, not a defect in the document.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["reason", "count"],
+            "properties": {
+              "reason": { "type": "string", "minLength": 1, "maxLength": 200 },
+              "count": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "parseFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "message"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "language": { "$ref": "#/$defs/language" },
+        "message": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "line": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

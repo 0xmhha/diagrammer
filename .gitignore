@@ -33,6 +33,11 @@ go.work.sum
 # Test fixtures are kept, their rendered output is not
 /testdata/**/got/
 
+# Fixtures are the exception to the generated-output rules above: a committed
+# codegraph is the contract stages 3 and 4 are tested against, not output.
+!/testdata/**/*.codegraph.json
+!/internal/**/testdata/**/*.codegraph.json
+
 # macOS
 .DS_Store
 

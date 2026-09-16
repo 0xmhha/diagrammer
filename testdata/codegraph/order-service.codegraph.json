@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "title": "Order Service",
+    "subtitle": "A small system that exercises every family's vocabulary"
+  },
+  "provenance": {
+    "origin": "handwritten",
+    "note": "Written by hand to cover the UML vocabulary each family requires: provided and required interfaces with ports and dependencies; lifelines with synchronous, asynchronous and reply messages, activations and a combined fragment; states with trigger, guard and effect plus initial and final; actors, a system boundary, and both include and extend."
+  },
+  "families": ["component", "sequence", "state", "usecase"],
+
+  "component": {
+    "components": [
+      {
+        "id": "api",
+        "name": "Order API",
+        "stereotype": "service",
+        "description": "Accepts orders and coordinates the rest.",
+        "ports": [
+          { "id": "api.p.orders", "name": "orders", "kind": "provided", "interface": "OrderAPI" },
+          { "id": "api.r.store", "name": "store", "kind": "required", "interface": "OrderStore" },
+          { "id": "api.r.notify", "name": "notify", "kind": "required", "interface": "Notifier" }
+        ]
+      },
+      {
+        "id": "store",
+        "name": "Order Store",
+        "stereotype": "database",
+        "ports": [
+          { "id": "store.p.orders", "name": "orders", "kind": "provided", "interface": "OrderStore" }
+        ]
+      },
+      {
+        "id": "notifier",
+        "name": "Notifier",
+        "stereotype": "service",
+        "ports": [
+          { "id": "notifier.p.notify", "name": "notify", "kind": "provided", "interface": "Notifier" }
+        ]
+      }
+    ],
+    "interfaces": [
+      {
+        "id": "OrderAPI",
+        "name": "OrderAPI",
+        "operations": [
+          { "name": "placeOrder", "signature": "placeOrder(Order) (OrderID, error)" },
+          { "name": "cancelOrder", "signature": "cancelOrder(OrderID) error" }
+        ]
+      },
+      {
+        "id": "OrderStore",
+        "name": "OrderStore",
+        "operations": [
+          { "name": "save", "signature": "save(Order) error" },
+          { "name": "load", "signature": "load(OrderID) (Order, error)" }
+        ]
+      },
+      {
+        "id": "Notifier",
+        "name": "Notifier",
+        "operations": [{ "name": "notify", "signature": "notify(OrderID, Event) error" }]
+      }
+    ],
+    "dependencies": [
+      { "id": "dep.api.store", "from": "api", "to": "store", "kind": "use", "name": "persists orders" },
+      { "id": "dep.api.notifier", "from": "api", "to": "notifier", "kind": "use" },
+      { "id": "dep.store.iface", "from": "store", "to": "OrderStore", "kind": "realize" }
+    ]
+  },
+
+  "sequence": {
+    "lifelines": [
+      { "id": "ll.customer", "name": "Customer", "actor": true },
+      { "id": "ll.api", "name": "Order API", "represents": "api" },
+      { "id": "ll.store", "name": "Order Store", "represents": "store" },
+      { "id": "ll.notifier", "name": "Notifier", "represents": "notifier" }
+    ],
+    "messages": [
+      { "id": "m.place", "from": "ll.customer", "to": "ll.api", "name": "placeOrder(order)", "kind": "sync" },
+      { "id": "m.save", "from": "ll.api", "to": "ll.store", "name": "save(order)", "kind": "sync" },
+      { "id": "m.saved", "from": "ll.store", "to": "ll.api", "name": "orderID", "kind": "reply" },
+      { "id": "m.notify", "from": "ll.api", "to": "ll.notifier", "name": "notify(orderID, Placed)", "kind": "async", "note": "Sent without waiting; the customer is not blocked on delivery." },
+      { "id": "m.accepted", "from": "ll.api", "to": "ll.customer", "name": "orderID", "kind": "reply" }
+    ],
+    "activations": [
+      { "id": "act.api", "lifeline": "ll.api", "start": "m.place", "end": "m.accepted" },
+      { "id": "act.store", "lifeline": "ll.store", "start": "m.save", "end": "m.saved" }
+    ],
+    "fragments": [
+      {
+        "id": "frag.notify",
+        "kind": "opt",
+        "operands": [{ "guard": "customer opted in", "messages": ["m.notify"] }]
+      }
+    ]
+  },
+
+  "state": {
+    "states": [
+      { "id": "st.start", "name": "start", "kind": "initial" },
+      { "id": "st.pending", "name": "Pending", "kind": "simple", "entry": "reserveStock()" },
+      { "id": "st.paid", "name": "Paid", "kind": "simple" },
+      { "id": "st.shipped", "name": "Shipped", "kind": "simple", "activity": "trackDelivery()" },
+      { "id": "st.cancelled", "name": "Cancelled", "kind": "simple", "entry": "releaseStock()" },
+      { "id": "st.done", "name": "done", "kind": "final" }
+    ],
+    "transitions": [
+      { "id": "tr.start", "from": "st.start", "to": "st.pending" },
+      { "id": "tr.pay", "from": "st.pending", "to": "st.paid", "trigger": "payment", "guard": "amount == total", "effect": "recordPayment()" },
+      { "id": "tr.ship", "from": "st.paid", "to": "st.shipped", "trigger": "dispatch", "effect": "notifyCustomer()" },
+      { "id": "tr.cancel", "from": "st.pending", "to": "st.cancelled", "trigger": "cancel", "guard": "not yet dispatched" },
+      { "id": "tr.delivered", "from": "st.shipped", "to": "st.done", "trigger": "delivered" },
+      { "id": "tr.closed", "from": "st.cancelled", "to": "st.done" }
+    ]
+  },
+
+  "usecase": {
+    "system": { "id": "sys.orders", "name": "Order Service" },
+    "actors": [
+      { "id": "ac.customer", "name": "Customer", "kind": "primary" },
+      { "id": "ac.payments", "name": "Payment Provider", "kind": "secondary" }
+    ],
+    "usecases": [
+      { "id": "uc.place", "name": "Place order", "description": "Submit an order and receive an identifier for it." },
+      { "id": "uc.pay", "name": "Take payment" },
+      { "id": "uc.notify", "name": "Send notification" },
+      { "id": "uc.cancel", "name": "Cancel order" }
+    ],
+    "associations": [
+      { "id": "as.customer.place", "actor": "ac.customer", "usecase": "uc.place" },
+      { "id": "as.customer.cancel", "actor": "ac.customer", "usecase": "uc.cancel" },
+      { "id": "as.payments.pay", "actor": "ac.payments", "usecase": "uc.pay" }
+    ],
+    "includes": [
+      { "id": "in.place.pay", "from": "uc.place", "to": "uc.pay" }
+    ],
+    "extends": [
+      { "id": "ex.notify.place", "from": "uc.notify", "to": "uc.place", "extension_point": "after acceptance", "condition": "customer opted in" }
+    ]
+  }
+}

@@ -13,7 +13,7 @@ GO          ?= go
 GOLANGCI    := golangci-lint
 
 .DEFAULT_GOAL := build
-.PHONY: build test race cover fmt vet lint tidy clean install run linux check
+.PHONY: build test race cover fmt fmt-check vet lint tidy clean install run linux check verify fixtures
 
 ## build: compile the binary for this machine
 build:
@@ -38,6 +38,16 @@ cover:
 fmt:
 	$(GO) fmt ./...
 
+## fmt-check: fail if anything is unformatted, rather than fixing it
+fmt-check:
+	@unformatted=$$(gofmt -l . 2>/dev/null); \
+	if [ -n "$$unformatted" ]; then \
+		echo "these files are not gofmt'd:"; \
+		echo "$$unformatted"; \
+		echo "run 'make fmt'"; \
+		exit 1; \
+	fi
+
 ## vet: the checks the toolchain ships with
 vet:
 	$(GO) vet ./...
@@ -54,6 +64,33 @@ tidy:
 
 ## check: what must pass before a commit
 check: fmt vet test
+
+## fixtures: run the shipped binary over every committed fixture
+#
+# This exercises the binary a second person would get, not the library the
+# tests link against, because "the tests pass" and "the program works" are
+# different claims.
+fixtures: build
+	@set -e; \
+	found=0; \
+	for f in testdata/codegraph/*.codegraph.json; do \
+		[ -e "$$f" ] || continue; \
+		found=$$((found + 1)); \
+		$(BIN_DIR)/$(BINARY) validate "$$f"; \
+	done; \
+	if [ "$$found" -eq 0 ]; then \
+		echo "no fixtures found under testdata/codegraph; the gate would pass by doing nothing"; \
+		exit 1; \
+	fi; \
+	echo "$$found fixture(s) validated"
+
+## verify: the release gate
+#
+# Green here is what authorises a tag, and it is the only automated gate. It
+# must run offline on a clean macOS machine with only Go and make installed;
+# anything it needs that such a machine lacks is a defect, not a prerequisite.
+verify: fmt-check vet test fixtures
+	@echo "verify: ok"
 
 ## install: put the binary on PATH via GOBIN
 install:
