@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/0xmhha/diagrammer/internal/analyze"
 	"github.com/0xmhha/diagrammer/internal/analyze/goast"
 	"github.com/0xmhha/diagrammer/internal/artifact"
 	"github.com/0xmhha/diagrammer/internal/compose"
@@ -39,11 +40,26 @@ type GraphRequest struct {
 
 func (r *GraphRequest) Op() Op { return OpGraph }
 
+// analyzers is what this build can read.
+//
+// One language today. It is assembled rather than registered globally, so the
+// set depends on this line rather than on which packages happened to be linked,
+// and a caller can be told what it is instead of discovering it by pointing the
+// program at a repository it returns almost nothing for.
+func analyzers() *analyze.Registry {
+	return analyze.NewRegistry(goast.Analyzer{})
+}
+
 func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 	if r.Source == "" {
 		return nil, fmt.Errorf("graph needs a source directory")
 	}
-	g, err := goast.Analyze(ctx, r.Source, goast.Options{
+	registry := analyzers()
+	reader, ok := registry.For(graph.Go)
+	if !ok {
+		return nil, fmt.Errorf("this build has no analyzer for Go")
+	}
+	g, err := reader.Analyze(ctx, r.Source, analyze.Options{
 		IncludeTests: r.IncludeTests,
 		MaxDepth:     r.MaxDepth,
 		Exclude:      r.Exclude,
@@ -64,6 +80,10 @@ func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 	}
 
 	out := &Result{}
+	// What was read is said rather than left to be inferred. A graph of a
+	// mixed repository that mentions only Go is otherwise indistinguishable
+	// from a graph of a repository that only had Go in it.
+	out.say("languages read: %s", joinLanguages(registry.Languages()))
 	summariseGraph(out, r.Source, g)
 	if err := deliver(out, r.Out, encoded); err != nil {
 		return nil, err
@@ -364,6 +384,14 @@ func joinLines(lines []string, sep string) string {
 		out += l
 	}
 	return out
+}
+
+func joinLanguages(languages []graph.Language) string {
+	names := make([]string, len(languages))
+	for i, l := range languages {
+		names[i] = string(l)
+	}
+	return joinLines(names, ", ")
 }
 
 func joinFamilies(families []uml.Family) string {

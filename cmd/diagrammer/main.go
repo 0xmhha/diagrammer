@@ -44,7 +44,7 @@ type subcommand struct {
 
 func commands() []subcommand {
 	return []subcommand{
-		{"graph", "parse a source tree into a code graph", runGraph},
+		{"graph", "parse a Go source tree into a code graph", runGraph},
 		{"validate", "check a UML codegraph against the stage-2 contract", runValidate},
 		{"compose", "turn a UML codegraph into diagram-source documents", runCompose},
 		{"render", "turn a diagram-source document into a self-contained page", runRender},

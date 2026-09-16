@@ -391,13 +391,14 @@ Anything else under `docs/` is a working note. This page is a working note.
 Beside `make verify`, and not automated, because each item is a judgement:
 
 - Triage any difference from the golden HTML byte comparison.
-- Confirm `THIRD_PARTY_NOTICES` carries a row for the embedded viewer asset, the
-  tree-sitter runtime and every vendored grammar, each naming project, version
-  and licence.
+- Confirm `THIRD_PARTY_NOTICES` lists every module compiled into the binary,
+  each with its version and licence. `go list -deps ./cmd/diagrammer` names
+  them. The viewer asset and the tree-sitter runtime this item was originally
+  written for are both gone: the viewer is ours, and the runtime is not built.
 - Confirm the shipped documents match the code they describe.
-- Confirm the measured cost of the tree-sitter runtime has been recorded, since
-  the published figures were never verified here and the number may reopen that
-  choice.
+- ~~Confirm the measured cost of the tree-sitter runtime has been recorded.~~
+  Moot. The choice was reopened by the runtime's premise rather than its cost;
+  see **Blocked** above.
 
 Nothing on this list may silently substitute for a test. An item that can be
 automated moves into `make verify` rather than staying a habit.
@@ -484,6 +485,33 @@ Four ways out, none of them a tidy-up:
 
 This is a decision about what 0.1.0 is, so it is recorded here rather than
 resolved in code.
+
+**Taken: option 4.** 0.1.0 reads Go only.
+
+The reasoning is short. The whole pipeline works through the Go path today and
+`make verify` runs on a clean machine, which is what round 9 defined done as.
+Option 1 changes that definition; options 2 and 3 postpone the release by a
+project each.
+
+Round 16 listed three languages as a condition of done, and that condition was
+written on the assumption that a cgo-free runtime existed. The assumption was
+wrong, and round 12 said in as many words that measuring might reopen the
+choice. It reopened earlier and harder than expected, which changes the timing
+rather than the principle.
+
+What follows from it, and is done:
+
+- The analyzer interface is defined and documented, so the other two languages
+  remain additions rather than a redesign. See docs/analyzer-interface.md.
+- `graph` reports which languages the build reads, every run. Nobody should
+  learn the scope by pointing the program at a Python repository and wondering
+  why the graph is nearly empty.
+- The README says it plainly, which round 8 asked for and no version of the
+  README had said until now.
+
+What it costs, stated rather than glossed: 0.1.0 ships reading one language of
+the three that were settled. Anyone who wanted the other two gets an interface
+and a written account of why, which is less than they wanted.
 
 ## Still open
 

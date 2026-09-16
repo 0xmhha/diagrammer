@@ -9,8 +9,7 @@ them does not happen inside this program.
    packages, files, types and functions, with the imports and calls it can
    prove, plus the doc comments their authors wrote. Structure and raw
    references only; nothing is interpreted here. Go is read with `go/ast` from
-   the standard library, and Python and JS/TS will be read with a cgo-free
-   tree-sitter whose grammars are vendored.
+   the standard library.
 2. A plugin's skill analyses that graph with an LLM and returns a
    **codegraph.json** expressed as a UML model. The binary has no subcommand for
    this and never calls a model itself. It hands the graph out and takes the
@@ -41,10 +40,18 @@ extend. That vocabulary is what stage 2 is held to.
 
 Early, and honest about it.
 
-Working end to end for Go source and all four families: `graph`, `validate`,
+**Go source only.** `graph` reads `.go` files and nothing else, and says so
+every time it runs. Pointed at a Python or TypeScript repository it will return
+a nearly empty graph, correctly and unhelpfully.
+
+Everything else works end to end for all four families: `graph`, `validate`,
 `compose`, `render` and `serve`.
 
-Not built yet: `graph` for Python and JS/TS.
+Python and JS/TS were settled and are not built. The runtime that was to read
+them does not satisfy a constraint the release gate depends on; what was tested
+and what the ways out are is in [docs/decisions.md](docs/decisions.md) under
+*Blocked*. The analyzer interface they would plug into is defined and
+documented, so adding one is an addition rather than a redesign.
 
 ## Build
 
@@ -83,6 +90,8 @@ documentation is what gets corrected.
   every stage must prove, and what each family means by completeness.
 - [docs/thresholds.md](docs/thresholds.md) — every number that decides what a
   page shows, and where it came from.
+- [docs/analyzer-interface.md](docs/analyzer-interface.md) — how a language gets
+  read, and what adding one actually costs.
 - [docs/decisions.md](docs/decisions.md) — what the design settled on, what was
   withdrawn along the way, and what is still open. Read this before changing
   anything structural.

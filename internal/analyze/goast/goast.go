@@ -29,22 +29,27 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/0xmhha/diagrammer/internal/analyze"
 	"github.com/0xmhha/diagrammer/internal/graph"
 )
 
-// Options tunes a walk.
-//
-// The zero value reads every non-test Go file under the root, at any depth.
-type Options struct {
-	// IncludeTests reads _test.go files too. They are skipped by default: test
-	// code describes how a package is exercised rather than what it is.
-	IncludeTests bool
-	// MaxDepth limits how far below the root to descend. Zero is unlimited.
-	MaxDepth int
-	// Exclude lists root-relative directory prefixes to skip, such as docs or
-	// examples.
-	Exclude []string
+// Analyzer reads Go source. The zero value is ready to use.
+type Analyzer struct{}
+
+// Language names what this analyzer reads.
+func (Analyzer) Language() graph.Language { return graph.Go }
+
+// Extensions lists the suffixes it claims.
+func (Analyzer) Extensions() []string { return []string{".go"} }
+
+// Analyze satisfies analyze.Analyzer.
+func (Analyzer) Analyze(ctx context.Context, root string, opts analyze.Options) (*graph.Graph, error) {
+	return Analyze(ctx, root, Options(opts))
 }
+
+// Options tunes a walk. It mirrors analyze.Options so this package can be used
+// directly without importing the interface it satisfies.
+type Options analyze.Options
 
 // Analyze walks root and returns what go/ast could prove about it.
 //
