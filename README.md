@@ -99,6 +99,34 @@ conditions.
 with nothing but Go and make installed; anything it needs that such a machine
 lacks is a defect rather than a prerequisite.
 
+## Drawing something, in one command
+
+From a working copy, `make diagram` runs the stages this program owns and stops
+where it does not:
+
+```
+make diagram SRC=../some/project          # graph and instruction, then stops
+make diagram SRC=../some/project AI=1     # calls a model, and draws
+make diagram SRC=../some/project MODEL=m.codegraph.json
+```
+
+The first stops because stage 2 has not happened, and says which two files to
+hand to a skill and what to run next. It reports that as a failure, because
+nothing was drawn.
+
+`AI=1` fills the gap by calling a model, and is the only one of the three that
+goes from a path to pages in one command. It is opt-in and always will be: it
+spends money, and it hands the graph, which carries every doc comment in the
+tree, to whoever runs that model. `AI_CMD` is the command, so pointing it at
+something else changes nothing here. Whatever comes back goes through
+`validate` before anything is drawn.
+
+It is a make target rather than a subcommand on purpose. A subcommand that
+drove a model would put stage 2 back inside the binary, and keeping it out is
+the decision the whole pipeline is shaped by. A Makefile is glue, and glue is
+allowed to know about a model. What a plugin drives is `serve`, which needs no
+glue at all.
+
 ## Giving it to a machine that cannot build it
 
 `make install` puts the binary on `PATH` through `GOBIN`, and needs a Go

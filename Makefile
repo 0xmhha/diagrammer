@@ -32,6 +32,33 @@ SIGN_ID     := com.github.0xmhha.diagrammer
 # directory twice produces the same bytes and a checksum means something.
 DIST_MTIME  := 202001010000
 
+# Drawing a project. See the diagram target for what each of these does; they
+# are here because make needs them resolved before any recipe runs.
+OUT         ?= out/diagram
+# AI=1 performs stage 2 by calling a model, which is the only way this draws a
+# tree in one command. It is opt-in and will never be a default: it spends money
+# and it sends the graph, which carries every doc comment in the tree, to
+# whoever runs that model. AI_CMD is what gets run, so pointing this at a
+# different tool needs no change here.
+AI_CMD      ?= claude -p --output-format text
+ifeq ($(AI),1)
+MODEL_CMD   := $(AI_CMD)
+endif
+
+# Whether MODEL_CMD was given is decided here rather than in the recipe. A
+# command line holds quotes, and `[ -n "$(MODEL_CMD)" ]` hands those quotes to
+# the shell a second time, which turns a perfectly good command into a test with
+# the wrong number of arguments and answers no. Running it is still make's own
+# expansion, which is what makes the quotes work where they are meant to.
+HAS_MODEL_CMD := $(if $(strip $(MODEL_CMD)),1,)
+ifeq ($(POLYGLOT),1)
+DIAGRAM_BIN := $(BIN_DIR)/$(BINARY)-polyglot
+DIAGRAM_DEP := build-polyglot
+else
+DIAGRAM_BIN := $(BIN_DIR)/$(BINARY)
+DIAGRAM_DEP := build
+endif
+
 # tarball packs one staged directory into one archive. The members are named in
 # a fixed order rather than walked, and the ownership and names are pinned, for
 # the same reason as the timestamp above: what comes out has to be a function of
@@ -43,7 +70,7 @@ tar -cf - -C $(DIST_DIR) --uid 0 --gid 0 --uname '' --gname '' \
 endef
 
 .DEFAULT_GOAL := build
-.PHONY: build build-polyglot test test-cgo race cover fmt fmt-check vet lint tidy clean install run linux check verify verify-cgo fixtures vendor-check dist dist-check
+.PHONY: build build-polyglot test test-cgo race cover fmt fmt-check vet lint tidy clean install run linux check verify verify-cgo fixtures vendor-check dist dist-check diagram
 
 ## build: compile the binary for this machine
 #
@@ -406,6 +433,115 @@ dist-check:
 		exit 1; \
 	fi; \
 	echo "$$found archive(s) checked"
+
+## diagram: read a project and draw it, in one command
+#
+# Stage 2 is not in this program, so there is a gap in the middle of this. The
+# gap is the reason this is a make target and not a subcommand: a subcommand
+# that drove a model would put stage 2 back inside the binary, and keeping it
+# out is the decision the whole pipeline is shaped by. make is glue, and glue is
+# allowed to know about a model.
+#
+#   make diagram SRC=../some/project
+#     reads the tree, writes the graph and the instruction stage 2 is performed
+#     from, and stops. No model, no diagram.
+#
+#   make diagram SRC=../some/project MODEL=out/diagram/model.codegraph.json
+#     picks up from a model, whoever wrote it, and draws every family in it.
+#
+#   make diagram SRC=../some/project AI=1
+#     performs stage 2 by calling a model, and is the only one of these that
+#     draws a tree in one command. Opt-in, because it spends money and hands the
+#     graph, doc comments and all, to whoever runs that model. Slow: close to
+#     two minutes on a four-file fixture.
+#
+#   make diagram SRC=../some/project MODEL_CMD='your-own-runner'
+#     the same path with something else on the other end. The command is handed
+#     the whole stage-2 prompt on its standard input, which is the instruction
+#     followed by the graph, and must write a model to its standard output.
+#     AI=1 is this with AI_CMD filled in.
+#
+# Whatever answers goes through `validate` before anything is drawn, so a model
+# that came back wrong is refused here rather than three stages later. What was
+# asked is left in OUT/stage-2.prompt, so a bad answer can be read next to the
+# question that produced it.
+#
+# The answer has its code fences stripped before it is validated. Asked for bare
+# JSON, the model fenced it anyway, which was measured rather than supposed.
+# Anything the stripping leaves behind is validate's problem, which is the right
+# place for it.
+#
+# OUT= puts the work somewhere else. POLYGLOT=1 uses the four-language build,
+# which is usually what you want for a tree that is not all Go.
+#
+# It is here rather than shipped because a packaged binary comes with no
+# Makefile. What a plugin drives is `serve`, which needs no glue at all.
+diagram: $(DIAGRAM_DEP)
+	@set -e; \
+	test -n "$(SRC)" || { \
+		echo "make diagram needs SRC=<a source directory>"; \
+		echo "  make diagram SRC=../some/project"; \
+		exit 1; \
+	}; \
+	out="$(OUT)"; \
+	mkdir -p "$$out/documents"; \
+	$(DIAGRAM_BIN) graph "$(SRC)" -o "$$out/graph.json"; \
+	$(DIAGRAM_BIN) instruct -o "$$out/stage-2.md"; \
+	model="$(MODEL)"; \
+	if [ -z "$$model" ] && [ -n "$(HAS_MODEL_CMD)" ]; then \
+		model="$$out/model.codegraph.json"; \
+		{ cat "$$out/stage-2.md"; \
+		  printf '\n\n## The code graph\n\n'; \
+		  cat "$$out/graph.json"; \
+		  printf '\n\nReturn the codegraph.json document and nothing else.\n'; \
+		} > "$$out/stage-2.prompt"; \
+		echo "stage 2: asking $(firstword $(MODEL_CMD)), which takes a while"; \
+		if ! $(MODEL_CMD) < "$$out/stage-2.prompt" > "$$model.part"; then \
+			rm -f "$$model.part"; \
+			echo "stage 2: the model command did not succeed, so there is nothing to draw"; \
+			exit 1; \
+		fi; \
+		sed '/^```/d' "$$model.part" | sed -n '/^{/,$$p' > "$$model"; \
+		rm -f "$$model.part"; \
+		if [ ! -s "$$model" ]; then \
+			echo "stage 2: the answer held no document"; \
+			exit 1; \
+		fi; \
+		echo "stage 2: wrote $$model"; \
+	fi; \
+	if [ -z "$$model" ]; then \
+		echo; \
+		echo "no diagram was drawn, because stage 2 has not been performed."; \
+		echo "  the graph to read:   $$out/graph.json"; \
+		echo "  what to do with it:  $$out/stage-2.md"; \
+		echo; \
+		echo "hand both to a skill, keep what it returns, then run:"; \
+		echo "  make diagram SRC=$(SRC) MODEL=<the file it returned>"; \
+		echo; \
+		echo "or have this ask a model for you, which spends money and hands the"; \
+		echo "graph to whoever runs it:"; \
+		echo "  make diagram SRC=$(SRC) AI=1"; \
+		echo; \
+		echo "(make reports this as an error because nothing was drawn, which is"; \
+		echo " what an exit code means here. The run itself did what it could.)"; \
+		exit 1; \
+	fi; \
+	$(DIAGRAM_BIN) validate "$$model"; \
+	$(DIAGRAM_BIN) compose "$$model" -o "$$out/documents"; \
+	drawn=0; \
+	for doc in "$$out/documents"/*.diagram.json; do \
+		[ -e "$$doc" ] || continue; \
+		family=$$(basename "$$doc" .diagram.json); \
+		$(DIAGRAM_BIN) render "$$doc" -o "$$out/$$family.html"; \
+		drawn=$$((drawn + 1)); \
+	done; \
+	if [ "$$drawn" -eq 0 ]; then \
+		echo "$$model declares no family anything here can draw"; \
+		exit 1; \
+	fi; \
+	echo; \
+	echo "$$drawn page(s):"; \
+	for page in "$$out"/*.html; do echo "  $$page"; done
 
 ## install: put the binary on PATH via GOBIN
 install:
