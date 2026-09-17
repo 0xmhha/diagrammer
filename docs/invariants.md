@@ -62,14 +62,31 @@ the files.
 
 - Every fixture's graph validates against the embedded graph schema.
 - Every fixture's graph is byte-identical across runs.
-- A file that does not parse is recorded with its path, its line and the
-  parser's message. It is never dropped in silence.
+- A file that does not parse is recorded with its path, its line, the column and
+  the parser's message. It is never dropped in silence.
+- The report says how much of that file reached the graph, counted from the
+  graph rather than claimed.
 
-The last one carries the most weight, and will carry more when the tree-sitter
-languages land. tree-sitter fails soft: it emits an ERROR node and carries on.
-A graph missing a file looks exactly like a graph of a project that never had
-it, and no later stage can restore what was never extracted. The diagnostics
-block is the only thing that makes the difference visible.
+The first carries the most weight. tree-sitter fails soft: it emits an ERROR
+node and carries on. A graph missing a file looks exactly like a graph of a
+project that never had it, and no later stage can restore what was never
+extracted. The diagnostics block is the only thing that makes the difference
+visible.
+
+The second is there because the first is not enough on its own. **"Did not
+parse" means two different things.** go/ast refuses a file outright and nothing
+of it arrives; tree-sitter recovers, and most of the file usually still comes
+through. Two files in the reference tree this project reads are reported as
+failures and both contributed every declaration they have: what the grammar
+could not read was one expression inside one function body, and nothing was
+lost. Telling somebody their code is absent when it is there is the wrong
+direction to be wrong in, so the count is taken from the graph and stated.
+
+`testdata/src/polyglot/web/` holds one fixture of each: `broken.js`, where the
+rest of the file goes with the error, and `nul-separator.js`, where it does not.
+The second is valid JavaScript — Node accepts a NUL used as a separator inside
+a template literal, and the grammar does not — which is a limit of the parser
+rather than a defect in the file, and the report has to be able to say so.
 
 - Exactly one node has no parent, and every other node reaches it by walking
   parents. A subtree hanging off a broken pointer would validate and could never

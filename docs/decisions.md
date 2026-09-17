@@ -547,7 +547,16 @@ refuse a file it cannot parse: it emits an ERROR node and carries on, which is
 why this project does not use it for Go, where the standard library gives a
 parser that says no. It can be asked, though. Every tree is checked with
 HasError and a file that parsed with errors is recorded with the position of the
-first one, so a silent gap becomes a reported one. A fixture with a deliberately
+first one, so a silent gap becomes a reported one.
+
+**What that recovery is worth was not measured until later.** Pointed at the
+reference tree, two files come back as failures, and both turned out to have
+contributed every declaration they have. What the grammar could not read was a
+NUL byte used as a separator inside a template literal, which Node accepts and
+this grammar does not, sitting inside one function body. So recovery is not a
+consolation prize here: it is the difference between losing an expression
+nothing extracts anyway and losing forty-four declarations. The report now says
+which of the two happened, per file, counted from the graph. A fixture with a deliberately
 broken JavaScript file holds that to it: the part that parses is still read, and
 the failure is still named.
 

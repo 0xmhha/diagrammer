@@ -99,28 +99,63 @@ func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 // summariseGraph names the files that would not parse rather than counting
 // them. A count says something is wrong; the paths say what to go and open.
 //
-// It does not claim those files are missing from the graph, because that
-// depends on which parser refused them and the summary cannot tell. go/ast
-// refuses a file outright and nothing of it arrives. tree-sitter recovers: it
-// reports an error and carries on, and most of the file usually still comes
-// through — one file in this repository's reference tree yielded 42
-// declarations while being reported as unparsable. A message claiming either
-// behaviour for both would be wrong half the time, and wrong in the direction
-// that matters: telling somebody their code is absent when it is there.
+// How much of a refused file is in the graph depends on which parser refused it,
+// and for a long time this said neither. go/ast refuses a file outright and
+// nothing of it arrives. tree-sitter recovers: it reports an error and carries
+// on, and most of the file usually still comes through. Two files in the
+// reference tree this project reads are reported here and both contributed
+// every declaration they have; what the grammar could not read was one
+// expression inside one function body, and nothing was lost.
+//
+// A sentence claiming either behaviour for both would be wrong half the time,
+// and wrong in the direction that matters: telling somebody their code is
+// absent when it is there. So it is no longer claimed. It is counted, per file,
+// out of the graph itself, which is the one place that actually knows.
 func summariseGraph(out *Result, source string, g *graph.Graph) {
 	d := g.Diagnostics
 	out.say("%s: %d nodes, %d edges, %d files read", source, len(g.Nodes), len(g.Edges), d.FilesParsed)
 	if len(d.ParseFailures) == 0 {
 		return
 	}
-	out.say("%d file(s) did not parse cleanly; whatever could not be read is not in the graph:", len(d.ParseFailures))
+	survived := declarationsByFile(g)
+	n := len(d.ParseFailures)
+	out.say("%d %s something the parser could not read:", n, plural(n, "file has", "files have"))
 	for _, f := range d.ParseFailures {
+		where := f.Path
 		if f.Line > 0 {
-			out.say("  %s:%d: %s", f.Path, f.Line, f.Message)
+			where = fmt.Sprintf("%s:%d", f.Path, f.Line)
+		}
+		out.say("  %s: %s", where, f.Message)
+		out.say("      %s", survivalOf(survived[f.Path]))
+	}
+}
+
+// survivalOf says how much of a file reached the graph, which is what separates
+// a file that is gone from a file with a hole in it.
+func survivalOf(declarations int) string {
+	switch declarations {
+	case 0:
+		return "nothing from this file is in the graph"
+	case 1:
+		return "1 declaration from this file is in the graph; the rest of it is not"
+	default:
+		return fmt.Sprintf("%d declarations from this file are in the graph, so what is missing is "+
+			"what the message names and not the file", declarations)
+	}
+}
+
+// declarationsByFile counts the declarations each file contributed.
+func declarationsByFile(g *graph.Graph) map[string]int {
+	out := map[string]int{}
+	for _, n := range g.Nodes {
+		if n.Kind != graph.KindFunc && n.Kind != graph.KindType {
 			continue
 		}
-		out.say("  %s: %s", f.Path, f.Message)
+		if n.Source != nil && n.Source.Path != "" {
+			out[n.Source.Path]++
+		}
 	}
+	return out
 }
 
 // --- the stage-2 boundary -----------------------------------------------------

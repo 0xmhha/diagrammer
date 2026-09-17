@@ -99,15 +99,32 @@ func (w *walker) readFile(ctx context.Context, abs string) {
 	w.walkNode(root, source, rel, dir, "")
 }
 
-// firstError finds where the grammar first lost its footing, so the report
-// sends a reader to a line rather than to a file.
+// firstError finds where the grammar first lost its footing, and says what it
+// lost it on.
+//
+// The message used to be the word "unparsable", which sends a reader to a line
+// and leaves them to work out the rest. Two files in the reference tree this
+// project reads are reported here, and what is at both is a NUL byte used as a
+// separator inside a template literal:
+//
+//	const key = `${from}` + "\x00" + `${to}`;
+//
+// Node accepts that and the grammar does not, so the file is valid JavaScript
+// that this parser cannot read all of. A reader told only "unparsable" has no
+// way to reach that conclusion; told the column and the kind of thing, they can
+// look and see it in a second.
+//
+// The offending text is deliberately not quoted. It is a byte the grammar could
+// not place, which is exactly the kind of byte that should not be pasted into a
+// message somebody's terminal will render.
 func firstError(n sitter.Node, source []byte) (int, string) {
-	if n.IsError() || n.IsMissing() {
-		what := "unparsable"
-		if n.IsMissing() {
-			what = "missing " + n.Type()
-		}
-		return int(n.StartPoint().Row) + 1, what
+	if n.IsMissing() {
+		return int(n.StartPoint().Row) + 1,
+			fmt.Sprintf("column %d: a %s is missing here", n.StartPoint().Column+1, n.Type())
+	}
+	if n.IsError() {
+		return int(n.StartPoint().Row) + 1,
+			fmt.Sprintf("column %d: the grammar does not accept what is here", n.StartPoint().Column+1)
 	}
 	for i := range int(n.ChildCount()) {
 		if line, detail := firstError(n.Child(uint32(i)), source); line > 0 {

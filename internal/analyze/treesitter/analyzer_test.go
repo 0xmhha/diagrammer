@@ -230,3 +230,44 @@ func TestImportsOutsideTheTreeAreCountedNotDrawn(t *testing.T) {
 		t.Error("the fixture imports nothing from outside itself, so the boundary is never tested")
 	}
 }
+
+// TestAFileWithAHoleStillGivesItsDeclarations is the case the reference tree
+// showed and no fixture had.
+//
+// A NUL byte used as a separator inside a template literal is valid JavaScript
+// — Node accepts it — and this grammar does not. The file is otherwise read
+// completely, so what a reader must not be told is that it is missing.
+func TestAFileWithAHoleStillGivesItsDeclarations(t *testing.T) {
+	g := analyzeAll(t)
+
+	const file = "web/nul-separator.js"
+	var failure *graph.ParseFailure
+	for i, f := range g.Diagnostics.ParseFailures {
+		if f.Path == file {
+			failure = &g.Diagnostics.ParseFailures[i]
+		}
+	}
+	if failure == nil {
+		t.Fatalf("%s parsed cleanly, so the grammar accepts the NUL now and this fixture proves nothing", file)
+	}
+	if failure.Line == 0 {
+		t.Error("the failure names no line, so a reader has a filename and nowhere to look")
+	}
+	if !strings.Contains(failure.Message, "column") {
+		t.Errorf("the failure says %q, which does not say where on the line to look", failure.Message)
+	}
+
+	declared := map[string]bool{}
+	for _, n := range g.Nodes {
+		if n.Kind == graph.KindFunc && n.Source != nil && n.Source.Path == file {
+			declared[n.Name] = true
+		}
+	}
+	// Every one of them, including the function the unreadable expression is
+	// inside. That is the whole point: the hole is smaller than the file.
+	for _, want := range []string{"keyOf", "alsoRead", "readToo"} {
+		if !declared[want] {
+			t.Errorf("%s is missing from the graph although only one expression could not be read", want)
+		}
+	}
+}
