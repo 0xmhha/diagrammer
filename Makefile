@@ -1,8 +1,9 @@
 # diagrammer build rules.
 #
-# macOS is the supported target today. Linux is listed below but deliberately
-# refuses to run, so a cross build fails loudly instead of producing a binary
-# nobody has tested.
+# macOS is the supported target today, and `dist` packages both of its
+# architectures. `linux` refuses, and not because the result would be a cross
+# build: `dist` cross-compiles. It refuses because nothing here can run a linux
+# binary, and the rule is that nothing ships until it has been run.
 
 BINARY      := diagrammer
 PKG         := ./cmd/diagrammer
@@ -12,8 +13,37 @@ LDFLAGS     := -s -w -X main.version=$(VERSION)
 GO          ?= go
 GOLANGCI    := golangci-lint
 
+# Packaging. See the dist target for why each of these is pinned rather than
+# left to whatever the machine doing the building happens to be.
+DIST_DIR    := dist
+DIST_ARCHES := arm64 amd64
+# The oldest macOS the packaged binaries declare they will run on. 12.0 is not
+# a preference: it is the floor this Go toolchain already puts on a build of its
+# own, and the number is here so that the cgo build is held to the same one
+# instead of inheriting the builder's macOS. It is a declaration and not a
+# measurement, and docs/install.md says so; the oldest macOS anything here has
+# actually been run on is the one that built it.
+MACOS_FLOOR := 12.0
+# Ad-hoc signing, which is not notarisation and does not satisfy Gatekeeper. It
+# gives the binary an identity that is its own rather than the linker's a.out,
+# and lets a recipient ask codesign whether the file still matches itself.
+SIGN_ID     := com.github.0xmhha.diagrammer
+# Every timestamp in an archive is set to this, so that packing the same
+# directory twice produces the same bytes and a checksum means something.
+DIST_MTIME  := 202001010000
+
+# tarball packs one staged directory into one archive. The members are named in
+# a fixed order rather than walked, and the ownership and names are pinned, for
+# the same reason as the timestamp above: what comes out has to be a function of
+# what went in.
+define tarball
+tar -cf - -C $(DIST_DIR) --uid 0 --gid 0 --uname '' --gname '' \
+	"$(1)/install.md" "$(1)/LICENSE" "$(1)/THIRD_PARTY_NOTICES.md" \
+	"$(1)/$(BINARY)" "$(1)/$(BINARY)-polyglot" | gzip -n -9 > "$(2)"
+endef
+
 .DEFAULT_GOAL := build
-.PHONY: build build-polyglot test test-cgo race cover fmt fmt-check vet lint tidy clean install run linux check verify verify-cgo fixtures vendor-check
+.PHONY: build build-polyglot test test-cgo race cover fmt fmt-check vet lint tidy clean install run linux check verify verify-cgo fixtures vendor-check dist dist-check
 
 ## build: compile the binary for this machine
 #
@@ -246,6 +276,137 @@ verify-cgo: build-polyglot
 	echo "$$found source fixture(s) read by every grammar: schema valid, byte-identical"
 	@echo "verify-cgo: ok"
 
+## dist: package the binaries for a mac that did not build them
+#
+# `make install` needs a Go toolchain on the machine that will run the program.
+# This is for a machine that has none: one archive per macOS architecture, each
+# holding both builds, the licences, and the notes a recipient needs.
+#
+# Cross compiling here and refusing it for linux is not a contradiction. The
+# objection to a cross build is that nobody has run it, and an x86_64 mac binary
+# runs on an arm64 one through Rosetta, so `dist-check` runs the whole pipeline
+# out of every archive it makes. Nothing here can run a linux binary.
+#
+# This is the one target that asks for more than Go and make. It needs the Xcode
+# command line tools, for clang to build the cgo half and for codesign and otool
+# to check what came out. `make verify` is the gate that must run on a machine
+# with neither, and it still does.
+#
+# MACOSX_DEPLOYMENT_TARGET is the reason this target exists rather than a tar
+# command in a shell history. clang defaults it to the version of macOS doing
+# the building, so the cgo build was quietly refusing to launch on anything
+# older than the builder's own machine while the Go-only build beside it ran
+# back to 12.0. A floor that depends on who built it is the packaging defect
+# this target is for.
+dist: verify
+	@rm -rf $(DIST_DIR)
+	@mkdir -p $(DIST_DIR)
+	@set -e; \
+	for arch in $(DIST_ARCHES); do \
+		case $$arch in \
+			arm64) cc="clang -arch arm64";; \
+			amd64) cc="clang -arch x86_64";; \
+			*) echo "no C compiler flags for darwin/$$arch"; exit 1;; \
+		esac; \
+		name=$(BINARY)_$(VERSION)_darwin_$$arch; \
+		stage=$(DIST_DIR)/$$name; \
+		mkdir -p "$$stage"; \
+		CGO_ENABLED=0 GOOS=darwin GOARCH=$$arch \
+			MACOSX_DEPLOYMENT_TARGET=$(MACOS_FLOOR) \
+			$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o "$$stage/$(BINARY)" $(PKG); \
+		CGO_ENABLED=1 GOOS=darwin GOARCH=$$arch CC="$$cc" \
+			MACOSX_DEPLOYMENT_TARGET=$(MACOS_FLOOR) \
+			$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o "$$stage/$(BINARY)-polyglot" $(PKG); \
+		for bin in $(BINARY) $(BINARY)-polyglot; do \
+			codesign --sign - --identifier $(SIGN_ID) --force "$$stage/$$bin" >/dev/null 2>&1 \
+				|| { echo "$$name: could not sign $$bin"; exit 1; }; \
+		done; \
+		cp LICENSE THIRD_PARTY_NOTICES.md docs/install.md "$$stage/"; \
+		find "$$stage" -exec touch -t $(DIST_MTIME) {} +; \
+		$(call tarball,$$name,$(DIST_DIR)/$$name.tar.gz); \
+		$(call tarball,$$name,$(DIST_DIR)/.$$name.again); \
+		cmp -s "$(DIST_DIR)/$$name.tar.gz" "$(DIST_DIR)/.$$name.again" \
+			|| { echo "$$name: two archivings of one directory produced different bytes"; exit 1; }; \
+		rm -f "$(DIST_DIR)/.$$name.again"; \
+		rm -rf "$$stage"; \
+		echo "packed $(DIST_DIR)/$$name.tar.gz"; \
+	done
+	@cd $(DIST_DIR) && shasum -a 256 *.tar.gz > SHA256SUMS
+	@$(MAKE) --no-print-directory dist-check
+	@echo "dist: ok"
+
+## dist-check: prove an archive works away from the tree that built it
+#
+# Run by `dist` rather than instead of it. Packaging that nothing opens again is
+# the same class of claim as an analyzer no gate covers: it looks identical to
+# one that works until somebody else needs it to.
+#
+# Everything here is done to the unpacked copy, from a directory that is not
+# this one, with an environment that carries nothing but a PATH. A binary that
+# reached back into the build tree would pass every test in `make verify` and
+# fail on the first machine it was sent to.
+#
+# The quarantine step is the one that reads oddly. Gatekeeper kills the process
+# rather than refusing to start it, and a shell announces a child that died by a
+# signal, so the check would print `Killed: 9` every time it passed. The inner
+# `sh -c` is there to receive that announcement, and the `exit $$?` after the
+# command is there to stop `sh` optimising itself away and leaving the
+# announcement to this shell after all.
+dist-check:
+	@set -e; \
+	test -d $(DIST_DIR) || { echo "no $(DIST_DIR)/; run 'make dist'"; exit 1; }; \
+	root=$$(pwd); \
+	( cd $(DIST_DIR) && shasum -a 256 -c SHA256SUMS >/dev/null ); \
+	found=0; \
+	for archive in $(DIST_DIR)/*.tar.gz; do \
+		[ -e "$$archive" ] || continue; \
+		found=$$((found + 1)); \
+		name=$$(basename "$$archive" .tar.gz); \
+		work=$$(mktemp -d); \
+		trap 'rm -rf "$$work"' EXIT; \
+		tar xzf "$$archive" -C "$$work"; \
+		unpacked="$$work/$$name"; \
+		for bin in $(BINARY) $(BINARY)-polyglot; do \
+			codesign --verify "$$unpacked/$$bin" \
+				|| { echo "$$name: $$bin lost its signature in the archive"; exit 1; }; \
+			floor=$$(otool -l "$$unpacked/$$bin" \
+				| awk '/LC_BUILD_VERSION/{seen=1} seen && /minos/{print $$2; exit}'); \
+			[ "$$floor" = "$(MACOS_FLOOR)" ] \
+				|| { echo "$$name: $$bin declares macOS $$floor, the package says $(MACOS_FLOOR)"; exit 1; }; \
+		done; \
+		grep -q 'macOS $(MACOS_FLOOR)' "$$unpacked/install.md" \
+			|| { echo "$$name: install.md does not tell a reader the floor is $(MACOS_FLOOR)"; exit 1; }; \
+		cp -R "$$root/testdata/src/go-basic" "$$work/src"; \
+		cp -R "$$root/testdata/src/polyglot" "$$work/polyglot-src"; \
+		cp "$$root/testdata/codegraph/diagrammer.codegraph.json" "$$work/model.json"; \
+		( cd "$$work" && env -i PATH=/usr/bin:/bin "$$unpacked/$(BINARY)" graph src -o graph.json ) >/dev/null; \
+		( cd "$$work" && env -i PATH=/usr/bin:/bin "$$unpacked/$(BINARY)" validate model.json ) >/dev/null; \
+		( cd "$$work" && env -i PATH=/usr/bin:/bin "$$unpacked/$(BINARY)" compose model.json -o out ) >/dev/null; \
+		( cd "$$work" && env -i PATH=/usr/bin:/bin "$$unpacked/$(BINARY)" render out/component.diagram.json -o page.html ) >/dev/null; \
+		grep -q '<svg' "$$work/page.html" \
+			|| { echo "$$name: the packaged binary wrote a page with no drawing in it"; exit 1; }; \
+		( cd "$$work" && env -i PATH=/usr/bin:/bin "$$unpacked/$(BINARY)" graph polyglot-src -o go-only.json ) >/dev/null; \
+		( cd "$$work" && env -i PATH=/usr/bin:/bin "$$unpacked/$(BINARY)-polyglot" graph polyglot-src -o four.json ) >/dev/null; \
+		go_only=$$(wc -c < "$$work/go-only.json"); four=$$(wc -c < "$$work/four.json"); \
+		[ "$$four" -gt "$$go_only" ] \
+			|| { echo "$$name: the four-language build read no more than the Go-only one"; exit 1; }; \
+		cp "$$unpacked/$(BINARY)" "$$work/quarantined"; \
+		xattr -w com.apple.quarantine '0081;00000000;dist-check;' "$$work/quarantined"; \
+		if sh -c "'$$work/quarantined' version; exit \$$?" >/dev/null 2>&1; then \
+			echo "  note: a quarantined binary ran here, so Gatekeeper is not enforcing on this machine"; \
+		fi; \
+		xattr -d com.apple.quarantine "$$work/quarantined"; \
+		"$$work/quarantined" version >/dev/null \
+			|| { echo "$$name: install.md's remedy for a quarantined download does not work"; exit 1; }; \
+		rm -rf "$$work"; trap - EXIT; \
+		echo "  $$name: signed, floors at $(MACOS_FLOOR), both builds run the pipeline from outside the tree"; \
+	done; \
+	if [ "$$found" -eq 0 ]; then \
+		echo "no archives in $(DIST_DIR)/; this gate would pass by doing nothing"; \
+		exit 1; \
+	fi; \
+	echo "$$found archive(s) checked"
+
 ## install: put the binary on PATH via GOBIN
 install:
 	$(GO) install -trimpath -ldflags '$(LDFLAGS)' $(PKG)
@@ -256,13 +417,19 @@ run: build
 
 ## clean: remove build output
 clean:
-	rm -rf $(BIN_DIR) coverage.out coverage.html
+	rm -rf $(BIN_DIR) $(DIST_DIR) coverage.out coverage.html
 
 ## linux: not supported yet
+#
+# `dist` cross-compiles for the other mac architecture, so the rule is not that
+# cross-compiling is forbidden. The rule is that nothing ships without having
+# been run: Rosetta runs an x86_64 mac binary on this machine and `dist-check`
+# does run it, and there is nothing here that will run a linux one. When there
+# is a linux runner, this becomes the same target pointed at it.
 linux:
 	@echo "linux builds are not supported yet."
-	@echo "when they are, they will run on a native linux runner rather than"
-	@echo "cross-compiling, so the binary that ships is the binary that was tested."
+	@echo "when they are, they will be run on linux before they ship, the way"
+	@echo "'make dist' runs the x86_64 mac binary it cross-compiles."
 	@exit 1
 
 ## help: list the targets

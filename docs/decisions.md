@@ -473,6 +473,8 @@ Deliverables, carrying acceptance weight:
 - `docs/thresholds.md` — why 6, 14, 24 and 1.4, written as the measurements
   that produced them, so a future change is made the same way rather than by
   taste.
+- `docs/install.md` — the notes a recipient of a packaged build needs, and the
+  only document that ships inside the archive rather than beside the source.
 - `docs/licensing.md`, `THIRD_PARTY_NOTICES.md`, `README.md`.
 
 Anything else under `docs/` is a working note. This page is a working note.
@@ -498,8 +500,62 @@ Beside `make verify`, and not automated, because each item is a judgement:
   it stands again, and it is still owed: the figures in **Still open** are that
   project's published ones and have never been taken here.
 
+- Decide whether this release is published as archives, and whether they are
+  notarised. `make dist` builds them and proves them; nothing puts them
+  anywhere, and ad-hoc signing leaves a recipient one `xattr` command to run.
+
 Nothing on this list may silently substitute for a test. An item that can be
 automated moves into `make verify` rather than staying a habit.
+
+### Packaging for a mac that did not build it (after 0.3.0)
+
+`make install` needs a Go toolchain on the machine that will run the program,
+which is a fine answer for this machine and no answer at all for anyone else's.
+`make dist` produces an archive per mac architecture, each holding both builds,
+the licences and `docs/install.md`, with a `SHA256SUMS` beside them.
+
+**Cross compiling is allowed here and still refused for linux.** That is one
+rule rather than two: nothing ships until it has been run. Rosetta runs an
+x86_64 mac binary on an arm64 one, so `make dist` unpacks each archive it makes
+into a directory that is not this one, with an environment holding nothing but a
+`PATH`, and runs the whole pipeline out of it with both binaries. Nothing here
+runs a linux binary, so `make linux` still refuses, and when a linux runner
+exists it becomes the same target pointed at that.
+
+**The defect this found.** clang defaults the deployment target to the version
+of macOS doing the building. So the four-language build was declaring it needed
+the builder's own macOS, 26.0 on the machine that found it, while the Go-only
+build beside it declared 12.0. Nobody would have noticed here: both binaries run
+on the machine that produced them, which is the one place the fault cannot show.
+`make dist` sets the floor for both builds and reads it back out of every packed
+binary, and a mismatch fails the target.
+
+**12.0 is a declaration, not a measurement,** and the document that ships says
+so. It is the floor this Go toolchain already puts on a build of its own, so it
+is the one number that is not invented. The oldest macOS anything here has been
+run on is the one that packaged it.
+
+**Ad-hoc signing is not notarisation.** The binaries are signed with an
+identifier of their own, which lets a recipient ask `codesign` whether the file
+still matches what was signed and answers nothing about who signed it.
+Gatekeeper is unmoved: a build that arrives carrying a quarantine flag is killed
+on sight, and the remedy is `xattr -d`. Notarisation would remove that step and
+needs an Apple developer account, which is a decision for whoever publishes
+rather than something the build can take.
+
+Two things about quarantine were measured rather than assumed, because both are
+widely asserted in both directions: unpacking with `tar` in a terminal does not
+quarantine the contents even when the archive itself was quarantined, and
+Gatekeeper kills the process rather than refusing to start it. `make dist`
+quarantines a packed binary, watches it refuse to run, removes the flag and
+watches it run, so the instruction in `docs/install.md` is one that has been
+seen to work rather than one that was repeated.
+
+Archives are deterministic: timestamps, ownership and member order are all
+pinned, and `make dist` packs each staged directory twice and compares. That is
+a claim about the archiving step only. Whether two builds of the same source
+produce the same binary is a Go toolchain property that has not been tested
+here, and is not claimed.
 
 ### What the linter is for, and is not
 
@@ -718,15 +774,21 @@ Deferred deliberately, to be settled when the work reaches them:
   would need git. Nothing here reads git, in either build, so this is not a
   question that was answered and is one that has not been asked again since it
   was framed against 0.1.0. Three releases have shipped without it.
-- Which architectures the binary targets. macOS is built and tested; `make
-  linux` refuses on purpose, because a cross-compiled binary is not the binary
-  that was tested and the native runner to do it properly does not exist yet.
+- Which architectures the binary targets. Both mac architectures are now built,
+  packaged and run by `make dist`; `make linux` still refuses, because nothing
+  here can run a linux binary and the rule is that nothing ships until it has
+  been run. A native linux runner is what that waits on, and it is now the only
+  thing it waits on.
 
   What a plugin needs once it has the binary is no longer open. The server says
   what it is for at `initialize`, offers the stage-2 instruction as a prompt,
   and serves each schema as a resource under its own `$id`, so a client learns
   the pipeline from the server rather than from a document beside it. Getting
-  the binary onto the machine is `make install` today, and packaging it for one
-  it was not built on is the part that remains.
+  the binary onto a machine that cannot build it was the part that remained, and
+  is answered above for macOS.
+
+  Not answered: nothing publishes the archives. `make dist` produces them and
+  proves them; putting them where somebody can fetch them, and whether that
+  comes with notarisation, has not been decided.
 - How the unfold window behaves for a language without a file generation. To be
   decided by measurement on the fixtures rather than assumed.
