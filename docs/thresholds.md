@@ -151,6 +151,69 @@ past both the ceiling and the page size the composer contemplates, and is drawn
 is deliberately past the limit and so is not in the drawn-ratio table, which
 asks a different question: whether ordinary models are drawn well.
 
+## What the second build costs
+
+`docs/decisions.md` carried two numbers for the tree-sitter runtime, roughly
+3.9x slower than native C and roughly 20 MB of growth. Both were the publishing
+project's own and neither had ever been taken here, which is the one thing this
+page exists to forbid. They have been taken now.
+
+Neither is reproduced, and the size one is not close.
+
+### Size: 2.63 MB, not 20
+
+    reading Go                        9220114 bytes    8.79 MB
+    reading four languages           11978658 bytes   11.42 MB
+    the runtime and four grammars     2758544 bytes    2.63 MB
+
+`make size` prints this, building both binaries fresh, so it is regenerated
+rather than remembered. The published figure is for the whole grammar forest;
+four grammars is what this vendors, and four grammars is what four grammars
+cost.
+
+### Speed: between a third and half again of `go/ast`, not a cliff
+
+The published comparison is against native C. This project has no C harness and
+no reason to build one: the question it has is not how tree-sitter compares with
+itself in another language, but what the second build costs **this program**
+against the parser it already had. That is the comparison taken.
+
+Measured end to end, whole command, best of seven runs on a warm cache, over
+whatever each tree actually holds. The denominator is the bytes of the files the
+analyzer really read, not what is on disk, because it skips tests and vendored
+directories:
+
+| tree | parser | files | MB | MB/s |
+|---|---|---|---|---|
+| diagrammer | `go/ast` | 78 | 0.37 | 8.9 |
+| cmux | `go/ast` | 92 | 1.56 | 6.9 |
+| archify | tree-sitter | 215 | 3.79 | 5.8 |
+| ouroboros | tree-sitter | 1473 | 30.33 | 7.1 |
+| cmux | tree-sitter | 1678 | 31.30 | 4.7 |
+| slither | tree-sitter | 1969 | 3.89 | 3.9 |
+
+`make bench` takes the speed half again without needing a tree that is not in
+this repository, by repeating the fixtures until there is enough of them to
+measure: 3.6 MB/s for Python, 4.5 for TypeScript, 6.5 for Solidity and 7.0 for
+JavaScript. That it agrees with the table above is the reason to trust either.
+
+These are whole-command figures. They include walking the tree, resolving
+references and writing JSON, not parsing alone, which is deliberate: what is
+being decided is whether the build is worth having, and the parser's own speed
+in isolation is not what anybody waits for.
+
+### What the measurement decides
+
+The choice stands. 2.63 MB is not a reason to drop four languages, and a parser
+somewhere between a third slower and half again slower than the one already
+shipping is not either. The Go-only build is untouched by all of it: it links
+none of this, and it remains what the release gate covers.
+
+The one number worth watching is the cold build. 5.85 seconds becomes 12.63,
+because cgo compiles the grammars' C. That is a cost paid by whoever builds,
+not by whoever runs, and it is the only figure here that more grammars would
+make materially worse.
+
 ### `drawnFloor` = 0.80
 
 The share of a model's relationships a drawing must actually show.

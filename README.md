@@ -71,8 +71,17 @@ make build-polyglot  # bin/diagrammer-polyglot, reading four languages
 make check           # fmt, vet, lint, test — before a commit
 make verify          # the release gate: fmt-check, vet, test, fixtures
 make verify-cgo      # the second gate, for the four-language build
+make size            # what the second build costs in bytes
+make bench           # what it costs in time, per megabyte read
 make help            # every target
 ```
+
+`make size` and `make bench` exist because the figures for that build were once
+quoted from the project that publishes the runtime rather than taken here. They
+are taken now, and they are taken again by running those two rather than by
+being remembered: 2.63 MB of binary and a parser somewhere between a third and
+half again slower than `go/ast`. `docs/thresholds.md` has the table and the
+conditions.
 
 `make verify` is the only automated gate. It runs offline on a clean machine
 with nothing but Go and make installed; anything it needs that such a machine

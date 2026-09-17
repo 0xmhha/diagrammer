@@ -46,6 +46,18 @@ test:
 test-cgo:
 	CGO_ENABLED=1 $(GO) test ./...
 
+## size: what the second build costs in bytes, both binaries built fresh
+#
+# The figure docs/decisions.md carried for this was the publishing project's
+# own and had never been taken here. This is how it is taken, so that it is
+# regenerated rather than remembered.
+size: build build-polyglot
+	@go_only=$$(wc -c < $(BIN_DIR)/$(BINARY)); 	polyglot=$$(wc -c < $(BIN_DIR)/$(BINARY)-polyglot); 	printf '  %-30s %10d bytes  %6.2f MB\n' 'reading Go' $$go_only $$(echo "$$go_only/1048576" | bc -l); 	printf '  %-30s %10d bytes  %6.2f MB\n' 'reading four languages' $$polyglot $$(echo "$$polyglot/1048576" | bc -l); 	printf '  %-30s %10d bytes  %6.2f MB\n' 'the runtime and four grammars' $$((polyglot - go_only)) $$(echo "($$polyglot - $$go_only)/1048576" | bc -l)
+
+## bench: what the second build costs in time, per megabyte it reads
+bench:
+	CGO_ENABLED=1 $(GO) test ./internal/analyze/treesitter/ -run '^$$' -bench BenchmarkAnalyze -benchtime 5x
+
 ## race: run the tests under the race detector
 race:
 	$(GO) test -race ./...
