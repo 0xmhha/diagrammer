@@ -120,8 +120,39 @@ boundary rather than three stages later.
 `validate` is the only gate at the stage-2 boundary. `compose` and `render` may
 assume a validated model and must say so rather than re-validating silently.
 
-Every subcommand reports failures on stderr with a non-zero exit status and names
-the offending input path where one exists.
+### What an exit code means (settled after 0.3.0, by writing down what the code already did)
+
+Every subcommand reports on stderr and names the offending input path where one
+exists. What the exit code says is narrower than "something went wrong", and the
+distinction was decided in code long before anybody wrote it here.
+
+**Exit 1: the command could not do what it was asked.** No artefact was
+produced. An input that is missing or unreadable, a document that does not
+satisfy the contract for its stage, a family the model does not declare, an
+output path that cannot be written.
+
+**Exit 0: the command did what it was asked, and says what it could not use.**
+The artefact exists. A file that would not parse, a relationship the page could
+not hold, a name there was nowhere to write: each is recorded in the output and
+on stderr, and none of them is a failure of the command.
+
+The line between the two is one question: **did the artefact the caller asked
+for get produced?** A graph of a tree with one unreadable file is a graph. A
+page that records three relationships it could not draw is a page, and the
+record is the thing that makes it honest rather than the thing that makes it
+broken.
+
+**An output path that is already taken is overwritten, without asking.** Every
+command here is one a person re-runs against the same paths while they work, and
+a program that refused the second run would be a program you wrote a `rm` in
+front of. What it does not do is inherit the file's old mode: the run that
+produced the content decides who may read it, so the mode is set on every write
+rather than only when the file is created. A code graph carries the doc comments
+of everything it read, and leaving that at whatever the last owner chose is how
+private prose becomes somebody else's to find.
+
+Both halves are pinned by a test over the built command, because an exit code is
+what a script branches on and nothing else here would notice it changing.
 
 `instruct` was added after 0.1.1 and is the one capability that reads nothing.
 Round 14 said the stage-2 skill prompt is built from the embedded schemas so
@@ -686,7 +717,7 @@ Deferred deliberately, to be settled when the work reaches them:
 - Whether a drawing should carry evidence back to the source it came from, which
   would need git. Nothing here reads git, in either build, so this is not a
   question that was answered and is one that has not been asked again since it
-  was framed against 0.1.0. Two releases have shipped without it.
+  was framed against 0.1.0. Three releases have shipped without it.
 - Which architectures the binary targets. macOS is built and tested; `make
   linux` refuses on purpose, because a cross-compiled binary is not the binary
   that was tested and the native runner to do it properly does not exist yet.
@@ -697,7 +728,5 @@ Deferred deliberately, to be settled when the work reaches them:
   the pipeline from the server rather than from a document beside it. Getting
   the binary onto the machine is `make install` today, and packaging it for one
   it was not built on is the part that remains.
-- Error policy and exit codes for parse failures, levels that cannot be laid out,
-  and output path collisions.
 - How the unfold window behaves for a language without a file generation. To be
   decided by measurement on the fixtures rather than assumed.
