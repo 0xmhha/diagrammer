@@ -27,6 +27,24 @@ Two things follow from the shape, and both are rules in their own right:
   the document. The checks read the emitted artifact, not the producer's
   intentions.
 
+## What the page does on its own
+
+The drawing is one half of the artifact and the viewer is the other. It moves
+between levels, and it answers "what is this one joined to" when the pointer
+rests on a box: everything not joined to it fades, and the lines that are stay.
+
+Faded rather than hidden, and nothing moves. A reader who has just found the box
+they wanted should not have the page rearrange itself underneath them, and what
+is faded is still there to be read.
+
+Two things have to hold for that walk to arrive anywhere, and no drawing rule
+cares about either. A line naming a box that is not on its page draws perfectly
+and leaves the highlight dark, in silence; so does a label naming a line that
+was left out. Both are checked over the emitted page, for every family.
+
+The attributes the walk reads are declared in `ViewerContract`, and a test holds
+that list and the viewer's own source to each other in both directions.
+
 ## Determinism
 
 The same input produces byte-identical output, every run.

@@ -78,8 +78,17 @@ const (
 // weight.
 
 // ViewerContract lists what the embedded viewer reads.
+//
+// The second group is what the highlight needs: which box the pointer is over,
+// which lines touch it, and what those lines carry. A drawing says which things
+// are joined by putting a line between them, and on a page of any size that is
+// a question the reader has to answer by following the line. These let the page
+// answer it.
 func ViewerContract() []string {
-	return []string{attrLevel, attrLevelLink, attrLevelBack, attrBoxOpens}
+	return []string{
+		attrLevel, attrLevelLink, attrLevelBack, attrBoxOpens,
+		attrBoxID, attrEdgeID, attrEdgeFrom, attrEdgeTo, attrEdgeLabelFor, attrBarBox,
+	}
 }
 
 // CheckerContract lists what reading the artifact back depends on.
