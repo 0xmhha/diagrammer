@@ -185,6 +185,24 @@ repository, one or two families became four, twice, with a state family
 describing the real accounting lifecycle and a use case family naming the actual
 capabilities.
 
+**It described the unfold window and not what a thin top level costs.** The same
+paragraph that says a level under `minBoxesPerLevel` is unfolded also says a band
+is worth aiming for, and it is, on a page deep in the tree. On the first page it
+is not: the overview is a level like any other, so too few components there
+unfolds it, the children take their place, and if those children open nothing the
+whole hierarchy has collapsed into one page.
+
+That is not hypothetical. Pointed at a 29,000-line package of somebody else's
+tree, a model returned twelve components with two at the top, and stage 3 drew
+one page of ten boxes with nothing to open. The nesting was there and the unfold
+undid it.
+
+The instruction now says the top level is the one place to count, and why. Two
+runs over the same package afterwards returned 23 components with five at the
+top, which drew four pages, and 27 with six at the top, which drew seven and was
+not unfolded at all. A model is not a function and neither run is a guarantee;
+what changed is that the number it should be aiming at is now written down.
+
 ### The server is confined, the command line is not (after 0.2.0)
 
 `serve` takes a root and refuses any path argument outside it. The default is
