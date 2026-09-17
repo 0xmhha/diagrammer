@@ -102,7 +102,7 @@ change, not an edit.
     diagrammer compose  <codegraph.json> -o <dir> stage 3
     diagrammer render   <doc.json> -o out.html    stage 4
     diagrammer instruct [-o prompt.md]            what stage 2 is performed from
-    diagrammer serve                              the same, as a local MCP server
+    diagrammer serve    [-root dir]               the same, as a local MCP server
     diagrammer version
 
 No single command infers its stage from the shape of the file it was handed.
@@ -131,6 +131,33 @@ what stage 2 must return was to find the schema in the source, which is a
 requirement on whoever drives the pipeline that this program was supposed to
 meet. It is a capability rather than a document in the repository for the same
 reason the schemas are embedded rather than read from disk.
+
+### The server is confined, the command line is not (after 0.2.0)
+
+`serve` takes a root and refuses any path argument outside it. The default is
+the directory it was started in, and `-root` widens it.
+
+The two surfaces differ here although they share one set of capabilities, and
+the reason is who chose the path. A path typed at a terminal was chosen by the
+person who owns the terminal, and they can already write anywhere their shell
+can; confining the command line would protect nobody from anyone. A path
+arriving over MCP was chosen by a plugin, or by a model the plugin is driving,
+and stage 1 has just handed that model the doc comments of a repository it did
+not write. Text from a stranger's source tree reaching an argument that names a
+file to overwrite is a short path, and it is worth closing.
+
+**The default is the safe one, which refuses calls that worked in 0.2.0.** A
+default that can be widened is worth more than one that can be narrowed: the
+second is only ever set by somebody who already thought about the question, and
+the people who need protecting are the ones who did not. The refusal names the
+root and says which flag widens it, because the reader of that message is a
+model and a message it cannot act on gets retried with a different path until
+something works.
+
+Enforcement sits on the MCP surface rather than in the operation, since the
+operation serves both surfaces. What the operation owns is saying which of its
+fields are paths, and that is on the `Request` interface so that a new
+capability cannot be added without answering the question: the compiler asks.
 
 CLI and MCP are two faces of one set of capabilities. `serve` exposes graph,
 validate, compose, render and instruct with the same names, arguments and error

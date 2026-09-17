@@ -89,8 +89,19 @@ same machine reaches it today.
 `diagrammer serve` speaks MCP over stdio. Point a client at the binary:
 
 ```json
-{ "command": "/path/to/diagrammer", "args": ["serve"] }
+{ "command": "/path/to/diagrammer", "args": ["serve", "-root", "/path/to/work"] }
 ```
+
+**Every path argument is confined to one directory**, and the default is the
+directory the server was started in. A path outside it is refused with the root
+named, and only the person who started the server can widen it. `-root /` is how
+you say you meant everywhere.
+
+That is not there for the plugin's sake. Stage 1 hands a model the doc comments
+of a repository it did not write, and the next tool call takes a path that names
+a file to overwrite. The distance between those two is short enough to be worth
+closing, and the command line is left alone, because a person typing a path can
+already write anywhere their shell can.
 
 Three things a caller can ask for before it does any work, which is the whole
 of what it needs to know:
@@ -103,6 +114,9 @@ of what it needs to know:
   from. `instruct` returns the same text as a tool for a client without prompts.
 - **The three schemas as resources**, each under the identifier it declares as
   its own `$id`, for a caller that wants one on its own.
+
+The instructions also say the arguments are confined, so a model is told the
+rule rather than discovering it by being refused.
 
 Then `graph`, your own model, `validate`, `compose`, `render`. Every path
 argument is a path on the machine the server runs on.
