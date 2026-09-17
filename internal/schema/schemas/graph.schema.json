@@ -31,9 +31,32 @@
       "type": "array",
       "items": { "$ref": "#/$defs/edge" }
     },
-    "diagnostics": { "$ref": "#/$defs/diagnostics" }
+    "diagnostics": { "$ref": "#/$defs/diagnostics" },
+    "revision": {
+      "description": "The commit the analyzed tree was checked out at, when it was inside a git checkout. Absent otherwise, and absent is the honest answer rather than a gap: a tree unpacked from an archive has no revision, and so does a repository before its first commit.\n\nIt is here so that a drawing made three stages later can name the code it describes. Stage 2 repeats it into the model's provenance and stage 3 carries it to the page.",
+      "$ref": "#/$defs/revision"
+    }
   },
   "$defs": {
+    "revision": {
+      "description": "The commit a source tree was checked out at. It is read from the files under .git rather than by running git, so it needs no git on the machine and says nothing about one: no remote, no author, no path.\n\nIt says which commit was checked out and nothing more. It is not a claim that the files matched that commit, because uncommitted changes are not detected, and a reader following a line number should expect to have to look around.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit"],
+      "properties": {
+        "commit": {
+          "description": "The full object name HEAD resolved to: forty hex digits where a repository hashes with SHA-1, sixty-four where it hashes with SHA-256. Abbreviations are not accepted, because what is abbreviated enough to be unambiguous today is not tomorrow.",
+          "type": "string",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "ref": {
+          "description": "The branch HEAD pointed at, such as refs/heads/main. Absent when HEAD was detached.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        }
+      }
+    },
     "nodeId": {
       "description": "Unique within the document. Conventionally a kind prefix and a path, such as pkg:net/http or fn:net/http.(*Server).Serve. Any printable text without spaces or control characters is accepted, because ids are derived from source paths rather than authored. Uniqueness is checked by validate, since a pattern cannot express it.",
       "type": "string",

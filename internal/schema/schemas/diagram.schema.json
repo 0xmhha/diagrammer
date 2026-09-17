@@ -28,7 +28,11 @@
       "required": ["model"],
       "properties": {
         "model": { "type": "string", "minLength": 1, "maxLength": 1024 },
-        "generatedBy": { "type": "string", "maxLength": 200 }
+        "generatedBy": { "type": "string", "maxLength": 200 },
+        "revision": {
+          "description": "The commit the source this describes was checked out at, carried from the model's provenance. Absent when the model carried none, which is what a model built from a tree that was not a checkout looks like.",
+          "$ref": "#/$defs/revision"
+        }
       }
     },
     "levels": {
@@ -40,6 +44,26 @@
     "accounting": { "$ref": "#/$defs/accounting" }
   },
   "$defs": {
+    "revision": {
+      "description": "The commit a source tree was checked out at. Written down once by stage 1, which read the tree, and repeated unchanged by every stage after it.\n\nIt says which commit was checked out and nothing more. It is not a claim that the files matched that commit: uncommitted changes are not detected, and a reader following it should expect to have to look around.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit"],
+      "properties": {
+        "commit": {
+          "description": "The full object name: forty hex digits where a repository hashes with SHA-1, sixty-four where it hashes with SHA-256. Abbreviations are not accepted, because what is unambiguous when abbreviated today is not tomorrow.",
+          "type": "string",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "ref": {
+          "description": "The branch HEAD pointed at, such as refs/heads/main. Absent when HEAD was detached.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        }
+      }
+    },
+
     "id": {
       "type": "string",
       "minLength": 1,

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/0xmhha/diagrammer/internal/vcs"
 )
 
 // The viewer is embedded rather than linked, which is what makes the artifact
@@ -16,6 +18,25 @@ var (
 	//go:embed viewer/viewer.js
 	viewerJS string
 )
+
+// revisionFor writes the commit the drawing describes, and writes nothing when
+// the document carried none.
+//
+// The whole object name is shown rather than an abbreviation. The schemas
+// refuse an abbreviated one because what is unambiguous when shortened today is
+// not tomorrow, and displaying one after saying that would invite exactly the
+// value the contract will not accept. It is here to be copied into a command,
+// and forty characters copy as easily as twelve.
+func revisionFor(r *vcs.Revision) string {
+	if r == nil {
+		return ""
+	}
+	out := `<p class="revision" ` + attrRevision + `="` + esc(r.Commit) + `">drawn from <code>` + esc(r.Commit) + `</code>`
+	if r.Ref != "" {
+		out += " on " + esc(r.Ref)
+	}
+	return out + "</p>\n"
+}
 
 // HTML assembles the whole page.
 //
@@ -35,6 +56,7 @@ func (p *Page) HTML() string {
 	if p.Subtitle != "" {
 		b.WriteString("<p class=\"subtitle\">" + esc(p.Subtitle) + "</p>\n")
 	}
+	b.WriteString(revisionFor(p.Revision))
 	b.WriteString("</header>\n")
 
 	b.WriteString("<nav>\n")

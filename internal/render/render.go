@@ -7,6 +7,7 @@ import (
 	"github.com/0xmhha/diagrammer/internal/artifact"
 	"github.com/0xmhha/diagrammer/internal/diagram"
 	"github.com/0xmhha/diagrammer/internal/invariant"
+	"github.com/0xmhha/diagrammer/internal/vcs"
 )
 
 // Page is a whole document, drawn.
@@ -14,6 +15,10 @@ type Page struct {
 	Title    string
 	Subtitle string
 	Family   diagram.Family
+	// Revision is the commit the drawn source was checked out at, when the
+	// document carried one. It is written into the page so that the person
+	// looking at a box knows which version of the code it describes.
+	Revision *vcs.Revision
 	Scenes   []artifact.Scene
 	// Accounting carries stage 3's drawn count forward as this stage's proven:
 	// what the pages handed us is what we were responsible for showing.
@@ -68,7 +73,7 @@ func Build(doc *diagram.Document) (*Page, error) {
 		return nil, fmt.Errorf("rendering the %q family is not implemented yet", doc.Family)
 	}
 
-	page := &Page{Title: doc.Meta.Title, Subtitle: doc.Meta.Subtitle, Family: doc.Family}
+	page := &Page{Title: doc.Meta.Title, Subtitle: doc.Meta.Subtitle, Family: doc.Family, Revision: doc.Provenance.Revision}
 	for _, level := range doc.Levels {
 		scene, drops, silent := buildScene(doc.Family, level)
 		page.Scenes = append(page.Scenes, scene)

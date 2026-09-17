@@ -221,6 +221,54 @@ knowingly.
 Two parser paths must not become two graph shapes. The graph schema is one
 contract and every analyzer satisfies it.
 
+### A drawing names the commit it was made from (after 0.3.0)
+
+A diagram of a moving codebase is about a moment, and a page that does not say
+which moment describes code that may no longer be there. So stage 1 records the
+commit the tree was checked out at, and every stage after it repeats that
+record unchanged until it reaches the page.
+
+**Stage 1 is the only stage that can know it,** because it is the only one that
+reads the source tree. `compose` reads a model and `render` reads a document;
+neither has ever seen the code. That is why the value is copied rather than
+looked up: a stage that went and asked git would be answering about whatever
+tree it happened to be run in, which is not the tree the drawing describes.
+
+**The .git files are read rather than git being run.** This program starts no
+external process anywhere, and starting one here would make the answer depend on
+git being installed and on what a person's configuration does to it. HEAD, a
+ref file and `packed-refs` are three files with a simple format, and reading
+them needs neither.
+
+**It says what was checked out, and not that the files matched it.** Deciding
+whether a working tree is clean means reading the object store, which is a
+different order of work; a heuristic for it would be a number that is sometimes
+wrong, and a commit that is sometimes wrong is worse than no commit. The schemas
+say this in the field's own description, and so does the page.
+
+**Two places take input from the tree being analysed rather than from the
+caller,** and both are bounded rather than trusted. A HEAD naming a ref is
+followed only within `refs/`, so a HEAD reading `ref: ../../../etc/passwd` is
+refused instead of read and reported as a commit. A `.git` file naming a
+directory is followed only if that directory holds a HEAD, which leaves a
+hostile repository able to learn that some directory contains a file by that
+name and nothing else. Both have fixtures that try it.
+
+**Nothing verifies that the commit a model states is the one its graph
+recorded,** and nothing can. Stage 2 runs outside this program, the instruction
+tells it to copy the object unchanged or leave it out, and `validate` checks the
+shape and not the truth. An invented commit would be believed. That is the same
+class of trust the rest of stage 2 already runs on, and it is recorded here
+rather than implied.
+
+**What was asked for and not built:** evidence per box, so that clicking a
+component opens the file it was drawn from. Stage 1 already carries a path and a
+line for every node and stage 2 drops them, so the chain breaks at the schema
+rather than for want of data. A commit is the part of that which is one field
+and no new argument; the rest would make `compose` take a second input and ask a
+model to transcribe numbers, and it was not worth that to answer a question
+nobody had asked twice.
+
 ### The renderer is reimplemented; the viewer is embedded (round 3)
 
 Go reimplements the renderer. The viewer ships as one frozen embedded asset.
@@ -770,10 +818,14 @@ and a written account of why, which is less than they wanted.
 
 Deferred deliberately, to be settled when the work reaches them:
 
-- Whether a drawing should carry evidence back to the source it came from, which
-  would need git. Nothing here reads git, in either build, so this is not a
-  question that was answered and is one that has not been asked again since it
-  was framed against 0.1.0. Three releases have shipped without it.
+- Whether a drawing should carry evidence back to the source it came from, per
+  box, so that a component opens the file it was drawn from. **The commit is now
+  carried** and the section above says how; what is still open is the rest. The
+  data is there and unused: stage 1 records a path and a line for every node,
+  and the stage-2 schema has nowhere to put them, so the chain breaks at the
+  contract rather than for want of evidence. Closing it means `compose` taking
+  the graph as a second input, because asking a model to transcribe line numbers
+  would produce numbers that are wrong in a way nothing downstream can detect.
 - Which architectures the binary targets. Both mac architectures are now built,
   packaged and run by `make dist`; `make linux` still refuses, because nothing
   here can run a linux binary and the rule is that nothing ships until it has

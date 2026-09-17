@@ -41,7 +41,7 @@ func headLabelUnits() int {
 
 // buildLadder draws a sequence document.
 func buildLadder(doc *diagram.Document) (*Page, error) {
-	page := &Page{Title: doc.Meta.Title, Subtitle: doc.Meta.Subtitle, Family: doc.Family}
+	page := &Page{Title: doc.Meta.Title, Subtitle: doc.Meta.Subtitle, Family: doc.Family, Revision: doc.Provenance.Revision}
 	for _, level := range doc.Levels {
 		scene := ladderScene(level)
 		page.Scenes = append(page.Scenes, scene)

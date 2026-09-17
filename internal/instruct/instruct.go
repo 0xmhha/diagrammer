@@ -149,6 +149,15 @@ across levels is how you avoid that, and it is your decision, not the drawing's.
 read in ` + "`sourceGraph`" + ` and a sentence in ` + "`note`" + ` saying what you did and what you
 judged, so a reader of the diagram can tell what was observed from what was
 decided.
+
+**Copy ` + "`revision`" + ` exactly, or leave it out.** If the graph you read carries a
+` + "`revision`" + `, copy that object into ` + "`sourceGraph`" + ` character for character. It
+reaches the finished page, where it is the only thing telling a reader which
+version of the code they are looking at. Do not abbreviate it, do not tidy it,
+and do not supply one from anywhere else: nothing downstream can tell a wrong
+commit from a right one, so a wrong one is worse than none. A graph with no
+` + "`revision`" + ` is a tree that was not in a checkout, and the honest model of it
+carries none.
 `
 
 const closingProse = `` + "`validate`" + ` accepts or refuses it. ` + "`compose`" + ` turns it into one diagram source

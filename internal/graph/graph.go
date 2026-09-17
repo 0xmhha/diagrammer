@@ -1,5 +1,7 @@
 package graph
 
+import "github.com/0xmhha/diagrammer/internal/vcs"
+
 // NodeKind is what a node stands for in the source tree.
 //
 // Every analyzer projects its language onto these five, whatever that language
@@ -49,6 +51,11 @@ type Graph struct {
 	Nodes         []Node      `json:"nodes"`
 	Edges         []Edge      `json:"edges"`
 	Diagnostics   Diagnostics `json:"diagnostics"`
+	// Revision is the commit the tree was checked out at, and is nil when it
+	// was not in a checkout. Stage 1 is the only stage that can know this,
+	// because it is the only one that reads the source tree; every stage after
+	// it repeats what is written here.
+	Revision *vcs.Revision `json:"revision,omitempty"`
 }
 
 // Node is one element of the source tree.

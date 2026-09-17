@@ -12,6 +12,11 @@ them does not happen inside this program.
    the standard library, which refuses a file it cannot parse; the other
    languages with tree-sitter, which does not, so every tree is asked whether
    it parsed cleanly and a file that did not is recorded with its line.
+
+   It also records which commit the tree was checked out at, read out of `.git`
+   rather than by running git, and every stage after it repeats that record
+   unchanged. This is the only stage that can know it, because it is the only
+   one that reads the source.
 2. A plugin's skill analyses that graph with an LLM and returns a
    **codegraph.json** expressed as a UML model. The binary does not perform this
    stage and never calls a model itself. It hands the graph out and takes the
@@ -29,7 +34,11 @@ them does not happen inside this program.
    routed lines and an embedded viewer that moves between levels and, when the
    pointer rests on a box, fades everything that box is not joined to. A
    relationship the geometry cannot hold is recorded on the page beside the
-   drawing rather than dropped in silence.
+   drawing rather than dropped in silence, and the commit the drawing was made
+   from is named in the header, so a reader knows which version of the code they
+   are looking at. It says what was checked out; it is not a claim that nothing
+   was uncommitted, and a tree that was not a checkout produces a page that says
+   nothing rather than one that guesses.
 
 `validate` guards the boundary between stages 2 and 3, and `serve` exposes the
 same capabilities as a local MCP server so any plugin can drive them.

@@ -6,7 +6,11 @@
   },
   "provenance": {
     "origin": "handwritten",
-    "note": "Written by hand to cover the UML vocabulary each family requires: provided and required interfaces with ports and dependencies; lifelines with synchronous, asynchronous and reply messages, activations and a combined fragment; states with trigger, guard and effect plus initial and final; actors, a system boundary, and both include and extend."
+    "note": "Written by hand to cover the UML vocabulary each family requires: provided and required interfaces with ports and dependencies; lifelines with synchronous, asynchronous and reply messages, activations and a combined fragment; states with trigger, guard and effect plus initial and final; actors, a system boundary, and both include and extend. It is also the one fixture carrying a sourceGraph revision: the commit has to survive stage 3 and reach the page, and a path nothing travels is a path nothing tests. The object name is invented, because this system is.",
+    "sourceGraph": {
+      "path": "order-service.graph.json",
+      "revision": { "commit": "4f1d9c8b2a7e6053fc1b8d94a2e70f6c5b3a1d82", "ref": "refs/heads/main" }
+    }
   },
   "families": ["component", "sequence", "state", "usecase"],
 

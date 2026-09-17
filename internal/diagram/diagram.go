@@ -1,5 +1,7 @@
 package diagram
 
+import "github.com/0xmhha/diagrammer/internal/vcs"
+
 // Family names the diagram family a document holds.
 //
 // One document holds one family. The list grows as each family's composer
@@ -101,6 +103,9 @@ type Meta struct {
 type Provenance struct {
 	Model       string `json:"model"`
 	GeneratedBy string `json:"generatedBy,omitempty"`
+	// Revision is the commit the source described here was checked out at,
+	// carried from the model. Nil when the model carried none.
+	Revision *vcs.Revision `json:"revision,omitempty"`
 }
 
 // Accounting is the relationships a scope was responsible for.
