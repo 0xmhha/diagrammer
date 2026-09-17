@@ -267,9 +267,13 @@ UML model carrying four families. Embedding it would mean either emitting
 attributes for features that do not exist, or pinning a contract most of which
 we could never satisfy. Pinning a contract we cannot meet pins nothing.
 
-So the viewer is written here, small, and covers what 0.1.0 named: level
-navigation, which is the drill-down capability round 9 listed. The DOM contract
-requirement from round 15 stands unchanged in intent — a missing data attribute
+So the viewer is written here, small, and covered what 0.1.0 named: level
+navigation, which is the drill-down capability round 9 listed. It has since
+grown one thing more, which is the argument for owning it: resting on a box
+fades everything it is not joined to. That was three CSS rules and sixty lines
+against a vocabulary this project already had, and it would have been a feature
+request against somebody else's. The DOM contract requirement from round 15
+stands unchanged in intent — a missing data attribute
 leaves the page drawing while interaction dies in silence, and no composition
 rule would notice — so our own, smaller vocabulary is pinned by a generated test
 exactly as that round asked.
@@ -679,7 +683,10 @@ and a written account of why, which is less than they wanted.
 
 Deferred deliberately, to be settled when the work reaches them:
 
-- Whether source evidence, which needs git, is in 0.1.0.
+- Whether a drawing should carry evidence back to the source it came from, which
+  would need git. Nothing here reads git, in either build, so this is not a
+  question that was answered and is one that has not been asked again since it
+  was framed against 0.1.0. Two releases have shipped without it.
 - Which architectures the binary targets. macOS is built and tested; `make
   linux` refuses on purpose, because a cross-compiled binary is not the binary
   that was tested and the native runner to do it properly does not exist yet.

@@ -2,6 +2,7 @@ package docscheck_test
 
 import (
 	"github.com/0xmhha/diagrammer/internal/instruct"
+	"github.com/0xmhha/diagrammer/internal/invariant"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -434,6 +435,42 @@ func TestTheInstructionNamesEveryFamilyTheGateChecks(t *testing.T) {
 		if !strings.Contains(told, "**"+name+"**") {
 			t.Errorf("the validator checks %q and the instruction never names it, so a model is refused "+
 				"for a reason it was not given", name)
+		}
+	}
+}
+
+// TestTheWrittenRuleCountMatchesTheCode holds a number the other checks cannot
+// see.
+//
+// Every rule's name is held to the contract already. How many there are is
+// written out in words, once, and nothing was watching it: a rule added or
+// dropped leaves the sentence counting the old set, and a reader has no way to
+// tell that from a rule they have missed. It is the same failure the thresholds
+// check exists for, in the one place a threshold is spelled rather than
+// digitised.
+func TestTheWrittenRuleCountMatchesTheCode(t *testing.T) {
+	spelled := map[int]string{
+		1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six",
+		7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",
+	}
+	// Lowercased, because the count opens a sentence in one place and sits
+	// inside one in the other, and which it is says nothing about the code.
+	doc := strings.ToLower(read(t, "docs/invariants.md"))
+
+	for _, c := range []struct {
+		what  string
+		rules []string
+	}{
+		{"the rules a grid family is held to", invariant.CompositionRules()},
+		{"the rules a ladder is held to", invariant.SequenceRules()},
+	} {
+		word, ok := spelled[len(c.rules)]
+		if !ok {
+			t.Fatalf("%s: %d rules, which this test has no word for", c.what, len(c.rules))
+		}
+		if !strings.Contains(doc, strings.ToLower(word)+" rules") {
+			t.Errorf("the code has %d of %s and docs/invariants.md never says %q",
+				len(c.rules), c.what, word+" rules")
 		}
 	}
 }

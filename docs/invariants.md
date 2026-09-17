@@ -327,7 +327,7 @@ by routed lines. Seven rules, each with a drawing that breaks it:
   of crossing it, which would read as the band having a side the diagram never
   meant.
 
-**sequence** has four of its own, each with a drawing that breaks it: every
+**sequence** has four rules of its own, each with a drawing that breaks it: every
 message has a rung of its own, because two on one rung destroys the ordering
 that is the diagram's whole content; an arrow's ends sit on the lifelines it
 names; an execution bar sits on the lifeline it names and has height; and
