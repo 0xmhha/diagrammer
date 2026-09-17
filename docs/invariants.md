@@ -327,11 +327,22 @@ by routed lines. Seven rules, each with a drawing that breaks it:
   of crossing it, which would read as the band having a side the diagram never
   meant.
 
-**sequence** has four rules of its own, each with a drawing that breaks it: every
+**sequence** has five rules of its own, each with a drawing that breaks it: every
 message has a rung of its own, because two on one rung destroys the ordering
 that is the diagram's whole content; an arrow's ends sit on the lifelines it
-names; an execution bar sits on the lifeline it names and has height; and
-nothing reaches outside the page.
+names; an execution bar sits on the lifeline it names and has height; nothing
+reaches outside the page; and `label-clearance`, held to a different standard
+here than on a grid.
+
+That last one is worth stating, because the same name means something else in
+the two places. A grid holds a label clear of every line but its own, since a
+label near a line is read as belonging to it. On a ladder a message writes above
+its rung and the lifelines beneath it are thin dashed strokes that every long
+message crosses, so the grid's standard would refuse the ordinary case. What
+would actually be unreadable is text on other text, text over a lifeline's head,
+which carries a participant's name, or text off the page. Those three are what
+is checked, and a drawing whose text merely crosses a lifeline has its own test
+saying it passes.
 
 Two of the grid rules hold by construction rather than by luck. Routes travel only in the
 channels between cells, so pass-through cannot happen; and the side a route
@@ -409,6 +420,7 @@ Held over a drawn ladder:
 | Name | What it holds |
 |---|---|
 | `rung-distinct` | every message has a rung of its own |
+| `label-clearance` | a message's text stays off other text, off a lifeline's head, and on the page |
 | `message-span` | an arrow's ends sit on the lifelines it names |
 | `activation-on-lifeline` | an execution bar sits on the lifeline it names, and has height |
 | `inside-canvas` | nothing reaches outside the page |

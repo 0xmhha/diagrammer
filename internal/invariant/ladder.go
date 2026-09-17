@@ -15,6 +15,14 @@ import (
 // refuse every sequence diagram ever drawn. What matters instead is that each
 // message has a rung of its own, that arrows reach the lifelines they name, and
 // that nothing hangs off the edge of the page.
+//
+// Text is judged here too, and by a different standard from a grid's. A grid
+// holds a label clear of every line but its own, because a label near a line is
+// read as belonging to it. On a ladder a message's text sits above its rung and
+// the lifelines beneath it are thin dashed strokes that every long message
+// crosses; holding text clear of those would refuse the ordinary case. What
+// would actually be unreadable is text on other text, text over a lifeline's
+// head, or text off the page, and that is what is checked.
 
 // Sequence composition rule names.
 const (
@@ -26,7 +34,7 @@ const (
 
 // SequenceRules lists the rules a ladder is held to.
 func SequenceRules() []string {
-	return []string{RuleRungDistinct, RuleMessageSpan, RuleActivationLine, RuleInsideCanvas}
+	return []string{RuleRungDistinct, RuleMessageSpan, RuleActivationLine, RuleInsideCanvas, RuleLabelClear}
 }
 
 // CompositionFor picks the rules a drawing is judged by.
@@ -125,6 +133,8 @@ func Sequence4(scene *artifact.Scene) []RouteProblem {
 		}
 	}
 
+	checkLadderText(scene, add)
+
 	for _, f := range scene.Frames {
 		if f.W <= 0 || f.H <= 0 {
 			add(f.ID, RuleInsideCanvas, "frames nothing")
@@ -155,4 +165,50 @@ func sortedFloats[V any](m map[float64]V) []float64 {
 	}
 	sort.Float64s(out)
 	return out
+}
+
+// checkLadderText holds a message's text to the three things that would make it
+// unreadable, and to nothing else.
+//
+// The rectangle is read from the page rather than worked out here, for the same
+// reason the grid's rule reads it: how wide a string is depends on the size that
+// one label was shrunk to, which nothing in the string says. A label with no
+// rectangle is a label the page never drew.
+func checkLadderText(scene *artifact.Scene, add func(string, string, string, ...any)) {
+	for i, r := range scene.Routes {
+		if r.LabelText == "" || (r.LabelBounds.W == 0 && r.LabelBounds.H == 0) {
+			continue
+		}
+		box := r.LabelBounds
+
+		if box.X < 0 || box.Y < 0 || box.Right() > scene.Width || box.Bottom() > scene.Height {
+			add(r.ID, RuleLabelClear, "its text reaches outside the page")
+			continue
+		}
+		// A lifeline's head carries the participant's name. Text over it makes
+		// two names one.
+		if head, ok := overlappingBox(scene, box); ok {
+			add(r.ID, RuleLabelClear, "its text overlaps %s, which carries a name of its own", head)
+			continue
+		}
+		for j, other := range scene.Routes {
+			if i == j || other.LabelText == "" {
+				continue
+			}
+			if box.Overlaps(other.LabelBounds) {
+				add(r.ID, RuleLabelClear, "its text overlaps the text on %s", other.ID)
+				break
+			}
+		}
+	}
+}
+
+// overlappingBox names the first box a rectangle lands on.
+func overlappingBox(scene *artifact.Scene, box artifact.Rect) (string, bool) {
+	for _, b := range scene.Boxes {
+		if box.Overlaps(artifact.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}) {
+			return b.ID, true
+		}
+	}
+	return "", false
 }
