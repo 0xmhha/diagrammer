@@ -1,0 +1,953 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "diagrammer",
+    "subtitle": "This repository as a hierarchy of its four stages: a top level that is a map rather than a census"
+  },
+  "provenance": {
+    "origin": "modelReviewed",
+    "note": "A worked example of what stage 2 produces when it is done well, and the only model here that is one. It describes this repository, read from its own stage-1 graph: every package, file count and import relation in it was taken from that graph rather than remembered. What it demonstrates is the part `diagrammer instruct` asks a model to judge and no schema can state. Seven components at the top rather than the sixteen packages the graph holds, grouped by the stage of the pipeline each belongs to, so that the first page is a map of the program and the detail is a click away. diagrammer.codegraph.json beside it is an earlier, shallower model of the same repository. Both are kept, because the difference between them is the lesson: this one states twenty-six relationships across five pages where that one states fourteen across three, and both draw everything they state."
+  },
+  "families": [
+    "component",
+    "sequence",
+    "state",
+    "usecase"
+  ],
+  "component": {
+    "components": [
+      {
+        "id": "cli",
+        "name": "diagrammer",
+        "stereotype": "entry point",
+        "description": "5 files, 34 declarations",
+        "ports": [
+          {
+            "id": "cli.r.capabilities",
+            "kind": "required",
+            "interface": "Capabilities"
+          }
+        ]
+      },
+      {
+        "id": "command",
+        "name": "command",
+        "stereotype": "capability",
+        "description": "5 files, 46 declarations",
+        "ports": [
+          {
+            "id": "command.p.capabilities",
+            "kind": "provided",
+            "interface": "Capabilities"
+          },
+          {
+            "id": "command.r.analyzer",
+            "kind": "required",
+            "interface": "Analyzer"
+          },
+          {
+            "id": "command.r.graph",
+            "kind": "required",
+            "interface": "Graph"
+          },
+          {
+            "id": "command.r.schemas",
+            "kind": "required",
+            "interface": "Schemas"
+          },
+          {
+            "id": "command.r.model",
+            "kind": "required",
+            "interface": "Model"
+          },
+          {
+            "id": "command.r.document",
+            "kind": "required",
+            "interface": "Document"
+          },
+          {
+            "id": "command.r.scene",
+            "kind": "required",
+            "interface": "Scene"
+          },
+          {
+            "id": "command.r.rules",
+            "kind": "required",
+            "interface": "Rules"
+          }
+        ]
+      },
+      {
+        "id": "analysis",
+        "name": "analysis",
+        "stereotype": "stage 1"
+      },
+      {
+        "id": "boundary",
+        "name": "boundary",
+        "stereotype": "stage 2"
+      },
+      {
+        "id": "composition",
+        "name": "composition",
+        "stereotype": "stage 3"
+      },
+      {
+        "id": "drawing",
+        "name": "drawing",
+        "stereotype": "stage 4"
+      },
+      {
+        "id": "docscheck",
+        "name": "docscheck",
+        "stereotype": "guard",
+        "description": "1 file, 0 declarations"
+      },
+      {
+        "id": "analyze",
+        "name": "analyze",
+        "stereotype": "registry",
+        "description": "3 files, 7 declarations",
+        "parent": "analysis",
+        "ports": [
+          {
+            "id": "analyze.p.analyzer",
+            "kind": "provided",
+            "interface": "Analyzer"
+          },
+          {
+            "id": "analyze.r.graph",
+            "kind": "required",
+            "interface": "Graph"
+          }
+        ]
+      },
+      {
+        "id": "goast",
+        "name": "goast",
+        "stereotype": "parser",
+        "description": "2 files, 61 declarations",
+        "parent": "analysis",
+        "ports": [
+          {
+            "id": "goast.p.analyzer",
+            "kind": "provided",
+            "interface": "Analyzer"
+          },
+          {
+            "id": "goast.r.graph",
+            "kind": "required",
+            "interface": "Graph"
+          }
+        ]
+      },
+      {
+        "id": "treesitter",
+        "name": "treesitter",
+        "stereotype": "parser",
+        "description": "5 files, 52 declarations",
+        "parent": "analysis",
+        "ports": [
+          {
+            "id": "treesitter.p.analyzer",
+            "kind": "provided",
+            "interface": "Analyzer"
+          },
+          {
+            "id": "treesitter.r.graph",
+            "kind": "required",
+            "interface": "Graph"
+          }
+        ]
+      },
+      {
+        "id": "graph",
+        "name": "graph",
+        "stereotype": "document",
+        "description": "2 files, 10 declarations",
+        "parent": "analysis",
+        "ports": [
+          {
+            "id": "graph.p.graph",
+            "kind": "provided",
+            "interface": "Graph"
+          }
+        ]
+      },
+      {
+        "id": "schema",
+        "name": "schema",
+        "stereotype": "contract",
+        "description": "2 files, 8 declarations",
+        "parent": "boundary",
+        "ports": [
+          {
+            "id": "schema.p.schemas",
+            "kind": "provided",
+            "interface": "Schemas"
+          }
+        ]
+      },
+      {
+        "id": "validate",
+        "name": "validate",
+        "stereotype": "gate",
+        "description": "2 files, 19 declarations",
+        "parent": "boundary",
+        "ports": [
+          {
+            "id": "validate.r.schemas",
+            "kind": "required",
+            "interface": "Schemas"
+          },
+          {
+            "id": "validate.r.model",
+            "kind": "required",
+            "interface": "Model"
+          }
+        ]
+      },
+      {
+        "id": "uml",
+        "name": "uml",
+        "stereotype": "document",
+        "description": "2 files, 35 declarations",
+        "parent": "boundary",
+        "ports": [
+          {
+            "id": "uml.p.model",
+            "kind": "provided",
+            "interface": "Model"
+          }
+        ]
+      },
+      {
+        "id": "compose",
+        "name": "compose",
+        "stereotype": "composer",
+        "description": "7 files, 34 declarations",
+        "parent": "composition",
+        "ports": [
+          {
+            "id": "compose.r.model",
+            "kind": "required",
+            "interface": "Model"
+          },
+          {
+            "id": "compose.r.document",
+            "kind": "required",
+            "interface": "Document"
+          }
+        ]
+      },
+      {
+        "id": "diagram",
+        "name": "diagram",
+        "stereotype": "document",
+        "description": "2 files, 20 declarations",
+        "parent": "composition",
+        "ports": [
+          {
+            "id": "diagram.p.document",
+            "kind": "provided",
+            "interface": "Document"
+          }
+        ]
+      },
+      {
+        "id": "render",
+        "name": "render",
+        "stereotype": "renderer",
+        "description": "11 files, 115 declarations",
+        "parent": "drawing",
+        "ports": [
+          {
+            "id": "render.r.document",
+            "kind": "required",
+            "interface": "Document"
+          },
+          {
+            "id": "render.r.scene",
+            "kind": "required",
+            "interface": "Scene"
+          },
+          {
+            "id": "render.r.rules",
+            "kind": "required",
+            "interface": "Rules"
+          }
+        ]
+      },
+      {
+        "id": "viewer",
+        "name": "viewer",
+        "stereotype": "asset",
+        "description": "1 file, 8 declarations",
+        "parent": "drawing"
+      },
+      {
+        "id": "artifact",
+        "name": "artifact",
+        "stereotype": "document",
+        "description": "3 files, 32 declarations",
+        "parent": "drawing",
+        "ports": [
+          {
+            "id": "artifact.p.scene",
+            "kind": "provided",
+            "interface": "Scene"
+          }
+        ]
+      },
+      {
+        "id": "invariant",
+        "name": "invariant",
+        "stereotype": "rules",
+        "description": "6 files, 47 declarations",
+        "parent": "drawing",
+        "ports": [
+          {
+            "id": "invariant.p.rules",
+            "kind": "provided",
+            "interface": "Rules"
+          },
+          {
+            "id": "invariant.r.model",
+            "kind": "required",
+            "interface": "Model"
+          },
+          {
+            "id": "invariant.r.document",
+            "kind": "required",
+            "interface": "Document"
+          },
+          {
+            "id": "invariant.r.scene",
+            "kind": "required",
+            "interface": "Scene"
+          }
+        ]
+      }
+    ],
+    "interfaces": [
+      {
+        "id": "Analyzer",
+        "name": "Analyzer",
+        "operations": [
+          {
+            "name": "Analyze",
+            "signature": "Analyze(root string, opts Options) (*graph.Graph, error)"
+          },
+          {
+            "name": "Language",
+            "signature": "Language() graph.Language"
+          },
+          {
+            "name": "Extensions",
+            "signature": "Extensions() []string"
+          }
+        ]
+      },
+      {
+        "id": "Graph",
+        "name": "Graph",
+        "operations": [
+          {
+            "name": "Nodes",
+            "signature": "Nodes []Node"
+          },
+          {
+            "name": "Edges",
+            "signature": "Edges []Edge"
+          },
+          {
+            "name": "Diagnostics",
+            "signature": "Diagnostics Diagnostics"
+          }
+        ]
+      },
+      {
+        "id": "Schemas",
+        "name": "Schemas",
+        "operations": [
+          {
+            "name": "Raw",
+            "signature": "Raw(Name) ([]byte, error)"
+          },
+          {
+            "name": "Validate",
+            "signature": "Validate(Name, []byte) error"
+          }
+        ]
+      },
+      {
+        "id": "Model",
+        "name": "UML model",
+        "operations": [
+          {
+            "name": "Families",
+            "signature": "Families() []Family"
+          },
+          {
+            "name": "Component",
+            "signature": "ComponentModel"
+          },
+          {
+            "name": "Sequence",
+            "signature": "SequenceModel"
+          }
+        ]
+      },
+      {
+        "id": "Document",
+        "name": "Diagram source",
+        "operations": [
+          {
+            "name": "Levels",
+            "signature": "Levels []Level"
+          },
+          {
+            "name": "Accounting",
+            "signature": "Accounting Accounting"
+          }
+        ]
+      },
+      {
+        "id": "Scene",
+        "name": "Scene",
+        "operations": [
+          {
+            "name": "Parse",
+            "signature": "Parse(html []byte) ([]Scene, error)"
+          },
+          {
+            "name": "BoxByID",
+            "signature": "BoxByID(id string) (Box, bool)"
+          }
+        ]
+      },
+      {
+        "id": "Rules",
+        "name": "Rules",
+        "operations": [
+          {
+            "name": "Composition",
+            "signature": "Composition(*Scene) []RouteProblem"
+          },
+          {
+            "name": "Crossings",
+            "signature": "Crossings(*Scene) [][2]string"
+          }
+        ]
+      },
+      {
+        "id": "Capabilities",
+        "name": "Capabilities",
+        "operations": [
+          {
+            "name": "Ops",
+            "signature": "Ops() []Op"
+          },
+          {
+            "name": "Run",
+            "signature": "Run(Request) (Result, error)"
+          }
+        ]
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "d.validate.uml",
+        "from": "validate",
+        "to": "uml",
+        "kind": "realize",
+        "name": "refuses what the schema and the meaning checks reject"
+      },
+      {
+        "id": "d.docscheck.render",
+        "from": "docscheck",
+        "to": "render",
+        "kind": "use",
+        "name": "reads the constants the documents quote"
+      },
+      {
+        "id": "d.render.viewer",
+        "from": "render",
+        "to": "viewer",
+        "kind": "use",
+        "name": "embeds"
+      }
+    ]
+  },
+  "sequence": {
+    "lifelines": [
+      {
+        "id": "dev",
+        "name": "Developer",
+        "actor": true
+      },
+      {
+        "id": "l.cli",
+        "name": "cli",
+        "represents": "cli"
+      },
+      {
+        "id": "l.command",
+        "name": "command",
+        "represents": "command"
+      },
+      {
+        "id": "l.analyze",
+        "name": "analyze",
+        "represents": "analyze"
+      },
+      {
+        "id": "l.validate",
+        "name": "validate",
+        "represents": "validate"
+      },
+      {
+        "id": "l.compose",
+        "name": "compose",
+        "represents": "compose"
+      },
+      {
+        "id": "l.render",
+        "name": "render",
+        "represents": "render"
+      },
+      {
+        "id": "l.invariant",
+        "name": "invariant",
+        "represents": "invariant"
+      }
+    ],
+    "messages": [
+      {
+        "id": "m01",
+        "from": "dev",
+        "to": "l.cli",
+        "name": "diagrammer graph .",
+        "kind": "sync",
+        "note": "stage 1"
+      },
+      {
+        "id": "m02",
+        "from": "l.cli",
+        "to": "l.command",
+        "name": "Run(GraphRequest)",
+        "kind": "sync"
+      },
+      {
+        "id": "m03",
+        "from": "l.command",
+        "to": "l.analyze",
+        "name": "For(extension)",
+        "kind": "sync",
+        "note": "one analyzer per language"
+      },
+      {
+        "id": "m04",
+        "from": "l.analyze",
+        "to": "l.command",
+        "name": "Analyzer",
+        "kind": "reply"
+      },
+      {
+        "id": "m05",
+        "from": "l.command",
+        "to": "l.analyze",
+        "name": "Analyze(root)",
+        "kind": "sync"
+      },
+      {
+        "id": "m06",
+        "from": "l.analyze",
+        "to": "l.command",
+        "name": "Merge(graphs) -> 611 nodes",
+        "kind": "reply"
+      },
+      {
+        "id": "m07",
+        "from": "l.command",
+        "to": "l.cli",
+        "name": "graph.json",
+        "kind": "reply"
+      },
+      {
+        "id": "m08",
+        "from": "l.cli",
+        "to": "dev",
+        "name": "61 files read",
+        "kind": "reply",
+        "note": "stage 2 happens outside this binary"
+      },
+      {
+        "id": "m09",
+        "from": "dev",
+        "to": "l.cli",
+        "name": "diagrammer validate codegraph.json",
+        "kind": "sync",
+        "note": "the stage-2 boundary"
+      },
+      {
+        "id": "m10",
+        "from": "l.cli",
+        "to": "l.command",
+        "name": "Run(ValidateRequest)",
+        "kind": "sync"
+      },
+      {
+        "id": "m11",
+        "from": "l.command",
+        "to": "l.validate",
+        "name": "Codegraph(path, raw)",
+        "kind": "sync",
+        "note": "schema, then meaning"
+      },
+      {
+        "id": "m12",
+        "from": "l.validate",
+        "to": "l.command",
+        "name": "uml.Model",
+        "kind": "reply"
+      },
+      {
+        "id": "m13",
+        "from": "dev",
+        "to": "l.cli",
+        "name": "diagrammer compose codegraph.json",
+        "kind": "sync",
+        "note": "stage 3"
+      },
+      {
+        "id": "m14",
+        "from": "l.cli",
+        "to": "l.compose",
+        "name": "Component(model)",
+        "kind": "sync"
+      },
+      {
+        "id": "m15",
+        "from": "l.compose",
+        "to": "l.cli",
+        "name": "diagram.Document, counted per level",
+        "kind": "reply"
+      },
+      {
+        "id": "m16",
+        "from": "dev",
+        "to": "l.cli",
+        "name": "diagrammer render component.diagram.json",
+        "kind": "sync",
+        "note": "stage 4"
+      },
+      {
+        "id": "m17",
+        "from": "l.cli",
+        "to": "l.render",
+        "name": "Build(document)",
+        "kind": "sync"
+      },
+      {
+        "id": "m18",
+        "from": "l.render",
+        "to": "l.invariant",
+        "name": "Composition(scene)",
+        "kind": "sync",
+        "note": "the drawing judges itself"
+      },
+      {
+        "id": "m19",
+        "from": "l.invariant",
+        "to": "l.render",
+        "name": "problems",
+        "kind": "reply"
+      },
+      {
+        "id": "m20",
+        "from": "l.render",
+        "to": "l.invariant",
+        "name": "Crossings(scene)",
+        "kind": "sync",
+        "note": "a crossing condemns a pair"
+      },
+      {
+        "id": "m21",
+        "from": "l.invariant",
+        "to": "l.render",
+        "name": "pairs",
+        "kind": "reply"
+      },
+      {
+        "id": "m22",
+        "from": "l.render",
+        "to": "l.cli",
+        "name": "page, with what it could not draw recorded",
+        "kind": "reply"
+      },
+      {
+        "id": "m23",
+        "from": "l.cli",
+        "to": "dev",
+        "name": "component.html",
+        "kind": "reply"
+      }
+    ],
+    "activations": [
+      {
+        "id": "a.graph",
+        "lifeline": "l.command",
+        "start": "m02",
+        "end": "m07"
+      },
+      {
+        "id": "a.analyze",
+        "lifeline": "l.analyze",
+        "start": "m05",
+        "end": "m06"
+      },
+      {
+        "id": "a.validate",
+        "lifeline": "l.validate",
+        "start": "m11",
+        "end": "m12"
+      },
+      {
+        "id": "a.compose",
+        "lifeline": "l.compose",
+        "start": "m14",
+        "end": "m15"
+      },
+      {
+        "id": "a.render",
+        "lifeline": "l.render",
+        "start": "m17",
+        "end": "m22"
+      }
+    ]
+  },
+  "state": {
+    "states": [
+      {
+        "id": "st.start",
+        "name": "start",
+        "kind": "initial"
+      },
+      {
+        "id": "st.proven",
+        "name": "Proven",
+        "kind": "simple",
+        "activity": "stage 3 counted it, per level"
+      },
+      {
+        "id": "st.placed",
+        "name": "Placed",
+        "kind": "simple",
+        "activity": "both ends have a cell on one page"
+      },
+      {
+        "id": "st.routed",
+        "name": "Routed",
+        "kind": "simple",
+        "activity": "a lane was free in every channel it needs"
+      },
+      {
+        "id": "st.drawn",
+        "name": "Drawn",
+        "kind": "simple",
+        "entry": "written to the page with its points"
+      },
+      {
+        "id": "st.recorded",
+        "name": "Recorded",
+        "kind": "simple",
+        "entry": "written on the box it belonged to, with the rule that refused it"
+      },
+      {
+        "id": "st.done",
+        "name": "done",
+        "kind": "final"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "t.prove",
+        "from": "st.start",
+        "to": "st.proven",
+        "trigger": "compose"
+      },
+      {
+        "id": "t.selfref",
+        "from": "st.proven",
+        "to": "st.recorded",
+        "guard": "both ends roll up to one box",
+        "effect": "reason: selfReference"
+      },
+      {
+        "id": "t.place",
+        "from": "st.proven",
+        "to": "st.placed",
+        "trigger": "layOut"
+      },
+      {
+        "id": "t.lane",
+        "from": "st.placed",
+        "to": "st.routed",
+        "trigger": "routeAll"
+      },
+      {
+        "id": "t.nolane",
+        "from": "st.placed",
+        "to": "st.recorded",
+        "guard": "every channel it needs is full",
+        "effect": "rule: channel-capacity"
+      },
+      {
+        "id": "t.rules",
+        "from": "st.routed",
+        "to": "st.drawn",
+        "guard": "no rule refuses it on its own"
+      },
+      {
+        "id": "t.bad",
+        "from": "st.routed",
+        "to": "st.recorded",
+        "guard": "a rule refuses it",
+        "effect": "rule: separation, border-run, label-clear"
+      },
+      {
+        "id": "t.cross",
+        "from": "st.drawn",
+        "to": "st.recorded",
+        "trigger": "Crossings",
+        "guard": "chosen as the fewest that settle every crossing",
+        "effect": "rule: crossing"
+      },
+      {
+        "id": "t.shown",
+        "from": "st.drawn",
+        "to": "st.done"
+      },
+      {
+        "id": "t.kept",
+        "from": "st.recorded",
+        "to": "st.done"
+      }
+    ]
+  },
+  "usecase": {
+    "system": {
+      "id": "sys",
+      "name": "diagrammer"
+    },
+    "actors": [
+      {
+        "id": "a.dev",
+        "name": "Developer",
+        "kind": "primary"
+      },
+      {
+        "id": "a.plugin",
+        "name": "Plugin skill",
+        "kind": "secondary"
+      },
+      {
+        "id": "a.ci",
+        "name": "Release gate",
+        "kind": "secondary"
+      }
+    ],
+    "usecases": [
+      {
+        "id": "u.graph",
+        "name": "Read a source tree"
+      },
+      {
+        "id": "u.interpret",
+        "name": "Interpret the graph as UML"
+      },
+      {
+        "id": "u.validate",
+        "name": "Check a model at the boundary"
+      },
+      {
+        "id": "u.compose",
+        "name": "Compose diagram sources"
+      },
+      {
+        "id": "u.render",
+        "name": "Render a page"
+      },
+      {
+        "id": "u.record",
+        "name": "Record what cannot be drawn"
+      },
+      {
+        "id": "u.serve",
+        "name": "Serve the same capabilities over MCP"
+      },
+      {
+        "id": "u.hold",
+        "name": "Hold the documents to the code"
+      }
+    ],
+    "associations": [
+      {
+        "id": "as.dev.graph",
+        "actor": "a.dev",
+        "usecase": "u.graph"
+      },
+      {
+        "id": "as.dev.compose",
+        "actor": "a.dev",
+        "usecase": "u.compose"
+      },
+      {
+        "id": "as.dev.render",
+        "actor": "a.dev",
+        "usecase": "u.render"
+      },
+      {
+        "id": "as.plugin.interpret",
+        "actor": "a.plugin",
+        "usecase": "u.interpret"
+      },
+      {
+        "id": "as.plugin.serve",
+        "actor": "a.plugin",
+        "usecase": "u.serve"
+      },
+      {
+        "id": "as.ci.hold",
+        "actor": "a.ci",
+        "usecase": "u.hold"
+      }
+    ],
+    "includes": [
+      {
+        "id": "in.compose.validate",
+        "from": "u.compose",
+        "to": "u.validate"
+      },
+      {
+        "id": "in.interpret.graph",
+        "from": "u.interpret",
+        "to": "u.graph"
+      },
+      {
+        "id": "in.serve.render",
+        "from": "u.serve",
+        "to": "u.render"
+      }
+    ],
+    "extends": [
+      {
+        "id": "ex.record.render",
+        "from": "u.record",
+        "to": "u.render",
+        "condition": "the page cannot hold the relationship"
+      }
+    ]
+  }
+}

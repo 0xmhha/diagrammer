@@ -132,6 +132,26 @@ rule rather than discovering it by being refused.
 Then `graph`, your own model, `validate`, `compose`, `render`. Every path
 argument is a path on the machine the server runs on.
 
+## A worked example of stage 2
+
+`instruct` tells a model how to write one. `testdata/codegraph/diagrammer-layered.codegraph.json`
+is one written that way: this repository, read from its own code graph, with
+seven components on the top page grouped by the stage of the pipeline each
+belongs to.
+
+`testdata/codegraph/diagrammer.codegraph.json` beside it is an earlier model of
+the same repository, shallower. Both are kept, and the difference between them
+is what the instruction is asking for:
+
+```
+diagrammer compose testdata/codegraph/diagrammer-layered.codegraph.json -o out
+diagrammer render out/component.diagram.json -o out/component.html
+```
+
+Five pages and twenty-six relationships, against three pages and fourteen.
+Both draw everything they state; the deeper one is able to state more, because
+a page that opens is a page you can put less on.
+
 ## The schemas are the contract
 
 Three JSON Schema files define the stage boundaries, and they are embedded in
