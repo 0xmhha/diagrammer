@@ -456,10 +456,24 @@ func encode(v any) ([]byte, error) {
 }
 
 // deliver writes content to path, or hands it back when no path was named.
+//
+// The mode is set on every write, not only when the file is created. That is
+// what os.WriteFile does on its own, and it leaves a file somebody made
+// world-readable world-readable while this program fills it with the doc
+// comments of a private repository. The run that produced the content is the
+// one that decides who may read it; widening it is still one chmod, taken after
+// that run rather than once and forgotten.
+//
+// Directories are left alone. An existing output directory keeps whatever mode
+// it has, because what it holds is already the owner's alone and re-tightening
+// somebody's directory is a larger surprise than it is worth.
 func deliver(out *Result, path string, content []byte) error {
 	if path != "" {
 		if err := os.WriteFile(path, content, outputFileMode); err != nil {
 			return fmt.Errorf("write %s: %w", path, err)
+		}
+		if err := os.Chmod(path, outputFileMode); err != nil {
+			return fmt.Errorf("set the mode on %s: %w", path, err)
 		}
 	}
 	out.Files = append(out.Files, OutputFile{Path: path, Content: content})
