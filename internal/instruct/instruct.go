@@ -124,6 +124,30 @@ a refusal tells you where to look rather than that something is wrong.
 const judgementProse = `Everything above is mechanical. This part is not, and it is the reason a model
 does this stage rather than a converter.
 
+**Four families, and you are asked for every one the graph can carry.** The
+rule above is about not over-claiming; this one is about not stopping early. A
+model that returns only a component diagram has answered a quarter of the
+question when the graph would have carried more, and nothing downstream can tell
+that from a graph that really had only that much in it.
+
+- **component** is always available. Packages, files and imports are structure
+  the graph proves rather than structure you infer.
+- **sequence** is available wherever there are call edges, and there are usually
+  far more of those than imports. Do not transcribe them: choose one path a
+  reader would want to follow and show that, with the lifelines it touches.
+- **state** is available wherever something moves through phases. It does not
+  have to be a state machine in the code. A request, a document or a record that
+  is created, checked, used and finished is one, and the doc comments usually
+  say so in words.
+- **use case** is available wherever the graph shows a surface something reaches
+  the system through: commands, handlers, an exported API. The actors are
+  whoever is on the other side of that surface, which includes other programs.
+
+**And do not invent one.** If nothing in the tree moves through phases, leave
+` + "`state`" + ` out. A family made up to fill the set is worse than a missing one,
+because a reader cannot tell the difference and the drawing will look just as
+confident either way.
+
 **A top level is a map, not a census.** Somebody opening a diagram of a project
 they do not know wants to see what the parts are and which way they lean, and
 then to open the one they came for. Fifteen packages with every relationship
