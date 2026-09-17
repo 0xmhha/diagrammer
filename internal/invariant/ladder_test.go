@@ -25,6 +25,23 @@ func soundLadder() *artifact.Scene {
 	}
 }
 
+// TestTextCrossingALifelineIsNotAFault is the case a grid's rule would refuse
+// and a ladder must not. A message spanning several participants writes above
+// its rung, and the lifelines beneath it are thin dashed strokes every long
+// message crosses. Holding text clear of those would refuse the ordinary case.
+func TestTextCrossingALifelineIsNotAFault(t *testing.T) {
+	scene := soundLadder()
+	scene.Boxes = append(scene.Boxes, artifact.Box{ID: "mid", X: 170, Y: 40, W: 20, H: 52})
+	scene.Routes[0].LabelText = "settle the order"
+	// Directly above the rung, across the column the middle lifeline runs down,
+	// and clear of every head.
+	scene.Routes[0].LabelBounds = artifact.Rect{X: 150, Y: 140, W: 100, H: 13}
+
+	if problems := invariant.CompositionFor(scene); len(problems) > 0 {
+		t.Errorf("text written across a lifeline was refused: %v", problems)
+	}
+}
+
 func TestASoundLadderPasses(t *testing.T) {
 	if problems := invariant.CompositionFor(soundLadder()); len(problems) > 0 {
 		t.Fatalf("a sound ladder reported %d problems: %v", len(problems), problems)
@@ -81,6 +98,34 @@ func TestEverySequenceRuleFires(t *testing.T) {
 			rule: invariant.RuleInsideCanvas,
 			damage: func(s *artifact.Scene) {
 				s.Frames[0].H = 0
+			},
+		}, {
+			name: "a message's text runs off the page",
+			rule: invariant.RuleLabelClear,
+			damage: func(s *artifact.Scene) {
+				s.Routes[0].LabelText = "pay"
+				s.Routes[0].LabelBounds = artifact.Rect{X: 560, Y: 140, W: 80, H: 13}
+			},
+		}, {
+			name: "a message's text sits over a lifeline's head",
+			rule: invariant.RuleLabelClear,
+			damage: func(s *artifact.Scene) {
+				s.Routes[0].LabelText = "pay"
+				// Over box "a", which carries a participant's name.
+				s.Routes[0].LabelBounds = artifact.Rect{X: 60, Y: 50, W: 60, H: 13}
+			},
+		}, {
+			name: "two messages write in the same place",
+			rule: invariant.RuleLabelClear,
+			damage: func(s *artifact.Scene) {
+				s.Routes[0].LabelText = "pay"
+				s.Routes[0].LabelBounds = artifact.Rect{X: 220, Y: 140, W: 60, H: 13}
+				s.Routes = append(s.Routes, artifact.Route{
+					ID: "m2", From: "a", To: "b", FromSide: "right", ToSide: "left",
+					Points:      []artifact.Point{{X: 120, Y: 220}, {X: 380, Y: 220}},
+					LabelText:   "settle",
+					LabelBounds: artifact.Rect{X: 250, Y: 145, W: 60, H: 13},
+				})
 			},
 		},
 	}
