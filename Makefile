@@ -41,6 +41,12 @@ OUT         ?= out/diagram
 # whoever runs that model. AI_CMD is what gets run, so pointing this at a
 # different tool needs no change here.
 AI_CMD      ?= claude -p --output-format text
+# How many times to ask before giving up. A model is not reliable run to run:
+# asked for one small fixture six times it returned a fenced document, a null
+# where the schema wants a string, and a note over its length limit, each once.
+# None of those is a reason to stop, and all of them are caught by `validate`
+# rather than guessed at, so asking again is both safe and usually enough.
+AI_TRIES    ?= 3
 ifeq ($(AI),1)
 MODEL_CMD   := $(AI_CMD)
 endif
@@ -471,6 +477,38 @@ dist-check:
 # Anything the stripping leaves behind is validate's problem, which is the right
 # place for it.
 #
+# The prompt ends with two sentences this adds, and both were put there by a run
+# that failed. One asks for the document alone, because the answer came fenced.
+# The other asks for an absent field to be left out rather than set to null,
+# because a run produced `"parent": null` where the schema wants a string.
+#
+# The third is the length of `provenance.note`, and it is there because asking
+# again did not help. Two kinds of wrong answer turned up while this was built
+# and they want different things. A model that returns a fenced document once
+# and a clean one the next time is flaky, and asking again is enough. A model
+# that goes over the same length limit three times in a row has misread the
+# instruction, and asking a fourth time is just spending money: the limit was in
+# the prompt, because the instruction carries the schema verbatim, and it was
+# read past anyway. The sentence above says it where it cannot be missed.
+#
+# What holds all of this up is that `validate` runs before anything is drawn.
+# Each attempt says what was wrong with the last, and the answer that finally
+# fails is kept beside the prompt that produced it. A model is not a function,
+# and the gate is what makes that survivable rather than silent.
+#
+# A model command that fails has whatever it wrote reported before it is thrown
+# away, out of both streams. The first thing this was pointed at that did not fit
+# answered "Prompt is too long" on its standard output rather than its standard
+# error, so the message went into the file holding the model and was deleted with
+# it, and the failure arrived with no reason attached.
+#
+# How big is too big depends on the model, so nothing here guesses: the prompt's
+# size is printed and the tool on the other end gets to answer. Measured against
+# the default: this repository, 63 files and a 349 KB graph, is drawn in about
+# 107 seconds; a 1.1 MB graph still answers; a 2.8 MB graph of 292 files is
+# refused, in twelve seconds and at no cost. The instruction is 33 KB of any
+# prompt, so the graph is the part that varies.
+#
 # OUT= puts the work somewhere else. POLYGLOT=1 uses the four-language build,
 # which is usually what you want for a tree that is not all Go.
 #
@@ -493,21 +531,39 @@ diagram: $(DIAGRAM_DEP)
 		{ cat "$$out/stage-2.md"; \
 		  printf '\n\n## The code graph\n\n'; \
 		  cat "$$out/graph.json"; \
-		  printf '\n\nReturn the codegraph.json document and nothing else.\n'; \
+		  printf '\n\nReturn the codegraph.json document and nothing else. Leave an '; \
+		  printf 'optional field out rather than setting it to null. Keep '; \
+		  printf 'provenance.note under 1000 characters, which is the limit the '; \
+		  printf 'schema above states and the one most often broken.\n'; \
 		} > "$$out/stage-2.prompt"; \
-		echo "stage 2: asking $(firstword $(MODEL_CMD)), which takes a while"; \
-		if ! $(MODEL_CMD) < "$$out/stage-2.prompt" > "$$model.part"; then \
+		size=$$(($$(wc -c < "$$out/stage-2.prompt") / 1024)); \
+		try=1; \
+		while :; do \
+			echo "stage 2: asking $(firstword $(MODEL_CMD)) with a $$size KB prompt, attempt $$try of $(AI_TRIES)"; \
+			if ! $(MODEL_CMD) < "$$out/stage-2.prompt" > "$$model.part" 2> "$$out/stage-2.err"; then \
+				echo "stage 2: the model command failed. What it said:"; \
+				cat "$$out/stage-2.err" "$$model.part" 2>/dev/null \
+					| grep -v '^[[:space:]]*$$' | head -5 | sed 's/^/  /'; \
+				rm -f "$$model.part" "$$out/stage-2.err"; \
+				exit 1; \
+			fi; \
+			rm -f "$$out/stage-2.err"; \
+			sed '/^```/d' "$$model.part" | sed -n '/^{/,$$p' > "$$model"; \
 			rm -f "$$model.part"; \
-			echo "stage 2: the model command did not succeed, so there is nothing to draw"; \
-			exit 1; \
-		fi; \
-		sed '/^```/d' "$$model.part" | sed -n '/^{/,$$p' > "$$model"; \
-		rm -f "$$model.part"; \
-		if [ ! -s "$$model" ]; then \
-			echo "stage 2: the answer held no document"; \
-			exit 1; \
-		fi; \
-		echo "stage 2: wrote $$model"; \
+			if [ -s "$$model" ] && $(DIAGRAM_BIN) validate "$$model" >/dev/null 2>&1; then \
+				echo "stage 2: wrote $$model"; \
+				break; \
+			fi; \
+			if [ "$$try" -ge "$(AI_TRIES)" ]; then \
+				echo "stage 2: $(AI_TRIES) answers, none of which satisfies the contract. The last one:"; \
+				$(DIAGRAM_BIN) validate "$$model" 2>&1 | sed 's/^/  /'; \
+				echo "  it is kept at $$model, next to the prompt that produced it"; \
+				exit 1; \
+			fi; \
+			echo "stage 2: that answer was refused, asking again"; \
+			$(DIAGRAM_BIN) validate "$$model" 2>&1 | head -3 | sed 's/^/  /'; \
+			try=$$((try + 1)); \
+		done; \
 	fi; \
 	if [ -z "$$model" ]; then \
 		echo; \
