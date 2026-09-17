@@ -409,6 +409,46 @@ func TestTheLabelSizeMatchesTheStylesheet(t *testing.T) {
 	}
 }
 
+// TestTheStylesheetDoesNotShrinkADrawing holds the other end of the size the
+// renderer declares.
+//
+// svgFor writes the width and height the scene was laid out at, so that a
+// drawing wider than the page overflows and is scrolled to rather than scaled
+// down. A stylesheet rule that caps the drawing puts it back: the browser obeys
+// the cap, every label goes under the size the fitting refused to go below, and
+// nothing anywhere fails, because the composition rules judge the drawing in
+// its own units where the labels are still the size they were fitted to.
+//
+// It is here rather than in the renderer's own tests because neither half is
+// wrong alone. The Go side is checked by TestEveryDrawingDeclaresTheSizeItWasLaidOutAt;
+// this is the stylesheet keeping its side of it.
+func TestTheStylesheetDoesNotShrinkADrawing(t *testing.T) {
+	css := read(t, "internal/render/viewer/viewer.css")
+
+	if !strings.Contains(css, ".scene-scroll") {
+		t.Fatal("viewer.css has no .scene-scroll, so a drawing too wide for the page has nothing to overflow into")
+	}
+	if !regexp.MustCompile(`\.scene-scroll\s*\{[^}]*overflow`).MatchString(css) {
+		t.Error(".scene-scroll does not scroll, so a wide drawing is clipped rather than reachable")
+	}
+
+	rule := regexp.MustCompile(`svg\.scene\s*\{([^}]*)\}`).FindStringSubmatch(css)
+	if rule == nil {
+		t.Fatal("viewer.css no longer sizes svg.scene, so there is nothing to check")
+	}
+	for _, capping := range []string{"max-width", "max-height", "transform"} {
+		if strings.Contains(rule[1], capping) {
+			t.Errorf("svg.scene sets %s, which overrides the size the renderer declared and shrinks the drawing", capping)
+		}
+	}
+
+	// And the renderer is still declaring it. A test that only read the
+	// stylesheet would keep passing after the Go side stopped writing one.
+	if !strings.Contains(read(t, "internal/render/svg.go"), "min-width:") {
+		t.Error("svgFor no longer declares the size the scene was laid out at")
+	}
+}
+
 // The instruction stage 2 is performed from says things about this program, and
 // this program can change without it noticing. These hold the two together.
 

@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "No generation to split on",
+    "subtitle": "A package of twenty-six functions, with nothing between the package and them"
+  },
+  "provenance": {
+    "origin": "handwritten",
+    "note": "Written to hold the one page shape nothing else covers: wide. Go's hierarchy has a file generation between a package and its functions, and a language without one gives stage 3 nothing to split a package on, so every function becomes a column. The thin page beside it is the control, and the two fail to split for opposite reasons: three members is under the unfold window, so the unfold is tried and finds leaves to give it nothing; twenty-six is over the window, so the unfold is never tried at all. Measured rather than supposed, and docs/decisions.md records what the measurement corrected."
+  },
+  "families": [
+    "component"
+  ],
+  "component": {
+    "components": [
+      {
+        "id": "sys",
+        "name": "Toolkit",
+        "stereotype": "subsystem"
+      },
+      {
+        "id": "bulk",
+        "name": "helpers",
+        "stereotype": "package",
+        "parent": "sys"
+      },
+      {
+        "id": "bulk.fn00",
+        "name": "Helper00",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn01",
+        "name": "Helper01",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn02",
+        "name": "Helper02",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn03",
+        "name": "Helper03",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn04",
+        "name": "Helper04",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn05",
+        "name": "Helper05",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn06",
+        "name": "Helper06",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn07",
+        "name": "Helper07",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn08",
+        "name": "Helper08",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn09",
+        "name": "Helper09",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn10",
+        "name": "Helper10",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn11",
+        "name": "Helper11",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn12",
+        "name": "Helper12",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn13",
+        "name": "Helper13",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn14",
+        "name": "Helper14",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn15",
+        "name": "Helper15",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn16",
+        "name": "Helper16",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn17",
+        "name": "Helper17",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn18",
+        "name": "Helper18",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn19",
+        "name": "Helper19",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn20",
+        "name": "Helper20",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn21",
+        "name": "Helper21",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn22",
+        "name": "Helper22",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn23",
+        "name": "Helper23",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn24",
+        "name": "Helper24",
+        "parent": "bulk"
+      },
+      {
+        "id": "bulk.fn25",
+        "name": "Helper25",
+        "parent": "bulk"
+      },
+      {
+        "id": "few",
+        "name": "core",
+        "stereotype": "package",
+        "parent": "sys"
+      },
+      {
+        "id": "few.fn0",
+        "name": "Core0",
+        "parent": "few"
+      },
+      {
+        "id": "few.fn1",
+        "name": "Core1",
+        "parent": "few"
+      },
+      {
+        "id": "few.fn2",
+        "name": "Core2",
+        "parent": "few"
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "d.core.helpers",
+        "from": "few",
+        "to": "bulk",
+        "kind": "use"
+      }
+    ]
+  }
+}

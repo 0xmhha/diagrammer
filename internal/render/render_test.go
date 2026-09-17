@@ -27,6 +27,10 @@ func families() []struct {
 		Fixture string
 	}{
 		{diagram.FamilyComponent, "hub"},
+		// The page that does not fit. Every other fixture here draws something
+		// a screen can hold, so without this one the rules about what happens
+		// when it cannot would never fire.
+		{diagram.FamilyComponent, "wide-page"},
 		{diagram.FamilyState, "skipping"},
 		{diagram.FamilyComponent, "nested-platform"},
 		{diagram.FamilyComponent, "diagrammer"},
