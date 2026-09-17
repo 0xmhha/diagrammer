@@ -248,6 +248,7 @@ func TestEveryShippedDocumentExists(t *testing.T) {
 		"docs/thresholds.md",
 		"docs/licensing.md",
 		"docs/decisions.md",
+		"docs/install.md",
 		"THIRD_PARTY_NOTICES.md",
 		"README.md",
 	} {
@@ -261,6 +262,42 @@ func TestEveryShippedDocumentExists(t *testing.T) {
 				name, info.Size())
 		}
 	}
+}
+
+// TestTheInstallNotesQuoteTheFloorTheyShipWith holds the packaged document to
+// the one number it states about the binaries beside it.
+//
+// The minimum macOS is decided in one place, the Makefile, because clang takes
+// it from whoever did the building otherwise, and a floor that depends on the
+// builder is not a floor. `make dist-check` reads the number back out of every
+// packed binary, so the binary and the Makefile cannot part company. The
+// document is the one that could, and it is the only one of the three a
+// recipient actually reads.
+func TestTheInstallNotesQuoteTheFloorTheyShipWith(t *testing.T) {
+	const name = "MACOS_FLOOR"
+	floor, ok := makeVariable(t, name)
+	if !ok {
+		t.Fatalf("the Makefile no longer sets %s, so nothing decides what the packages declare", name)
+	}
+	if !strings.Contains(read(t, "docs/install.md"), "macOS "+floor) {
+		t.Errorf("docs/install.md never says the minimum is macOS %s, which is what `make dist` packages", floor)
+	}
+}
+
+// makeVariable reads one simply-expanded variable out of the Makefile.
+//
+// Read rather than asked for, because asking means running make, and a test
+// that runs the build system to learn a constant has made the build system a
+// dependency of the test suite. The pattern wants the whole line so that a
+// variable mentioned in a recipe is not mistaken for the one that sets it.
+func makeVariable(t *testing.T, name string) (string, bool) {
+	t.Helper()
+	pattern := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(name) + `\s*:?=\s*(\S+)\s*$`)
+	found := pattern.FindStringSubmatch(read(t, "Makefile"))
+	if found == nil {
+		return "", false
+	}
+	return found[1], true
 }
 
 // TestEveryPackageHasADocFile keeps the package documentation where Go's own

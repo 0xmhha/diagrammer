@@ -73,6 +73,7 @@ make build-polyglot  # bin/diagrammer-polyglot, reading four languages
 make check           # fmt, vet, lint, test — before a commit
 make verify          # the release gate: fmt-check, vet, test, fixtures
 make verify-cgo      # the second gate, for the four-language build
+make dist            # archives for a mac that cannot build it
 make size            # what the second build costs in bytes
 make bench           # what it costs in time, per megabyte read
 make help            # every target
@@ -89,11 +90,31 @@ conditions.
 with nothing but Go and make installed; anything it needs that such a machine
 lacks is a defect rather than a prerequisite.
 
-Linux builds will come later, on a native runner rather than by cross
-compiling, so that the binary that ships is the binary that was tested.
+## Giving it to a machine that cannot build it
 
-`make install` puts it on `PATH` through `GOBIN`, which is how a plugin on the
-same machine reaches it today.
+`make install` puts the binary on `PATH` through `GOBIN`, and needs a Go
+toolchain on the machine that will run it. `make dist` is for one that has none:
+an archive per mac architecture, each holding both builds, the licences and
+[docs/install.md](docs/install.md), with a `SHA256SUMS` beside them.
+
+Both architectures are cross-compiled, which is not a retreat from the rule that
+nothing ships until it has been run. `make dist` unpacks every archive it makes
+into a directory that is not this one, with an environment holding nothing but a
+`PATH`, and runs the whole pipeline out of it with both binaries, the Intel ones
+through Rosetta. What nothing here can run is a Linux binary, which is why
+`make linux` still refuses and waits on a native runner.
+
+Packaging found a defect rather than arranging one. clang takes the minimum
+macOS from the machine doing the building, so the four-language build was
+declaring it needed the builder's own macOS while the Go-only build beside it
+went back to 12.0 — a fault that cannot show on the machine that produced it.
+Both now declare 12.0, `make dist` reads that number back out of the binaries it
+packed, and `docs/install.md` says plainly that it is a declaration rather than
+something anyone has run on a mac that old.
+
+The binaries are signed ad-hoc, which is not notarisation: Gatekeeper still
+kills a build that arrives carrying a quarantine flag, and `docs/install.md`
+carries the one command that fixes it, having been watched doing so.
 
 ## Driving it from a plugin
 
@@ -156,6 +177,9 @@ documentation is what gets corrected.
 - [docs/decisions.md](docs/decisions.md) — what the design settled on, what was
   withdrawn along the way, and what is still open. Read this before changing
   anything structural.
+- [docs/install.md](docs/install.md) — what a recipient of a packaged build
+  needs: which binary reads what, the minimum macOS, and what macOS does to a
+  download.
 - [docs/licensing.md](docs/licensing.md) — what may be borrowed and what must be
   attributed.
 
