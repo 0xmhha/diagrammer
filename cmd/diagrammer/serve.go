@@ -52,19 +52,28 @@ func toolSummaries() map[command.Op]string {
 func runServe(args []string, _, stderr io.Writer) error {
 	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	flags.Usage = usageFor(stderr, flags, "serve")
+	var given string
+	flags.StringVar(&given, "root", "", "confine tool arguments to this directory (default: the working directory)")
+	flags.Usage = usageFor(stderr, flags, "serve [-root dir]")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 {
 		return fmt.Errorf("serve takes no arguments, got %d", flags.NArg())
 	}
+	root, err := newRoot(given)
+	if err != nil {
+		return err
+	}
+	// Said once, on the way up, because a plugin reading stderr is the only
+	// place an operator finds out what the server will and will not reach.
+	say(stderr, "serving; tool arguments are confined to %s\n", root.resolved)
 
 	// stdio is the transport a local plugin starts the binary on. Nothing may
 	// be written to standard output but protocol traffic, which is why every
 	// summary the operations produce is returned in the tool result rather
 	// than printed.
-	return newServer().Run(context.Background(), &mcp.StdioTransport{})
+	return newServer(root).Run(context.Background(), &mcp.StdioTransport{})
 }
 
 // newServer registers one tool per capability.
@@ -73,18 +82,18 @@ func runServe(args []string, _, stderr io.Writer) error {
 // carries its arguments. The SDK reads the tool's argument schema off that
 // type, so the argument names a plugin sees are the request's own JSON tags and
 // cannot drift from the ones the CLI fills in.
-func newServer() *mcp.Server {
+func newServer(root aRoot) *mcp.Server {
 	server := mcp.NewServer(
 		&mcp.Implementation{Name: serverName, Version: version},
 		&mcp.ServerOptions{Instructions: serverInstructions},
 	)
 	summaries := toolSummaries()
 
-	addOp[command.GraphRequest](server, command.OpGraph, summaries)
-	addOp[command.ValidateRequest](server, command.OpValidate, summaries)
-	addOp[command.ComposeRequest](server, command.OpCompose, summaries)
-	addOp[command.RenderRequest](server, command.OpRender, summaries)
-	addOp[command.InstructRequest](server, command.OpInstruct, summaries)
+	addOp[command.GraphRequest](server, command.OpGraph, summaries, root)
+	addOp[command.ValidateRequest](server, command.OpValidate, summaries, root)
+	addOp[command.ComposeRequest](server, command.OpCompose, summaries, root)
+	addOp[command.RenderRequest](server, command.OpRender, summaries, root)
+	addOp[command.InstructRequest](server, command.OpInstruct, summaries, root)
 
 	addStage2Prompt(server)
 	addSchemaResources(server)
@@ -120,8 +129,10 @@ yourself. This server has no tool that writes it, and never calls a model.
 
 The schemas are also readable as resources if you want one on its own.
 
-Every path argument is a path on the machine this server runs on, and it will
-read and write wherever the process can. Pass paths the person asked for.`
+Every path argument is a path on the machine this server runs on, and they are
+confined to one directory: a path outside it is refused with the root named, and
+only the person who started the server can widen it. Pass paths the person asked
+for, and do not go looking for others.`
 
 // addStage2Prompt offers the stage-2 instruction as a prompt.
 //
@@ -195,11 +206,21 @@ func schemaDescriptions() map[schema.Name]string {
 func addOp[T any, PT interface {
 	*T
 	command.Request
-}](server *mcp.Server, op command.Op, summaries map[command.Op]string) {
+}](server *mcp.Server, op command.Op, summaries map[command.Op]string, root aRoot) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        string(op),
 		Description: summaries[op],
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in T) (*mcp.CallToolResult, any, error) {
+		// Checked before the operation runs, so a refused path is refused
+		// rather than half-acted-on. The check is here and not in the
+		// operation because the command line is not confined and the two
+		// surfaces share the request.
+		if err := root.confine(PT(&in)); err != nil {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
+			}, nil, nil
+		}
 		result, err := PT(&in).Run(ctx)
 		if err != nil {
 			// A refused document is the caller's problem to fix, not a fault in

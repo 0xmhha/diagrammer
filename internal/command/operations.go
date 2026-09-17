@@ -40,6 +40,8 @@ type GraphRequest struct {
 
 func (r *GraphRequest) Op() Op { return OpGraph }
 
+func (r *GraphRequest) Paths() []string { return []string{r.Source, r.Out} }
+
 func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 	if r.Source == "" {
 		return nil, fmt.Errorf("graph needs a source directory")
@@ -131,6 +133,8 @@ type ValidateRequest struct {
 
 func (r *ValidateRequest) Op() Op { return OpValidate }
 
+func (r *ValidateRequest) Paths() []string { return []string{r.Model} }
+
 func (r *ValidateRequest) Run(context.Context) (*Result, error) {
 	model, _, err := readModel(r.Model)
 	if err != nil {
@@ -157,6 +161,8 @@ type ComposeRequest struct {
 }
 
 func (r *ComposeRequest) Op() Op { return OpCompose }
+
+func (r *ComposeRequest) Paths() []string { return []string{r.Model, r.Out} }
 
 func (r *ComposeRequest) Run(context.Context) (*Result, error) {
 	model, _, err := readModel(r.Model)
@@ -276,6 +282,8 @@ type RenderRequest struct {
 
 func (r *RenderRequest) Op() Op { return OpRender }
 
+func (r *RenderRequest) Paths() []string { return []string{r.Document, r.Out} }
+
 func (r *RenderRequest) Run(context.Context) (*Result, error) {
 	if r.Document == "" {
 		return nil, fmt.Errorf("render needs a diagram source path")
@@ -353,6 +361,8 @@ type InstructRequest struct {
 }
 
 func (r *InstructRequest) Op() Op { return OpInstruct }
+
+func (r *InstructRequest) Paths() []string { return []string{r.Out} }
 
 func (r *InstructRequest) Run(context.Context) (*Result, error) {
 	text, err := instruct.Stage2()

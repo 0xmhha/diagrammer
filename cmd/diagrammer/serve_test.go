@@ -23,10 +23,24 @@ import (
 
 func connect(t *testing.T) *mcp.ClientSession {
 	t.Helper()
+	// Rooted at the filesystem, which is what an operator asking for no
+	// confinement gets. These tests are about the capabilities: whether the
+	// tools are there, take the right arguments and do the right thing. What
+	// the root refuses has tests of its own, in root_test.go, and they would be
+	// testing nothing if every other test here were confined by accident.
+	return connectRooted(t, string(filepath.Separator))
+}
+
+func connectRooted(t *testing.T, dir string) *mcp.ClientSession {
+	t.Helper()
 	ctx := context.Background()
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
-	serverSession, err := newServer().Connect(ctx, serverTransport, nil)
+	root, err := newRoot(dir)
+	if err != nil {
+		t.Fatalf("root %s: %v", dir, err)
+	}
+	serverSession, err := newServer(root).Connect(ctx, serverTransport, nil)
 	if err != nil {
 		t.Fatalf("start the server: %v", err)
 	}

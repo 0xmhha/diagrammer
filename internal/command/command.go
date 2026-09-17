@@ -69,6 +69,18 @@ type Request interface {
 	Op() Op
 	// Run performs it.
 	Run(ctx context.Context) (*Result, error)
+	// Paths lists every filesystem path this request will read or write, in
+	// whatever form the caller supplied. An argument left empty is left out.
+	//
+	// The request says which of its fields are paths; what to do about that is
+	// the surface's business, and the two surfaces differ. A person typing a
+	// path at a terminal can already write anywhere that shell can, so the CLI
+	// restricts nothing. A path arriving over MCP was chosen by a plugin, or by
+	// a model the plugin is driving, and the server confines it.
+	//
+	// It is on the interface rather than beside it so that a new capability
+	// cannot be added without answering the question. The compiler asks.
+	Paths() []string
 }
 
 // operations is the registry both surfaces are built from. A capability absent
