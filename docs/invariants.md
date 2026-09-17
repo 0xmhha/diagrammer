@@ -173,6 +173,10 @@ Also checked:
   neighbours in the rows above and below, so that boxes joined by a line sit
   near each other and the run between them stays short. A long run is the thing
   that crosses.
+- Two lines on one row are counted as crossing when their column intervals
+  interleave, and not when one contains the other. A line between two boxes on
+  one row runs in the channel below it rather than between two rows, so the test
+  for two lines between rows says nothing true about it.
 - A band owns its own columns. Two bands sharing a column would each have to
   reach across the other's boxes, and the two frames would overlap, which says
   the two groups overlap.
@@ -232,6 +236,12 @@ while every count still adds up.
 Nothing is dropped.
 
 ### use case
+
+A use case sits on the row of the actor that reaches it, and that is a statement
+about meaning rather than about layout: it is what makes the page read as "this
+actor does these things". It is held to even where a different row would let the
+drawing hold one more line. `docs/thresholds.md` records the page where that
+choice was measured and taken.
 
 Every actor, use case and association appears, include and extend resolve to
 declared use cases, and nothing sits outside the system boundary that the model
