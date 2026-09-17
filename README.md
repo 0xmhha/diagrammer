@@ -26,9 +26,10 @@ them does not happen inside this program.
 3. **compose** turns that model into diagram-source documents, one per family:
    component, sequence, state and use case.
 4. **render** turns a document into a self-contained HTML page: positions,
-   routed lines and an embedded viewer for moving between levels. A relationship
-   the geometry cannot hold is recorded on the page beside the drawing rather
-   than dropped in silence.
+   routed lines and an embedded viewer that moves between levels and, when the
+   pointer rests on a box, fades everything that box is not joined to. A
+   relationship the geometry cannot hold is recorded on the page beside the
+   drawing rather than dropped in silence.
 
 `validate` guards the boundary between stages 2 and 3, and `serve` exposes the
 same capabilities as a local MCP server so any plugin can drive them.
@@ -49,10 +50,11 @@ extend. That vocabulary is what stage 2 is held to.
 
 Early, and honest about it.
 
-**Two builds, one source.** `make build` produces a binary that reads Go and nothing else, needs no C toolchain, and is what the release gate covers.
-`make build-polyglot` produces one that also reads Python, Solidity and JS/TS
-through tree-sitter, and needs a C compiler because tree-sitter is a C library
-and Go links C through cgo.
+**Two builds, one source.** `make build` produces a binary that
+reads Go and nothing else, needs no C toolchain, and is what the release gate
+covers. `make build-polyglot` produces one that also reads Python, Solidity and
+JS/TS through tree-sitter, and needs a C compiler because tree-sitter is a C
+library and Go links C through cgo.
 
 Which one you have is printed every time `graph` runs, so nobody discovers the
 scope by pointing the program at a repository and wondering why the graph came
