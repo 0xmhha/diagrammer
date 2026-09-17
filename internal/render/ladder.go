@@ -18,6 +18,10 @@ const (
 	lifelineWidth = 156
 	headHeight    = 52
 	lifelineGap   = 64
+	// A message to the lifeline it came from is drawn as a loop out and back,
+	// because a zero-length arrow says nothing. These are its two dimensions.
+	selfLoopWidth = 40
+	selfLoopDrop  = 18
 	// rungHeight is the vertical space one message gets. It has to hold the
 	// arrow and the label above it without the two runs touching.
 	rungHeight = 58
@@ -90,31 +94,41 @@ func ladderScene(level diagram.Level) artifact.Scene {
 		// It is drawn as a short loop out and back so it reads as a call the
 		// participant makes on itself.
 		if from == to {
-			scene.Routes = append(scene.Routes, artifact.Route{
+			route := artifact.Route{
 				ID: c.ID, From: c.From, To: c.To, FromSide: "right", ToSide: "right",
 				Points: []artifact.Point{
 					{X: quantize(from), Y: quantize(y)},
-					{X: quantize(from + 40), Y: quantize(y)},
-					{X: quantize(from + 40), Y: quantize(y + 18)},
-					{X: quantize(from), Y: quantize(y + 18)},
+					{X: quantize(from + selfLoopWidth), Y: quantize(y)},
+					{X: quantize(from + selfLoopWidth), Y: quantize(y + selfLoopDrop)},
+					{X: quantize(from), Y: quantize(y + selfLoopDrop)},
 				},
-				LabelText: c.Label,
-				LabelAt:   artifact.Point{X: quantize(from + 40), Y: quantize(y + 9)},
-			})
+			}
+			// The gap to the next lifeline is what a self-message has to write
+			// in: its loop hangs off the right of this one.
+			at := artifact.Point{X: quantize(from + selfLoopWidth), Y: quantize(y + selfLoopDrop/2)}
+			route.LabelText, route.LabelSize, route.LabelAnchor, route.LabelBounds =
+				fitLadderLabel(c.Label, at, lifelineGap, anchorStart)
+			route.LabelAt = at
+			scene.Routes = append(scene.Routes, route)
 			continue
 		}
 		side, otherSide := "right", "left"
 		if to < from {
 			side, otherSide = "left", "right"
 		}
-		scene.Routes = append(scene.Routes, artifact.Route{
+		route := artifact.Route{
 			ID: c.ID, From: c.From, To: c.To, FromSide: side, ToSide: otherSide,
 			Points: []artifact.Point{
 				{X: quantize(from), Y: quantize(y)}, {X: quantize(to), Y: quantize(y)},
 			},
-			LabelText: c.Label,
-			LabelAt:   artifact.Point{X: quantize((from + to) / 2), Y: quantize(y)},
-		})
+		}
+		// The rung itself is the room: a message writes between the two
+		// lifelines it joins and nowhere else.
+		at := artifact.Point{X: quantize((from + to) / 2), Y: quantize(y)}
+		route.LabelText, route.LabelSize, route.LabelAnchor, route.LabelBounds =
+			fitLadderLabel(c.Label, at, math.Abs(to-from), anchorMiddle)
+		route.LabelAt = at
+		scene.Routes = append(scene.Routes, route)
 	}
 	sort.Slice(scene.Routes, func(i, j int) bool { return scene.Routes[i].ID < scene.Routes[j].ID })
 
@@ -145,6 +159,27 @@ func ladderScene(level diagram.Level) artifact.Scene {
 	scene.Width = quantize(columnX(maxCol(level)) + lifelineWidth + margin)
 	scene.Height = quantize(rungY(max(rows, 1)) + margin)
 	return scene
+}
+
+// fitLadderLabel measures a message's text against the room its rung has, and
+// returns it with the size and the rectangle it occupies.
+//
+// A ladder places its own labels, because a rung per message is a place for
+// each one and the crowding a grid has does not arise. What it did not do was
+// measure them. The text went out at whatever length it arrived at and the
+// artifact carried a size of zero and an empty rectangle, so the label rule,
+// which reads that rectangle back, measured nothing at all on a sequence page
+// and passed every time. A rule that cannot fail is not a rule.
+func fitLadderLabel(text string, at artifact.Point, room float64, anchor string) (string, float64, string, artifact.Rect) {
+	if text == "" {
+		return "", 0, "", artifact.Rect{}
+	}
+	size := fittedFontSize(text, room, edgeLabelSize, labelMinSize)
+	short := truncate(text, int((room-textPadding)/(size*widthFactor)))
+	if short == "" {
+		return "", 0, "", artifact.Rect{}
+	}
+	return short, size, anchor, labelRect(at, short, size, anchor)
 }
 
 // operandGuard is the condition a fragment's first branch carries, which is the

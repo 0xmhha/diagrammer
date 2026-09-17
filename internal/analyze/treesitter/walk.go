@@ -45,7 +45,7 @@ func (w *walker) collect(ctx context.Context) error {
 		if !entry.Type().IsRegular() || !w.claims(entry.Name()) {
 			return nil
 		}
-		w.readFile(abs)
+		w.readFile(ctx, abs)
 		return nil
 	})
 	if err != nil {
@@ -63,7 +63,7 @@ func (w *walker) claims(name string) bool {
 	return false
 }
 
-func (w *walker) readFile(abs string) {
+func (w *walker) readFile(ctx context.Context, abs string) {
 	rel := w.relative(abs)
 	source, err := os.ReadFile(abs)
 	if err != nil {
@@ -75,7 +75,7 @@ func (w *walker) readFile(abs string) {
 	parser := sitter.NewParser()
 	parser.SetLanguage(sitter.NewLanguage(w.lang.grammar()))
 
-	tree, err := parser.ParseString(context.Background(), nil, source)
+	tree, err := parser.ParseString(ctx, nil, source)
 	if err != nil {
 		w.recordFailure(rel, 0, err.Error())
 		return
