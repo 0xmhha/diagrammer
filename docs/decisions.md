@@ -542,6 +542,16 @@ read depends on the build; `graph` reports the languages it read on every run,
 so nobody learns the scope by pointing the program at a repository and wondering
 why the graph came back nearly empty.
 
+**What it costs has been measured.** Round 12 said the runtime's cost had not
+been taken here and that the result might reopen the choice. It has been taken
+and it does not: 2.63 MB of binary, against a published figure of roughly 20 for
+the whole grammar forest, and a parser between a third and half again slower
+than `go/ast` rather than the cliff a comparison with native C suggests. The
+numbers, how they were taken and the two make targets that take them again are
+in `docs/thresholds.md`. The cold build is the one figure that grew sharply,
+from 5.85 seconds to 12.63, and it is paid by whoever builds rather than by
+whoever runs.
+
 **The soft failure is answered rather than accepted.** tree-sitter does not
 refuse a file it cannot parse: it emits an ERROR node and carries on, which is
 why this project does not use it for Go, where the standard library gives a
@@ -682,13 +692,5 @@ Deferred deliberately, to be settled when the work reaches them:
   it was not built on is the part that remains.
 - Error policy and exit codes for parse failures, levels that cannot be laid out,
   and output path collisions.
-- The measured speed and binary cost of the tree-sitter runtime. The published
-  figures, roughly 3.9x slower than native C and roughly 20 MB of growth, are
-  that project's own and have never been taken here. This is the only number
-  either document carries that was inherited rather than measured, which is what
-  `docs/thresholds.md` exists to forbid. It is owed now that a shipped build
-  links the runtime, and the result may still reopen the choice: the Go-only
-  build is unaffected either way, so what is at stake is whether the second one
-  is worth its size.
 - How the unfold window behaves for a language without a file generation. To be
   decided by measurement on the fixtures rather than assumed.
