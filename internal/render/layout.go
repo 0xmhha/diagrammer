@@ -29,6 +29,15 @@ const (
 	// the page is mostly empty channel, and the routes that do not fit are
 	// refused and recorded as usual.
 	channelMaxLanes = 24
+	// channelSlack is how many lanes a channel holds beyond the routes that
+	// want it.
+	//
+	// Counting the routes and stopping there gives every route a lane and the
+	// wrong one. A route is not looking for any free lane but for one that
+	// clears what else is in the channel, and with no lane to spare the only
+	// one left may be exactly the one that crosses. See docs/thresholds.md for
+	// where the number comes from.
+	channelSlack = 3
 	// laneGap keeps two routes sharing a channel far enough apart to read as
 	// two lines rather than one thick one.
 	laneGap = 14
@@ -179,11 +188,11 @@ func channelSizes(level diagram.Level, cols, rows int) (vertical, horizontal []f
 
 	vertical = make([]float64, cols+1)
 	for i, n := range wantV {
-		vertical[i] = sizeForLanes(channelX, n)
+		vertical[i] = sizeForLanes(channelX, n+channelSlack)
 	}
 	horizontal = make([]float64, rows+1)
 	for i, n := range wantH {
-		horizontal[i] = sizeForLanes(channelY, n)
+		horizontal[i] = sizeForLanes(channelY, n+channelSlack)
 	}
 	return vertical, horizontal
 }

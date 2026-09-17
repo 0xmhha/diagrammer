@@ -247,12 +247,17 @@ func (r *router) detour(c diagram.Connection, from, to placedBox) (routed, error
 		startY, endY = from.Y, to.bottom()
 	}
 
-	w, err := r.chooseWay(c, from, to, nearFrom, nearTo, startY, endY)
+	// Where it leaves and arrives is settled before the way is chosen, because
+	// the way is chosen by counting what it would cross and a path scored from
+	// the middles of its two boxes is not the path that gets drawn. Scoring the
+	// wrong path is how a route came back with nothing to cross and was then
+	// refused for crossing something.
+	startX, endX := r.stubs(c, from, fromSide, to, toSide)
+	w, err := r.chooseWay(c, to.Col, startX, endX, nearFrom, nearTo, startY, endY)
 	if err != nil {
 		return routed{}, err
 	}
 
-	startX, endX := r.stubs(c, from, fromSide, to, toSide)
 	start := point{X: startX, Y: startY}
 	end := point{X: endX, Y: endY}
 	points := simplify([]point{
@@ -561,7 +566,7 @@ type way struct {
 // routeAll draws the routes with no choice first. That is what makes looking
 // worth doing: what a detour can see is everything that could not have gone
 // anywhere else.
-func (r *router) chooseWay(c diagram.Connection, from, to placedBox, nearFrom, nearTo channel, startY, endY float64) (way, error) {
+func (r *router) chooseWay(c diagram.Connection, toCol int, startX, endX float64, nearFrom, nearTo channel, startY, endY float64) (way, error) {
 	firsts := freeLanes(r.takenH, nearFrom)
 	seconds := freeLanes(r.takenH, nearTo)
 	if len(firsts) == 0 || len(seconds) == 0 {
@@ -575,7 +580,7 @@ func (r *router) chooseWay(c diagram.Connection, from, to placedBox, nearFrom, n
 	}
 	var best choice
 	bestScore, found := 0, false
-	for _, col := range r.columnsNearest(to.Col) {
+	for _, col := range r.columnsNearest(toCol) {
 		ch := r.grid.channelLeftOf(col)
 		for _, v := range freeLanes(r.takenV, ch) {
 			for _, f := range firsts {
@@ -588,7 +593,7 @@ func (r *router) chooseWay(c diagram.Connection, from, to placedBox, nearFrom, n
 						},
 						firstI: f, secondI: sc, v: v, centre: ch.centre,
 					}
-					score := r.crossingsOf(c, from, to, cand.w, startY, endY)
+					score := r.crossingsOf(c, startX, endX, cand.w, startY, endY)
 					if !found || score < bestScore {
 						found, bestScore, best = true, score, cand
 					}
@@ -646,14 +651,14 @@ func (r *router) columnsNearest(preferred int) []int {
 	return out
 }
 
-func (r *router) crossingsOf(c diagram.Connection, from, to placedBox, w way, startY, endY float64) int {
+func (r *router) crossingsOf(c diagram.Connection, startX, endX float64, w way, startY, endY float64) int {
 	return r.crossings(c, simplify([]point{
-		{X: from.centerX(), Y: startY},
-		{X: from.centerX(), Y: w.first},
+		{X: startX, Y: startY},
+		{X: startX, Y: w.first},
 		{X: w.x, Y: w.first},
 		{X: w.x, Y: w.second},
-		{X: to.centerX(), Y: w.second},
-		{X: to.centerX(), Y: endY},
+		{X: endX, Y: w.second},
+		{X: endX, Y: endY},
 	}))
 }
 

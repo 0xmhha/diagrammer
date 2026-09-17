@@ -65,6 +65,13 @@ defended rather than merely recorded.
   each edge is what keeps the turn into the outermost lane longer than
   `minSegment`. These four are one decision rather than four: changing any of
   them without the others makes the router produce routes its own rules refuse.
+- **`channelSlack` = 3.** How many lanes a channel holds beyond the routes that
+  want it. Counting the routes and stopping there gives every route a lane and
+  the wrong one: a route is not looking for any free lane but for one that
+  clears what else is in the channel, and with none to spare the only one left
+  may be exactly the one that crosses. Measured over seven models, the share
+  drawn goes 168, 171, 172, 173, 173 for slack 0 to 4, so it is set at the point
+  it stops paying.
 - **`channelMaxLanes` = 24.** The most lanes a channel is widened to hold. The
   two channel sizes above are now the smallest a channel gets rather than the
   size it always is; a channel more routes want is widened to `2*stub + n*laneGap`
@@ -338,6 +345,26 @@ fifty-eight: the order it forces creates a crossing in two places where the
 arbitrary order happened not to. Shorter, ordered fan-outs were judged worth
 more than two lines out of that many, and the numbers are here so the judgement
 can be revisited rather than rediscovered.
+
+### Room to spare in a channel
+
+A channel sized for exactly the routes that want it gives every route a lane and
+gives some of them the wrong one.
+
+This is what a page of this repository looked like with none to spare. The
+channel between two rows was wanted by four routes, so it was made four lanes
+wide, and one of those lanes had another route descending across it. The route
+that arrived last had one lane free, it was that one, and the relationship was
+recorded instead of drawn. A fifth lane would have held it.
+
+So a channel is made `channelSlack` lanes wider than its demand. Measured over
+seven models the drawn count goes 168, 171, 172, 173, 173 as the slack goes 0 to
+4; three is where it stops paying. The page grows by 42px per channel that
+carries anything, which on this repository's state diagram is 514px wide against
+488.
+
+With that and the model arranged as a hierarchy, three of this repository's four
+diagrams draw everything they were given.
 
 What the layout scored before the placement work, and after:
 

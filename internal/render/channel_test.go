@@ -130,3 +130,40 @@ func TestLinesLeaveInTheOrderTheyGo(t *testing.T) {
 			leaves["left"], leaves["mid"], leaves["right"])
 	}
 }
+
+// TestAChannelKeepsALaneToSpare is why a channel is wider than its demand.
+//
+// Sized for exactly the routes that want it, a channel gives every route a lane
+// and some of them the wrong one: what a route needs is not any free lane but
+// one that clears whatever else crosses the channel.
+//
+// The fixture is a column of states with four transitions skipping past the
+// middle to one late state. They all want the channel above it, and another
+// transition descends across that channel. With channelSlack at zero the last
+// to arrive is left the one lane the descent blocks, and its relationship is
+// recorded rather than drawn; the numbers are in docs/thresholds.md.
+func TestAChannelKeepsALaneToSpare(t *testing.T) {
+	page, err := Build(composeFor(t, diagram.FamilyState, "skipping"))
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if len(page.Dropped) != 0 {
+		t.Errorf("every relationship here fits once a channel has a lane to spare, "+
+			"and %d were left out: %+v", len(page.Dropped), page.Dropped)
+	}
+
+	scenes, err := artifact.Parse([]byte(page.HTML()))
+	if err != nil {
+		t.Fatalf("read back the artifact: %v", err)
+	}
+	drawn := 0
+	for i := range scenes {
+		drawn += len(scenes[i].Routes)
+		for _, p := range invariant.CompositionFor(&scenes[i]) {
+			t.Errorf("%s", p)
+		}
+	}
+	if drawn != page.Accounting.Proven {
+		t.Errorf("%d of %d relationships are on the page", drawn, page.Accounting.Proven)
+	}
+}

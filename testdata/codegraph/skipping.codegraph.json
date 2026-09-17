@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Skipping states",
+    "subtitle": "The life of one relationship, which is the shape that needs a lane to spare"
+  },
+  "provenance": {
+    "origin": "handwritten",
+    "note": "The state family of this repository's own model, kept as a fixture because it is the shape that showed a channel sized for exactly its demand costing a relationship. Every state is in one column; four transitions skip past the middle to Recorded and all want the channel above it, while another descends across that channel. With no lane to spare the last arrival is left the one lane the descent blocks."
+  },
+  "families": [
+    "state"
+  ],
+  "state": {
+    "states": [
+      {
+        "id": "st.start",
+        "name": "start",
+        "kind": "initial"
+      },
+      {
+        "id": "st.proven",
+        "name": "Proven",
+        "kind": "simple",
+        "activity": "stage 3 counted it, per level"
+      },
+      {
+        "id": "st.placed",
+        "name": "Placed",
+        "kind": "simple",
+        "activity": "both ends have a cell on one page"
+      },
+      {
+        "id": "st.routed",
+        "name": "Routed",
+        "kind": "simple",
+        "activity": "a lane was free in every channel it needs"
+      },
+      {
+        "id": "st.drawn",
+        "name": "Drawn",
+        "kind": "simple",
+        "entry": "written to the page with its points"
+      },
+      {
+        "id": "st.recorded",
+        "name": "Recorded",
+        "kind": "simple",
+        "entry": "written on the box it belonged to, with the rule that refused it"
+      },
+      {
+        "id": "st.done",
+        "name": "done",
+        "kind": "final"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "t.prove",
+        "from": "st.start",
+        "to": "st.proven",
+        "trigger": "compose"
+      },
+      {
+        "id": "t.selfref",
+        "from": "st.proven",
+        "to": "st.recorded",
+        "guard": "both ends roll up to one box",
+        "effect": "reason: selfReference"
+      },
+      {
+        "id": "t.place",
+        "from": "st.proven",
+        "to": "st.placed",
+        "trigger": "layOut"
+      },
+      {
+        "id": "t.lane",
+        "from": "st.placed",
+        "to": "st.routed",
+        "trigger": "routeAll"
+      },
+      {
+        "id": "t.nolane",
+        "from": "st.placed",
+        "to": "st.recorded",
+        "guard": "every channel it needs is full",
+        "effect": "rule: channel-capacity"
+      },
+      {
+        "id": "t.rules",
+        "from": "st.routed",
+        "to": "st.drawn",
+        "guard": "no rule refuses it on its own"
+      },
+      {
+        "id": "t.bad",
+        "from": "st.routed",
+        "to": "st.recorded",
+        "guard": "a rule refuses it",
+        "effect": "rule: separation, border-run, label-clear"
+      },
+      {
+        "id": "t.cross",
+        "from": "st.drawn",
+        "to": "st.recorded",
+        "trigger": "Crossings",
+        "guard": "chosen as the fewest that settle every crossing",
+        "effect": "rule: crossing"
+      },
+      {
+        "id": "t.shown",
+        "from": "st.drawn",
+        "to": "st.done"
+      },
+      {
+        "id": "t.kept",
+        "from": "st.recorded",
+        "to": "st.done"
+      }
+    ]
+  }
+}

@@ -82,7 +82,7 @@ func TestEveryThresholdIsDocumentedWithItsValue(t *testing.T) {
 		"minBoxesPerLevel": true, "expandedMaxBoxes": true,
 		"minSegment": true, "separation": true, "LabelClearance": true, "borderRun": true,
 		"channelX": true, "channelY": true, "laneGap": true, "stub": true,
-		"channelMaxLanes": true,
+		"channelMaxLanes": true, "channelSlack": true,
 	}
 
 	doc := read(t, "docs/thresholds.md")
