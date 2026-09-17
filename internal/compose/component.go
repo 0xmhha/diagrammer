@@ -450,8 +450,35 @@ func placeBoxes(l plannedLevel, t *componentTree, regionOf map[string]string, dr
 				Interface: p.Interface,
 			})
 		}
+		sortPorts(box.Ports)
 		boxes = append(boxes, box)
 	}
 	sort.Slice(boxes, func(i, j int) bool { return boxes[i].ID < boxes[j].ID })
 	return boxes, grid
+}
+
+// sortPorts puts a box's ports in an order of this stage's choosing rather than
+// the order the model happened to list them in.
+//
+// It was the last thing in a composed document that a model could move without
+// meaning to. Everything else here is sorted or positioned: shuffle a model's
+// arrays and the levels, the boxes, where each one sits, the connections and the
+// accounting all come back identical, and only this passed the input's order
+// through. That matters because stage 2 is performed by a model, and a model
+// asked the same question twice does not answer in the same order.
+//
+// Provided before required, because that is how a component is read: what it
+// offers, then what it needs. Then by id, which is unique, so the order is
+// total and two runs cannot differ.
+//
+// Nothing is rearranged on a drawing by this. Stage 4 does not read ports at
+// all yet; they are carried for when it does, and settling the order now is
+// cheaper than settling it once something depends on it.
+func sortPorts(ports []diagram.Port) {
+	sort.Slice(ports, func(i, j int) bool {
+		if ports[i].Kind != ports[j].Kind {
+			return ports[i].Kind == diagram.PortProvided
+		}
+		return ports[i].ID < ports[j].ID
+	})
 }

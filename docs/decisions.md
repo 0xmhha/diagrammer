@@ -322,6 +322,45 @@ the two numbers. Stage 3 inventing levels the model did not ask for would be
 stage 3 deciding what the drawing means. What changed is that the page is now
 legible while it is wide, rather than illegible in a way nothing reported.
 
+### A model is source, not build output (after 0.4.0)
+
+`make diagram SRC=... AI=1` draws a tree in one command, and asking it twice
+gives two different drawings. That is worth being precise about, because two
+different things are going on and only one of them was a defect.
+
+**Everything downstream of a model is already reproducible.** `make verify`
+holds compose and render to byte-identity across runs, and has since round 11.
+Hand the same model in twice and the same pages come out, on any machine.
+
+**A model that differs only in order now composes identically, and did not
+before.** Reordering every array whose order carries no meaning and composing
+both, the levels, the boxes, where each box sits, the connections and the
+accounting all came back the same. One thing did not: a box's `ports` were
+passed through in whatever order the model listed them. Stage 4 does not read
+ports yet, so nothing on a drawing moved, and a test that only looked at the
+drawing would never have found it. They are sorted now, provided before
+required and then by id.
+
+A sequence diagram's messages are the boundary that makes the rest meaningful.
+Their order is their meaning, the schema says so, and shuffling them is refused
+by the validator rather than tolerated.
+
+**Two answers from a model do not differ only in order.** Asked the same
+question about this repository twice, it returned 23 components and 37
+dependencies both times, which is a striking amount of agreement, and then named
+them `analyze` once and `Analyze` the next, and emitted one family once and two
+the next. Nothing about that is fixable here, and no amount of sorting reaches
+it.
+
+**So the model is kept, not regenerated.** Stage 2 is an authoring step and its
+output is source: written once, read by a person, and committed, which is what
+every file in `testdata/codegraph/` is. `make diagram MODEL=...` is that path,
+and it is the one to use for anything whose drawing should not move under it.
+`AI=1` is for the first draft and for a tree nobody has modelled yet.
+
+This is the same reason `provenance.origin` distinguishes `model` from
+`modelReviewed`. A model nobody has read is a draft, and the field says so.
+
 ### The renderer is reimplemented; the viewer is embedded (round 3)
 
 Go reimplements the renderer. The viewer ships as one frozen embedded asset.
