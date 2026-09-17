@@ -101,6 +101,7 @@ change, not an edit.
     diagrammer validate <codegraph.json>          stage 2 boundary
     diagrammer compose  <codegraph.json> -o <dir> stage 3
     diagrammer render   <doc.json> -o out.html    stage 4
+    diagrammer instruct [-o prompt.md]            what stage 2 is performed from
     diagrammer serve                              the same, as a local MCP server
     diagrammer version
 
@@ -122,9 +123,18 @@ assume a validated model and must say so rather than re-validating silently.
 Every subcommand reports failures on stderr with a non-zero exit status and names
 the offending input path where one exists.
 
+`instruct` was added after 0.1.1 and is the one capability that reads nothing.
+Round 14 said the stage-2 skill prompt is built from the embedded schemas so
+that the instruction given to a model and the check applied to what it returns
+come from one file. Nothing built it: for two releases the only way to learn
+what stage 2 must return was to find the schema in the source, which is a
+requirement on whoever drives the pipeline that this program was supposed to
+meet. It is a capability rather than a document in the repository for the same
+reason the schemas are embedded rather than read from disk.
+
 CLI and MCP are two faces of one set of capabilities. `serve` exposes graph,
-validate, compose and render with the same names, arguments and error behaviour
-as the subcommands. Neither surface has a capability the other lacks. The MCP
+validate, compose, render and instruct with the same names, arguments and error
+behaviour as the subcommands. Neither surface has a capability the other lacks. The MCP
 tool and argument names are contract once 0.1.0 ships, because plugins bind to
 them.
 

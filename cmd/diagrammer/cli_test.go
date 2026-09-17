@@ -49,6 +49,12 @@ func TestEveryRequestFieldHasAFlag(t *testing.T) {
 			build: func(args []string, w io.Writer) (any, error) {
 				return buildRenderRequest(args, w)
 			},
+		}, {
+			op:   command.OpInstruct,
+			args: []string{"-o", "prompt.md"},
+			build: func(args []string, w io.Writer) (any, error) {
+				return buildInstructRequest(args, w)
+			},
 		},
 	}
 

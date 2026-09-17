@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io"
 
 	"github.com/0xmhha/diagrammer/internal/command"
@@ -119,6 +120,35 @@ func buildRenderRequest(args []string, stderr io.Writer) (*command.RenderRequest
 }
 
 // deliverResult runs a request and puts its output where each part belongs.
+// runInstruct prints what stage 2 is performed from.
+//
+// It takes no operand, unlike every other command here, because it reads
+// nothing: the instruction is built from the schemas the binary carries. That
+// is the point of it being a command rather than a document in the repository.
+func runInstruct(args []string, stdout, stderr io.Writer) error {
+	req, err := buildInstructRequest(args, stderr)
+	if err != nil {
+		return err
+	}
+	return deliverResult(req, stdout, stderr)
+}
+
+func buildInstructRequest(args []string, stderr io.Writer) (*command.InstructRequest, error) {
+	req := &command.InstructRequest{}
+	flags := flag.NewFlagSet("instruct", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	flags.StringVar(&req.Out, "o", "", "write the instruction here instead of standard output")
+	flags.Usage = usageFor(stderr, flags, "instruct [-o prompt.md]")
+
+	if err := flags.Parse(args); err != nil {
+		return nil, err
+	}
+	if flags.NArg() != 0 {
+		return nil, fmt.Errorf("instruct takes no arguments, got %d", flags.NArg())
+	}
+	return req, nil
+}
+
 func deliverResult(req command.Request, stdout, stderr io.Writer) error {
 	result, err := req.Run(context.Background())
 	if err != nil {

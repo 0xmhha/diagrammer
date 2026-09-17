@@ -37,6 +37,9 @@ func toolSummaries() map[command.Op]string {
 		command.OpCompose: "Turn a validated UML codegraph into diagram sources, one per family the model declares. " +
 			"Laid out but not drawn: boxes carry the cell they sit in, not a pixel position.",
 		command.OpRender: "Turn a diagram source into a self-contained HTML page.",
+		command.OpInstruct: "Return the instruction stage 2 is performed from: what a code graph holds, the schema a UML model " +
+			"must satisfy, what the gate checks beyond that schema, and how to choose what to say. " +
+			"Ask for this before reading a graph; it is built from the same schemas the gate uses, so it cannot disagree with them.",
 	}
 }
 
@@ -72,6 +75,7 @@ func newServer() *mcp.Server {
 	addOp[command.ValidateRequest](server, command.OpValidate, summaries)
 	addOp[command.ComposeRequest](server, command.OpCompose, summaries)
 	addOp[command.RenderRequest](server, command.OpRender, summaries)
+	addOp[command.InstructRequest](server, command.OpInstruct, summaries)
 	return server
 }
 

@@ -13,9 +13,16 @@ them does not happen inside this program.
    languages with tree-sitter, which does not, so every tree is asked whether
    it parsed cleanly and a file that did not is recorded with its line.
 2. A plugin's skill analyses that graph with an LLM and returns a
-   **codegraph.json** expressed as a UML model. The binary has no subcommand for
-   this and never calls a model itself. It hands the graph out and takes the
+   **codegraph.json** expressed as a UML model. The binary does not perform this
+   stage and never calls a model itself. It hands the graph out and takes the
    model back.
+
+   What it does hand out is the instruction. `instruct` prints what a skill
+   performs this stage from: what a code graph holds, the schema a UML model
+   must satisfy, what the gate checks beyond that schema, and how to choose what
+   to say. It is built from the same embedded schemas the gate uses, so the
+   instruction given to a model and the check applied to what it returns cannot
+   disagree.
 3. **compose** turns that model into diagram-source documents, one per family:
    component, sequence, state and use case.
 4. **render** turns a document into a self-contained HTML page: positions,
@@ -52,7 +59,7 @@ scope by pointing the program at a repository and wondering why the graph came
 back nearly empty.
 
 Everything else works end to end for all four families in either build:
-`graph`, `validate`, `compose`, `render` and `serve`.
+`graph`, `validate`, `compose`, `render`, `instruct` and `serve`.
 
 ## Build
 
