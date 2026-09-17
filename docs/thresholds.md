@@ -292,6 +292,53 @@ A heuristic that improves the total is not a heuristic that improves every case,
 and a table showing only the cases that moved the right way would be an argument
 rather than a measurement.
 
+### A box as wide as what it points at, tried three ways
+
+A box that fans out to many others is the hardest thing on the page: on this
+repository's diagram `command` sits on one row and reaches five boxes across
+another, and its lines have to fan sideways before they can descend. Sideways is
+where lines cross.
+
+The obvious answer is to make such a box wide enough to sit over the block it
+points at, so each line leaves above where it is going and drops almost
+straight down. It was tried three ways and measured each time, over six models.
+
+**As wide as it reaches.** 117 relationships drawn became 100. A box stretched
+over the block it points at lies across the vertical channels beside it, and
+every route that used one of those channels has to go round. Teaching the router
+to refuse a way through a box did not recover it: 100 became 99.
+
+**As wide as its own lines need,** by the same `2*stub + n*laneGap` a channel
+uses: no change at all. A box with ten lines wants 180px and its column is
+already 168px wide, so almost nothing grows.
+
+The reason the idea does not pay here is worth writing down, because it is the
+same reason dummy nodes are the textbook answer. A vertical channel runs the
+whole height of the page. A box wide enough to cover its dependents lies across
+the channels its neighbours need, and there is nowhere else for them to go. For
+the width to help, a route crossing several rows would have to be free to change
+column at each one, which is what a dummy node at every rank gives it.
+
+What does pay is spreading the row out. A row with two boxes in a band five
+columns wide used to put them side by side on the left and leave three columns
+empty; they are now spread across the band, so each sits over what it points at
+without having to grow at all. That alone took the six models from 115 drawn to
+117.
+
+**Lines leave in the order they go.** Positions along a box edge used to be
+handed out in the order routes asked for them, so a route to the far right could
+be given the leftmost position and had to cross everything else leaving that
+side before it started. They are now laid along the edge in the order of where
+they go, decided for the whole side before any of it is drawn, with the straight
+routes already sitting where they had to.
+
+That one is a trade and is recorded as one. It shortens every page measured by
+two to three per cent of line, and it costs two relationships of a hundred and
+fifty-eight: the order it forces creates a crossing in two places where the
+arbitrary order happened not to. Shorter, ordered fan-outs were judged worth
+more than two lines out of that many, and the numbers are here so the judgement
+can be revisited rather than rediscovered.
+
 What the layout scored before the placement work, and after:
 
 | | before | after |

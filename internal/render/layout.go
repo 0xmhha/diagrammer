@@ -268,13 +268,16 @@ func layOut(family diagram.Family, level diagram.Level) ([]placedBox, []placedRe
 			Row:  row,
 			Col:  col,
 		}
-		p.FontSize = fittedFontSize(b.Label, w, labelSize, labelMinSize)
+		boxes = append(boxes, p)
+	}
+	for i := range boxes {
+		b := &boxes[i]
+		b.FontSize = fittedFontSize(b.Label, b.W, labelSize, labelMinSize)
 		// Shrinking has a floor. Past it the label is cut instead, because a
 		// name nobody can read and a name that overflows its box are both
 		// wrong, and only one of them also breaks the drawing.
-		maxUnits := int((w - textPadding) / (p.FontSize * widthFactor))
-		p.ShortLabel = truncate(b.Label, maxUnits)
-		boxes = append(boxes, p)
+		maxUnits := int((b.W - textPadding) / (b.FontSize * widthFactor))
+		b.ShortLabel = truncate(b.Label, maxUnits)
 	}
 	sort.Slice(boxes, func(i, j int) bool { return boxes[i].ID < boxes[j].ID })
 

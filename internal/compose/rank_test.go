@@ -132,3 +132,38 @@ func TestSwappingNeighboursIsMeasuredInColumns(t *testing.T) {
 		t.Errorf("the arrangement lost or duplicated a box: %v", got)
 	}
 }
+
+// TestARowSpreadsAcrossItsBand is what gives a box room over what it points at.
+//
+// A row with two boxes in a band five columns wide used to put them side by
+// side on the left and leave three columns empty on the right. Everything they
+// pointed at on the row below was spread across all five, so both had to fan
+// their lines sideways before they could descend, and sideways is where lines
+// cross.
+func TestARowSpreadsAcrossItsBand(t *testing.T) {
+	ordered := []string{"top", "other", "a", "b", "c", "d", "e"}
+	rank := map[string]int{"top": 0, "other": 0, "a": 1, "b": 1, "c": 1, "d": 1, "e": 1}
+	band := func(string) string { return "" }
+	cells, grid := cellsByRank(ordered, rank, band)
+
+	if grid.Cols != 5 {
+		t.Fatalf("five boxes on the widest row need five columns, not %d", grid.Cols)
+	}
+	top, other := cells["top"][1], cells["other"][1]
+	if top >= other {
+		t.Fatalf("the two boxes on the thin row are at columns %d and %d, out of order", top, other)
+	}
+	if other-top < 2 {
+		t.Errorf("two boxes on a five-column row sit at columns %d and %d, packed together "+
+			"rather than spread over what they point at", top, other)
+	}
+
+	// Nothing shares a cell, whatever the spreading does.
+	seen := map[[2]int]string{}
+	for id, cell := range cells {
+		if was, taken := seen[cell]; taken {
+			t.Errorf("%s and %s are both at row %d column %d", id, was, cell[0], cell[1])
+		}
+		seen[cell] = id
+	}
+}

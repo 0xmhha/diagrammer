@@ -42,6 +42,9 @@ type router struct {
 	// handed the same place.
 	takenSide map[string]map[int]bool
 	placed    map[string]int
+	// stub is where each bent route meets each of its boxes, decided before any
+	// of them is drawn so that the order along a side is the order the lines go.
+	stub map[string]float64
 	// drawn is what has already been routed on this level, so a route still
 	// choosing its way can see what it would have to cross.
 	drawn []routed
@@ -56,6 +59,7 @@ func newRouter(g *grid, boxes []placedBox) *router {
 		grid: g, boxes: byID,
 		takenV: map[float64]map[int]bool{}, takenH: map[float64]map[int]bool{},
 		takenSide: map[string]map[int]bool{}, placed: map[string]int{},
+		stub: map[string]float64{},
 	}
 }
 
@@ -147,10 +151,9 @@ func (r *router) straight(c diagram.Connection, from, to placedBox) (routed, err
 	// The lane is spread along the shorter of the two facing edges. A state
 	// machine's start and end are drawn as dots, and a lane sized for a full
 	// box would put the line's end beside the dot rather than on it.
-	lane, err := r.takeEdgeLane(math.Min(from.H, to.H),
-		sideKey(from.ID, fromSide), sideKey(to.ID, toSide))
-	if err != nil {
-		return routed{}, err
+	lane, ok := r.stub[c.ID+"|from"]
+	if !ok {
+		return routed{}, &laneFail{channel: "box edge"}
 	}
 	y := from.centerY() + lane
 
@@ -176,10 +179,9 @@ func (r *router) stacked(c diagram.Connection, from, to placedBox) (routed, erro
 	if !downward {
 		fromSide, toSide = sideTop, sideBottom
 	}
-	lane, err := r.takeEdgeLane(math.Min(from.W, to.W),
-		sideKey(from.ID, fromSide), sideKey(to.ID, toSide))
-	if err != nil {
-		return routed{}, err
+	lane, ok := r.stub[c.ID+"|from"]
+	if !ok {
+		return routed{}, &laneFail{channel: "box edge"}
 	}
 	x := from.centerX() + lane
 	start, end := point{X: x, Y: from.bottom()}, point{X: x, Y: to.Y}
@@ -203,7 +205,7 @@ func (r *router) overOneRow(c diagram.Connection, from, to placedBox) (routed, e
 		ch = r.grid.channelAbove(from.Row)
 	}
 
-	startX, endX := r.stubs(from, fromSide, to, toSide)
+	startX, endX := r.stubs(c, from, fromSide, to, toSide)
 	start := point{X: startX, Y: from.bottom()}
 	end := point{X: endX, Y: to.Y}
 	if !downward {
@@ -250,7 +252,7 @@ func (r *router) detour(c diagram.Connection, from, to placedBox) (routed, error
 		return routed{}, err
 	}
 
-	startX, endX := r.stubs(from, fromSide, to, toSide)
+	startX, endX := r.stubs(c, from, fromSide, to, toSide)
 	start := point{X: startX, Y: startY}
 	end := point{X: endX, Y: endY}
 	points := simplify([]point{
@@ -271,7 +273,7 @@ func (r *router) detour(c diagram.Connection, from, to placedBox) (routed, error
 // channel to the channel above the row and come down into the target's top,
 // which is a lap around the row for a relationship that never leaves it.
 func (r *router) alongRow(c diagram.Connection, from, to placedBox) (routed, error) {
-	startX, endX := r.stubs(from, sideBottom, to, sideBottom)
+	startX, endX := r.stubs(c, from, sideBottom, to, sideBottom)
 	start := point{X: startX, Y: from.bottom()}
 	end := point{X: endX, Y: to.bottom()}
 	lane, err := r.takeLaneAvoiding(c, r.grid.channelBelow(from.Row), func(lane float64) []point {
@@ -288,13 +290,208 @@ func (r *router) alongRow(c diagram.Connection, from, to placedBox) (routed, err
 //
 // The ends are asked for separately, unlike a straight route's, because the
 // route bends anyway and nothing is gained by holding them level.
-func (r *router) stubs(from placedBox, fromSide side, to placedBox, toSide side) (startX, endX float64) {
-	return from.centerX() + r.stubLane(sideKey(from.ID, fromSide), from.W),
-		to.centerX() + r.stubLane(sideKey(to.ID, toSide), to.W)
+func (r *router) stubs(c diagram.Connection, from placedBox, fromSide side, to placedBox, toSide side) (startX, endX float64) {
+	out, ok := r.stub[c.ID+"|from"]
+	if !ok {
+		out = r.stubLane(sideKey(from.ID, fromSide), from.W)
+	}
+	in, ok := r.stub[c.ID+"|to"]
+	if !ok {
+		in = r.stubLane(sideKey(to.ID, toSide), to.W)
+	}
+	return from.centerX() + out, to.centerX() + in
 }
 
-// stubLane places one end of a bent route along a box side, taking the lowest
-// position still free.
+// assignStubs decides where along each box side the bent routes meet it, before
+// any of them is drawn.
+//
+// The positions are handed out in the order of where the lines go rather than
+// the order they were asked for. Two routes leaving one side towards different
+// places have to leave in that order or they cross before they have gone
+// anywhere, and a route to the far right that leaves from the left travels the
+// width of its own box first, across everything else leaving.
+//
+// Deciding it up front is what makes that possible: handed out one at a time,
+// the first route to ask takes the position nearest where it is going and the
+// second is left with whatever is over, whatever order the two are really in.
+//
+// Straight and stacked routes are left out. Each uses one position at both of
+// its ends, so it has no order to be put in, and it has already reserved
+// through takeEdgeLane.
+func (r *router) assignStubs(conns []diagram.Connection) {
+	// The rigid routes go first and take one position at each of their two
+	// ends, because both ends have to move together or the line stops being
+	// straight. What is left is what the bent ones are laid along.
+	for _, c := range conns {
+		from, okf := r.boxes[c.From]
+		to, okt := r.boxes[c.To]
+		if !okf || !okt {
+			continue
+		}
+		fromSide, toSide, extent, rigid := rigidSides(from, to)
+		if !rigid {
+			continue
+		}
+		fk, tk := sideKey(from.ID, fromSide), sideKey(to.ID, toSide)
+		for i := range lanesPerChannel(extent) {
+			if r.takenSide[fk][i] || r.takenSide[tk][i] {
+				continue
+			}
+			claimSide(r.takenSide, fk, i)
+			claimSide(r.takenSide, tk, i)
+			r.stub[c.ID+"|from"] = laneOffset(i)
+			r.stub[c.ID+"|to"] = laneOffset(i)
+			break
+		}
+	}
+
+	// Every end on a side, the fixed ones among them, ordered by where its
+	// line is going.
+	type end struct {
+		id     string
+		which  string
+		toward float64
+		extent float64
+		fixed  bool
+		at     float64
+	}
+	groups := map[string][]end{}
+	add := func(key string, e end) { groups[key] = append(groups[key], e) }
+	for _, c := range conns {
+		from, okf := r.boxes[c.From]
+		to, okt := r.boxes[c.To]
+		if !okf || !okt {
+			continue
+		}
+		if fromSide, toSide, _, rigid := rigidSides(from, to); rigid {
+			at, placed := r.stub[c.ID+"|from"]
+			add(sideKey(from.ID, fromSide), end{c.ID, "from", to.centerX(), from.W, placed, at})
+			add(sideKey(to.ID, toSide), end{c.ID, "to", from.centerX(), to.W, placed, at})
+			continue
+		}
+		fromSide, toSide, bent := bentSides(from, to)
+		if !bent {
+			continue
+		}
+		add(sideKey(from.ID, fromSide), end{c.ID, "from", to.centerX(), from.W, false, 0})
+		add(sideKey(to.ID, toSide), end{c.ID, "to", from.centerX(), to.W, false, 0})
+	}
+
+	for _, key := range sortedStrings(groups) {
+		ends := groups[key]
+		sort.Slice(ends, func(i, j int) bool {
+			if ends[i].toward != ends[j].toward {
+				return ends[i].toward < ends[j].toward
+			}
+			return ends[i].id < ends[j].id
+		})
+		// Every position along the edge, leftmost first. laneOffset alternates
+		// about the middle, so index order is not order along the edge.
+		var offsets []float64
+		for i := range lanesPerChannel(ends[0].extent) {
+			offsets = append(offsets, laneOffset(i))
+		}
+		sort.Float64s(offsets)
+
+		// Walk the ends in the order their lines go and hand out positions from
+		// left to right, stepping past the ones already fixed. That is what
+		// keeps a line to the right of another leaving to the right of it, with
+		// a straight route sitting wherever it had to.
+		next := 0
+		for _, e := range ends {
+			if e.fixed {
+				for next < len(offsets) && offsets[next] <= e.at {
+					next++
+				}
+				continue
+			}
+			for next < len(offsets) && r.takenSide[key][laneIndexOf(offsets[next])] {
+				next++
+			}
+			if next >= len(offsets) {
+				break // the side is full; what is left falls back to stubLane
+			}
+			r.stub[e.id+"|"+e.which] = offsets[next]
+			next++
+		}
+	}
+}
+
+// laneIndexOf inverts laneOffset, so a position along an edge can be looked up
+// in the record of what is taken.
+func laneIndexOf(offset float64) int {
+	step := int(math.Abs(offset)/laneGap + 0.5)
+	if step == 0 {
+		return 0
+	}
+	if offset < 0 {
+		return step*2 - 1
+	}
+	return step * 2
+}
+
+// rigidSides names the sides a straight or stacked route meets, and how long
+// the shorter of the two facing edges is. Everything else reports false.
+//
+// The extent is the shorter edge because a state machine's start and end are
+// drawn as dots: a position spread along a full box would put the line's end
+// beside the dot rather than on it.
+func rigidSides(from, to placedBox) (fromSide, toSide side, extent float64, rigid bool) {
+	switch {
+	case from.Row == to.Row && abs(from.Col-to.Col) == 1:
+		if from.Col > to.Col {
+			return sideLeft, sideRight, math.Min(from.H, to.H), true
+		}
+		return sideRight, sideLeft, math.Min(from.H, to.H), true
+	case abs(from.Row-to.Row) == 1 && from.Col == to.Col:
+		if to.Row > from.Row {
+			return sideBottom, sideTop, math.Min(from.W, to.W), true
+		}
+		return sideTop, sideBottom, math.Min(from.W, to.W), true
+	}
+	return "", "", 0, false
+}
+
+func claimSide(taken map[string]map[int]bool, key string, lane int) {
+	if taken[key] == nil {
+		taken[key] = map[int]bool{}
+	}
+	taken[key][lane] = true
+}
+
+// bentSides names the sides a route meets, for the shapes that bend. A straight
+// or stacked route reports false: its two ends move together.
+func bentSides(from, to placedBox) (fromSide, toSide side, bent bool) {
+	switch {
+	case from.Row == to.Row && abs(from.Col-to.Col) == 1,
+		abs(from.Row-to.Row) == 1 && from.Col == to.Col:
+		return "", "", false
+	case from.Row == to.Row:
+		return sideBottom, sideBottom, true
+	case to.Row > from.Row:
+		return sideBottom, sideTop, true
+	default:
+		return sideTop, sideBottom, true
+	}
+}
+
+func sortedStrings[V any](m map[string]V) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// stubLane places one end of a bent route along a box side, on the side of the
+// box the route is heading for.
+//
+// Taking the lowest free position was the earlier rule and it ignored the one
+// thing that matters: a route to something away on the right that leaves from
+// the left of its box has to travel back across the box's own width before it
+// starts, and every route leaving to the left has to be crossed on the way.
+// Leaving towards the target costs nothing and removes that.
 //
 // A side with nothing free hands out a position already in use rather than
 // refusing the route. Two stubs sharing a few pixels of box edge is a drawing
@@ -306,6 +503,7 @@ func (r *router) stubLane(key string, extent float64) float64 {
 	limit := lanesPerChannel(extent)
 	n := r.placed[key]
 	r.placed[key] = n + 1
+
 	for i := range limit {
 		if !r.takenSide[key][i] {
 			if r.takenSide[key] == nil {
@@ -320,47 +518,6 @@ func (r *router) stubLane(key string, extent float64) float64 {
 
 // sideKey names one side of one box.
 func sideKey(box string, s side) string { return box + "|" + string(s) }
-
-// takeEdgeLane hands out a position along the sides of boxes a route meets, so
-// that no two routes meet one side of one box in the same place.
-//
-// Every shape asks the same allocator. Two allocators is what this replaced,
-// one keyed by pair for straight and stacked routes and one keyed by box side
-// for bent ones, and each handed out its own first position: a route arriving
-// at a box's top and a route leaving it were drawn along the same line for the
-// length of their stubs. No rule saw it. Two parallel lines on one x do not
-// properly intersect, so the crossing rule said nothing, and the two shared an
-// endpoint in any case. What noticed was a label, sitting on a line that ran
-// underneath it the whole way.
-//
-// A straight or stacked route passes both of the sides it joins and uses one
-// position at both ends, because moving one end alone would bend it. A bent
-// route asks for each end separately.
-//
-// The box is only so wide, and a line leaving near its corner stops looking
-// attached to it, so a full side refuses the route.
-func (r *router) takeEdgeLane(extent float64, sides ...string) (float64, error) {
-	for n := range lanesPerChannel(extent) {
-		taken := false
-		for _, key := range sides {
-			if r.takenSide[key][n] {
-				taken = true
-				break
-			}
-		}
-		if taken {
-			continue
-		}
-		for _, key := range sides {
-			if r.takenSide[key] == nil {
-				r.takenSide[key] = map[int]bool{}
-			}
-			r.takenSide[key][n] = true
-		}
-		return laneOffset(n), nil
-	}
-	return 0, &laneFail{channel: "box edge"}
-}
 
 // freeLanes lists the lanes of a channel nobody has taken, nearest the middle
 // first, which is the order they were handed out in before anything chose.
@@ -665,6 +822,8 @@ func routeAll(level diagram.Level, g *grid, boxes []placedBox) ([]routed, map[st
 	sort.SliceStable(ordered, func(i, j int) bool { return freedom(ordered[i]) < freedom(ordered[j]) })
 
 	r := newRouter(g, boxes)
+	r.assignStubs(ordered)
+
 	var out []routed
 	refused := map[string]error{}
 	for _, c := range ordered {

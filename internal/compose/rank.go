@@ -149,14 +149,33 @@ func cellsByRank(ordered []string, rank map[string]int, bandOf func(string) stri
 		cols = 1
 	}
 
-	next := map[string]int{} // band and row to the next free column
+	// Members of one band on one row are spread across the columns that band
+	// owns rather than packed against its left edge.
+	//
+	// A row with two boxes in a band five columns wide used to leave three
+	// columns empty on the right and put the two boxes side by side on the
+	// left. Everything they pointed at on the row below was spread over all
+	// five, so both boxes had to fan their lines sideways across the page
+	// before they could descend. Spread out, each sits over what it points at
+	// and stage 4 can widen it into the room beside it.
+	perRow := map[string][]string{}
+	for _, id := range ordered {
+		key := bandOf(id) + "\x00" + itoa(rank[id])
+		perRow[key] = append(perRow[key], id)
+	}
 	cells := make(map[string][2]int, len(ordered))
 	for _, id := range ordered {
 		b, r := bandOf(id), rank[id]
 		key := b + "\x00" + itoa(r)
-		col := start[b] + next[key]
-		next[key]++
-		cells[id] = [2]int{r, col}
+		members := perRow[key]
+		i := 0
+		for n, m := range members {
+			if m == id {
+				i = n
+				break
+			}
+		}
+		cells[id] = [2]int{r, start[b] + i*width[b]/len(members)}
 	}
 	return cells, diagram.Grid{Rows: rows, Cols: cols}
 }
