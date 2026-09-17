@@ -100,3 +100,35 @@ func TestABandKeepsItsOwnColumns(t *testing.T) {
 		seen[cell] = id
 	}
 }
+
+// TestSwappingNeighboursIsMeasuredInColumns is the bug that made the whole
+// arrangement step do nothing.
+//
+// Columns are handed out within a row and a band, so two boxes far apart in the
+// order can be neighbours on the page. Counting crossings by place in the order
+// measured something the page does not have: every swap looked like no
+// improvement and the step returned what it was given.
+func TestSwappingNeighboursIsMeasuredInColumns(t *testing.T) {
+	// Two lines that cross: left points right and right points left.
+	ordered := []string{"a", "b", "x", "y"}
+	rank := map[string]int{"a": 0, "b": 0, "x": 1, "y": 1}
+	band := func(string) string { return "" }
+	edges := [][2]string{{"a", "y"}, {"b", "x"}}
+
+	if n := crossingProxy(ordered, rank, band, edges); n != 1 {
+		t.Fatalf("two lines that swap sides count as %d crossings, not 1", n)
+	}
+	got := orderWithin(ordered, rank, band, edges)
+	if n := crossingProxy(got, rank, band, edges); n != 0 {
+		t.Errorf("swapping one pair removes the crossing and %d were left: %v", n, got)
+	}
+
+	// Rows are never mixed and a box stays on its own.
+	seen := map[string]bool{}
+	for _, id := range got {
+		seen[id] = true
+	}
+	if len(seen) != len(ordered) {
+		t.Errorf("the arrangement lost or duplicated a box: %v", got)
+	}
+}

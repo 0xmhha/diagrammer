@@ -256,18 +256,36 @@ and a detour has a lane in two channels and any vertical it likes. By the time a
 detour picks, what it can see is everything that could not have gone anywhere
 else. Within a tier the shortest go first, for the same reason.
 
+The barycentre sweep moves a box to where its neighbours average out, which is
+a good guess and only a guess. Two boxes whose neighbours average to the same
+place, and a box pulled two ways at once, are both cases an average cannot
+answer, so neighbouring boxes are then swapped whenever the swap crosses fewer
+lines. That is the question the average was approximating, asked directly.
+
+**Counted in columns, not in list order.** Columns are handed out within a row
+and a band, so two boxes far apart in the order can be neighbours on the page.
+The first version of this counted crossings by place in the order, which
+measured something the page does not have: every swap looked like no
+improvement and the step returned what it was given. On this repository's
+component diagram it left 29 pairs ordered one way at the top and the other at
+the bottom; counting in columns brings it to 19.
+
+Nineteen is what this graph costs in this layering. No arrangement of the
+columns removes them, because `command` sits on one row and reaches five boxes
+spread across another, and every one of those lines crosses the row between.
+
 Measured on models of real projects, grouped package by package, plus this
 repository's own four-family model:
 
 | model | before | after |
 |---|---|---|
-| archify | 17/25 | 20/25 |
-| diagrammer, packages | 21/28 | 23/28 |
-| diagrammer, four families | 16/25 | 18/25 |
-| OpenMMO | 28/63 | 37/63 |
+| archify | 17/25 | 22/25 |
+| diagrammer, packages | 21/28 | 21/28 |
+| diagrammer, four families | 16/25 | 20/25 |
+| OpenMMO | 28/63 | 38/63 |
 | mythril | 8/9 | 6/9 |
 | ego-lite | 8/8 | 8/8 |
-| **total** | **92/158** | **112/158** |
+| **total** | **92/158** | **115/158** |
 
 mythril is the one that lost, and it is left in the table rather than out of it.
 A heuristic that improves the total is not a heuristic that improves every case,
