@@ -412,17 +412,19 @@ Beside `make verify`, and not automated, because each item is a judgement:
 - Triage any difference from the golden HTML byte comparison.
 - Confirm `THIRD_PARTY_NOTICES` lists every module compiled into the binary,
   each with its version and licence. `go list -deps ./cmd/diagrammer` names
-  them. The viewer asset and the tree-sitter runtime this item was originally
-  written for are both gone: the viewer is ours, and the runtime is not built.
+  them, and it has to be run **twice**: the two builds link different modules,
+  and the four grammars and the tree-sitter runtime appear only in the second.
+  The viewer asset this item was also written for is gone; the viewer is ours.
 - ~~Confirm the shipped documents match the code they describe.~~ Automated,
   as the rule below says such an item should be. `make verify` reads the
   thresholds and the rule names out of the source and fails when a document
   quotes a number the code no longer uses, or omits a rule the checkers have.
   What is left for a person is whether the prose still says something true,
   which no test can judge.
-- ~~Confirm the measured cost of the tree-sitter runtime has been recorded.~~
-  Moot. The choice was reopened by the runtime's premise rather than its cost;
-  see **Blocked** above.
+- Confirm the measured cost of the tree-sitter runtime has been recorded. This
+  item was struck as moot while no build carried the runtime. One does now, so
+  it stands again, and it is still owed: the figures in **Still open** are that
+  project's published ones and have never been taken here.
 
 Nothing on this list may silently substitute for a test. An item that can be
 automated moves into `make verify` rather than staying a habit.
@@ -587,6 +589,11 @@ resolved in code.
 
 **Taken: option 4.** 0.1.0 reads Go only.
 
+**Superseded after 0.1.1 by a fifth way out** that the four above did not
+contain, because all four asked which runtime and the answer was which binary.
+See **Unblocked** above. What survives from this round is the finding itself,
+and the reason the release gate still runs the Go-only build.
+
 The reasoning is short. The whole pipeline works through the Go path today and
 `make verify` runs on a clean machine, which is what round 9 defined done as.
 Option 1 changes that definition; options 2 and 3 postpone the release by a
@@ -624,7 +631,11 @@ Deferred deliberately, to be settled when the work reaches them:
   and output path collisions.
 - The measured speed and binary cost of the tree-sitter runtime. The published
   figures, roughly 3.9x slower than native C and roughly 20 MB of growth, are
-  that project's own and were never verified here. The result may reopen the
-  choice.
+  that project's own and have never been taken here. This is the only number
+  either document carries that was inherited rather than measured, which is what
+  `docs/thresholds.md` exists to forbid. It is owed now that a shipped build
+  links the runtime, and the result may still reopen the choice: the Go-only
+  build is unaffected either way, so what is at stake is whether the second one
+  is worth its size.
 - How the unfold window behaves for a language without a file generation. To be
   decided by measurement on the fixtures rather than assumed.
