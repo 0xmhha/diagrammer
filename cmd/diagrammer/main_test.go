@@ -171,16 +171,23 @@ func TestGraphCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("names the files that did not parse", func(t *testing.T) {
+	t.Run("names the files that did not parse, and what that cost", func(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		if err := run([]string{"graph", brokenSrc}, &stdout, &stderr); err != nil {
 			t.Fatalf("a parse failure must not fail the command: %v", err)
 		}
-		if !strings.Contains(stderr.String(), "bad.go") {
-			t.Errorf("the failing file is not named on stderr: %q", stderr.String())
+		said := stderr.String()
+		if !strings.Contains(said, "bad.go") {
+			t.Errorf("the failing file is not named on stderr: %q", said)
 		}
-		if !strings.Contains(stderr.String(), "did not parse cleanly") {
-			t.Errorf("stderr does not say the file would not parse: %q", stderr.String())
+		if !strings.Contains(said, "could not read") {
+			t.Errorf("stderr does not say the parser could not read it: %q", said)
+		}
+		// go/ast refuses a file outright, so this one is gone. Saying only that
+		// it "did not parse" leaves a reader to guess whether its contents are
+		// in the graph, and for the other parser the guess would be wrong.
+		if !strings.Contains(said, "nothing from this file is in the graph") {
+			t.Errorf("stderr does not say what the failure cost: %q", said)
 		}
 	})
 
