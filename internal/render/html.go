@@ -45,17 +45,19 @@ func (p *Page) HTML() string {
 	b.WriteString("</nav>\n<main>\n")
 
 	byLevel := p.dropsByLevel()
+	silentByLevel := p.unwrittenByLevel()
 	for _, scene := range p.Scenes {
 		b.WriteString(`<section ` + attrLevel + `="` + esc(scene.Level) + `" hidden>` + "\n")
 		b.WriteString("<div class=\"level-head\">\n")
 		b.WriteString("<h2>" + esc(scene.Title) + "</h2>\n")
-		b.WriteString(fmt.Sprintf("<span class=\"count\">%d boxes, %d relationships drawn</span>\n",
-			len(scene.Boxes), len(scene.Routes)))
+		fmt.Fprintf(&b, "<span class=\"count\">%d boxes, %d relationships drawn</span>\n",
+			len(scene.Boxes), len(scene.Routes))
 		b.WriteString(`<button class="back" ` + attrLevelBack + `="1">back</button>` + "\n")
 		b.WriteString("</div>\n")
 		b.WriteString(svgFor(scene))
 		b.WriteString("\n")
 		b.WriteString(recordFor(byLevel[scene.Level]))
+		b.WriteString(unwrittenFor(silentByLevel[scene.Level]))
 		b.WriteString("</section>\n")
 	}
 
@@ -74,9 +76,9 @@ func recordFor(drops []Drop) string {
 	}
 	var b strings.Builder
 	b.WriteString("<div class=\"record\">\n<h3>Not drawn</h3>\n")
-	b.WriteString(fmt.Sprintf(
+	fmt.Fprintf(&b,
 		"<p>%d relationship(s) here could not be drawn. They are listed so the diagram does not quietly leave them out.</p>\n",
-		len(drops)))
+		len(drops))
 	b.WriteString("<ul>\n")
 	for _, d := range drops {
 		b.WriteString("<li><code>" + esc(d.Route) + "</code> from <code>" + esc(d.Box) + "</code>: " +
@@ -84,6 +86,40 @@ func recordFor(drops []Drop) string {
 	}
 	b.WriteString("</ul>\n</div>\n")
 	return b.String()
+}
+
+// unwrittenFor writes the names the page had no room for, beside the page.
+//
+// These lines are drawn; it is their text that is missing. Saying so is the
+// same bargain the record above makes: what the drawing could not hold is
+// stated rather than left for the reader to notice.
+func unwrittenFor(silent []Unwritten) string {
+	if len(silent) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("<div class=\"record\">\n<h3>Drawn without their text</h3>\n")
+	fmt.Fprintf(&b,
+		"<p>%d line(s) here are drawn but unnamed: there was nowhere to write the name that was not already somebody else's line.</p>\n",
+		len(silent))
+	b.WriteString("<ul>\n")
+	for _, u := range silent {
+		b.WriteString("<li><code>" + esc(u.Route) + "</code> from <code>" + esc(u.Box) +
+			"</code>: " + esc(u.Text) + "</li>\n")
+	}
+	b.WriteString("</ul>\n</div>\n")
+	return b.String()
+}
+
+func (p *Page) unwrittenByLevel() map[string][]Unwritten {
+	out := map[string][]Unwritten{}
+	for _, u := range p.Unwritten {
+		out[u.Level] = append(out[u.Level], u)
+	}
+	for level := range out {
+		sort.Slice(out[level], func(i, j int) bool { return out[level][i].Route < out[level][j].Route })
+	}
+	return out
 }
 
 func (p *Page) dropsByLevel() map[string][]Drop {

@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "title": "Hub and spokes",
+    "subtitle": "Eight components depending on one, which is the shape the layout was worst at"
+  },
+  "provenance": {
+    "origin": "handwritten",
+    "note": "Written by hand after comparing two real projects. One of them was hub-shaped and lost three relationships to channel exhaustion while the other, which is layered, lost none. A fixture with no hub in it cannot tell those two apart."
+  },
+  "families": [
+    "component"
+  ],
+  "component": {
+    "components": [
+      {
+        "id": "hub",
+        "name": "Shared",
+        "stereotype": "hub",
+        "ports": [
+          {
+            "id": "hub.p.geo",
+            "kind": "provided",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "alpha",
+        "name": "Alpha",
+        "ports": [
+          {
+            "id": "alpha.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "beta",
+        "name": "Beta",
+        "ports": [
+          {
+            "id": "beta.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "gamma",
+        "name": "Gamma",
+        "ports": [
+          {
+            "id": "gamma.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "delta",
+        "name": "Delta",
+        "ports": [
+          {
+            "id": "delta.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "epsilon",
+        "name": "Epsilon",
+        "ports": [
+          {
+            "id": "epsilon.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "zeta",
+        "name": "Zeta",
+        "ports": [
+          {
+            "id": "zeta.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "eta",
+        "name": "Eta",
+        "ports": [
+          {
+            "id": "eta.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      },
+      {
+        "id": "theta",
+        "name": "Theta",
+        "ports": [
+          {
+            "id": "theta.r.geo",
+            "kind": "required",
+            "interface": "Geometry"
+          }
+        ]
+      }
+    ],
+    "interfaces": [
+      {
+        "id": "Geometry",
+        "name": "Geometry",
+        "operations": [
+          {
+            "name": "route",
+            "signature": "route(relations)"
+          }
+        ]
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "dep.alpha",
+        "from": "alpha",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.beta",
+        "from": "beta",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.gamma",
+        "from": "gamma",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.delta",
+        "from": "delta",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.epsilon",
+        "from": "epsilon",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.zeta",
+        "from": "zeta",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.eta",
+        "from": "eta",
+        "to": "hub",
+        "kind": "use"
+      },
+      {
+        "id": "dep.theta",
+        "from": "theta",
+        "to": "hub",
+        "kind": "use"
+      }
+    ]
+  }
+}

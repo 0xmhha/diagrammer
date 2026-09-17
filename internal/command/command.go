@@ -20,6 +20,19 @@ const (
 	OpRender Op = "render"
 )
 
+// What this program writes belongs to whoever ran it, and nobody else by
+// default.
+//
+// A code graph carries the doc comments of everything it read, and a composed
+// document and a rendered page carry whatever those comments said. Pointed at a
+// private repository, the output holds private prose. Writing it world-readable
+// would make that somebody else's to find, and widening it afterwards is one
+// chmod that the person who wants it can decide to run.
+const (
+	outputFileMode = 0o600
+	outputDirMode  = 0o700
+)
+
 // OutputFile is one thing an operation produced.
 //
 // Path is empty when the caller did not name one, and the content is handed

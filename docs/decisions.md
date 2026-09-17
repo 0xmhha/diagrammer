@@ -266,6 +266,25 @@ equals proven at each stage.
 That is also why stage 4 has drop reasons stage 3 does not. A grid that cannot
 route a line is a geometric problem, and geometry lives here.
 
+A drop being permitted is not the same as a drop being right, and one class of
+them turned out to be avoidable. Channels used to be one size everywhere, which
+is one size for the average, and a hub is where the average stops being a guide:
+every component depending on one box sends its route through the same channel
+while the neighbouring channels sit empty. Channels are now sized from the
+routes that will use them, which is what `channelsWanted` in
+`internal/render/route.go` is for. It came out of comparing two real projects,
+and `docs/thresholds.md` has the measurements and the ceiling that widening
+stops at.
+
+The same comparison showed a second class. A crossing is the only rule that
+condemns two routes at once, and the renderer used to take out every route the
+checker named without noticing that naming one of each pair was already a
+choice, and an arbitrary one. It now takes out the fewest routes that leave no
+crossing behind. Two shapes changed with it: a detour leaves by the side facing
+its target rather than always downward, and box-edge positions come from one
+allocator rather than two, which had been handing two routes the same place on
+the same box.
+
 ### Floating point (round 4)
 
 The premise of this round was withdrawn; its measurements were not.
@@ -408,6 +427,35 @@ Beside `make verify`, and not automated, because each item is a judgement:
 Nothing on this list may silently substitute for a test. An item that can be
 automated moves into `make verify` rather than staying a habit.
 
+### What the linter is for, and is not
+
+`golangci-lint` runs over both builds, because a run with `CGO_ENABLED=0` never
+sees the four grammars: every file in that package but its doc is behind a build
+tag, so the checks would pass by not looking.
+
+It is deliberately not part of `make verify`. The release gate is a clean
+machine with only Go and make, and requiring a linter would change that
+definition for checks that find style rather than defects. It is part of
+`make check`, which is what to run before a commit on a machine that has it.
+
+The enabled set is the default plus the checks this project has actually been
+bitten by, and nothing chosen for completeness. A linter reporting things nobody
+intends to fix trains people to skim its output, which costs more than the
+checks are worth.
+
+Two exclusions are decisions rather than conveniences, and `.golangci.yml` says
+so where they are made. `G304`, reading a file whose path came from a variable,
+can never fire usefully here: every file this program reads is one the caller
+named, and a security review found no trust boundary being crossed. `G115`,
+integer conversion, is about grid indices and parser positions, both bounded by
+the document they came from.
+
+One finding was fixed rather than excluded. Output was being written 0644 into
+0755 directories, and a code graph carries the doc comments of everything it
+read: pointed at a private repository, the output holds private prose.
+World-readable is the wrong default for that, so it is now 0600 and 0700, and a
+test holds it there. Widening it is one chmod the person who wants it can run.
+
 ## What was withdrawn
 
 | Withdrawn | Round | Replaced by | Why |
@@ -439,9 +487,55 @@ because each would otherwise send an implementer at the wrong problem:
   They appear in checked-in examples on its `origin/main`. The region-boundary
   work multiplied them in large artifacts rather than introducing them.
 
+## Unblocked: two builds from one source
+
+The block below stood for as long as the question was "which cgo-free runtime",
+and it has no answer. The question that does is **which binary**.
+
+`CGO_ENABLED=0` compiles an analyzer for Go and nothing else. That is the build
+the release gate runs, and it needs no C toolchain, so round 9's definition of
+done is untouched. `CGO_ENABLED=1` compiles the same source with tree-sitter
+analyzers for Python, Solidity and JS/TS as well.
+
+The structure was already there. The analyzer registry is assembled by its
+caller rather than registered into globally, precisely so that what a build can
+read depends on the build; `graph` reports the languages it read on every run,
+so nobody learns the scope by pointing the program at a repository and wondering
+why the graph came back nearly empty.
+
+**The soft failure is answered rather than accepted.** tree-sitter does not
+refuse a file it cannot parse: it emits an ERROR node and carries on, which is
+why this project does not use it for Go, where the standard library gives a
+parser that says no. It can be asked, though. Every tree is checked with
+HasError and a file that parsed with errors is recorded with the position of the
+first one, so a silent gap becomes a reported one. A fixture with a deliberately
+broken JavaScript file holds that to it: the part that parses is still read, and
+the failure is still named.
+
+**The cost, stated rather than glossed.** Two things.
+
+One name now means two binaries. `go install` builds with cgo on by default and
+gives four languages; a distributed binary built for a machine without a C
+toolchain gives one. Every run says which, and `make build` and
+`make build-polyglot` are named apart so nobody produces one while meaning the
+other.
+
+And a second gate. `make verify` cannot cover the cgo analyzers without
+requiring a C toolchain, which is the thing it exists not to require. So
+`make verify-cgo` exists, needs one, and a release claiming those languages has
+to pass it. An analyzer no gate covers is worse than one that does not exist,
+because its output looks the same as a tree with none of that language in it.
+
+Vendoring the grammars takes `vendor/` from 4.7 MB to 22 MB. Both gates run
+offline, which is what that buys.
+
 ## Blocked
 
 ### The cgo-free tree-sitter runtime does not exist (round 12, tested)
+
+**Resolved by the section above**, which did not find one. It stopped needing
+one. Kept because the finding stands and the four ways out are still the four
+ways out.
 
 Round 12 settled stage 1 as three languages behind two parser paths: `go/ast`
 for Go, and **a cgo-free pure-Go tree-sitter runtime with vendored grammars**

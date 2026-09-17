@@ -82,6 +82,7 @@ func TestEveryThresholdIsDocumentedWithItsValue(t *testing.T) {
 		"minBoxesPerLevel": true, "expandedMaxBoxes": true,
 		"minSegment": true, "separation": true, "LabelClearance": true, "borderRun": true,
 		"channelX": true, "channelY": true, "laneGap": true, "stub": true,
+		"channelMaxLanes": true, "channelSlack": true,
 	}
 
 	doc := read(t, "docs/thresholds.md")
@@ -207,12 +208,17 @@ func TestTheReadmeListsTheCommandsThatExist(t *testing.T) {
 // TestTheScopeIsStatedWhereSomebodyWillSeeIt is the one round 8 asked for and
 // no version of the README carried until it was checked.
 //
-// Nobody should learn which languages this reads by pointing it at a repository
-// and wondering why the graph came back nearly empty.
+// It used to assert the README said "Go source only". That stopped being true
+// when the second build arrived, and the check now asks the question the claim
+// was standing in for: does a reader learn which languages they get, and does
+// the program say so at run time. Nobody should discover the scope by pointing
+// it at a repository and wondering why the graph came back nearly empty.
 func TestTheScopeIsStatedWhereSomebodyWillSeeIt(t *testing.T) {
-	readme := read(t, "README.md")
-	if !strings.Contains(strings.ToLower(readme), "go source only") {
-		t.Error("the README does not say plainly that only Go is read")
+	readme := strings.ToLower(read(t, "README.md"))
+	for _, want := range []string{"reads go and nothing else", "python, solidity"} {
+		if !strings.Contains(readme, want) {
+			t.Errorf("the README does not say %q, so a reader cannot tell which build reads what", want)
+		}
 	}
 
 	// And the program says it at run time, not only in a document somebody may
@@ -220,6 +226,15 @@ func TestTheScopeIsStatedWhereSomebodyWillSeeIt(t *testing.T) {
 	operations := read(t, "internal/command/operations.go")
 	if !strings.Contains(operations, "languages read") {
 		t.Error("graph does not report which languages the build reads")
+	}
+
+	// Both registries exist, and each says what it holds. A build tag that
+	// silently fell away would leave one of them covering both cases.
+	for _, path := range []string{"internal/command/analyzers.go", "internal/command/analyzers_cgo.go"} {
+		body := read(t, path)
+		if !strings.Contains(body, "//go:build") {
+			t.Errorf("%s carries no build tag, so both builds would use it", path)
+		}
 	}
 }
 
@@ -327,3 +342,30 @@ func TestEveryPackageHasADocFile(t *testing.T) {
 // packageComment matches a doc comment at the very top of a file, immediately
 // above the package clause.
 var packageComment = regexp.MustCompile(`\A(// [^\n]*\n)*// (Package|Command) [^\n]*\n(//[^\n]*\n)*package `)
+
+// TestTheLabelSizeMatchesTheStylesheet holds two numbers together that are
+// written down twice.
+//
+// The renderer measures a label to decide where it fits and the browser draws
+// it at whatever the stylesheet says. If those two sizes ever part company the
+// page still renders, the checker still passes, and the text sits somewhere the
+// checker was never asked about — which is the failure the label rule exists to
+// prevent, arriving through the one door the rule cannot see.
+func TestTheLabelSizeMatchesTheStylesheet(t *testing.T) {
+	const name = "edgeLabelSize"
+	declared, ok := constantsIn(t, "internal/render/label.go")[name]
+	if !ok {
+		t.Fatalf("internal/render/label.go no longer declares %s", name)
+	}
+
+	css := read(t, "internal/render/viewer/viewer.css")
+	pattern := regexp.MustCompile(`\.edge-label\s*\{[^}]*font-size:\s*(\d+)px`)
+	found := pattern.FindStringSubmatch(css)
+	if found == nil {
+		t.Fatal("viewer.css no longer gives .edge-label a font-size in px, so the two cannot be compared")
+	}
+	if found[1] != declared {
+		t.Errorf("the renderer measures labels at %s and the stylesheet draws them at %spx",
+			declared, found[1])
+	}
+}

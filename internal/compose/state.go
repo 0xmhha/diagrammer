@@ -44,12 +44,23 @@ func State(source string, model *uml.Model) (*diagram.Document, error) {
 		adjacency = append(adjacency, [2]string{t.From, t.To})
 	}
 
+	// A state machine runs in a direction, so the rows follow it: the initial
+	// state is at the top and what it leads to is beneath. A composite state
+	// keeps its substates in columns of its own, as a component's band does.
+	orderedIDs := orderByAdjacency(ids, adjacency, func(id string) string { return parentOf[id] })
 	ordered := make([]uml.State, 0, len(m.States))
-	for _, id := range orderByAdjacency(ids, adjacency, func(id string) string { return parentOf[id] }) {
+	for _, id := range orderedIDs {
 		ordered = append(ordered, byID[id])
 	}
 
-	grid := gridFor(len(ordered))
+	band := func(id string) string { return parentOf[id] }
+	rank := ranksOf(orderedIDs, adjacency)
+	orderedIDs = orderWithin(orderedIDs, rank, band, adjacency)
+	ordered = ordered[:0]
+	for _, id := range orderedIDs {
+		ordered = append(ordered, byID[id])
+	}
+	placed, grid := cellsByRank(orderedIDs, rank, band)
 	boxes := make([]diagram.Box, 0, len(ordered))
 	hasChildren := make(map[string]bool, len(ordered))
 	for _, s := range ordered {
@@ -57,13 +68,14 @@ func State(source string, model *uml.Model) (*diagram.Document, error) {
 			hasChildren[s.Parent] = true
 		}
 	}
-	for i, s := range ordered {
+	for _, s := range ordered {
+		cell := placed[s.ID]
 		boxes = append(boxes, diagram.Box{
 			ID:         s.ID,
 			Label:      s.Name,
 			Stereotype: string(s.Kind),
-			Row:        i / grid.Cols,
-			Col:        i % grid.Cols,
+			Row:        cell[0],
+			Col:        cell[1],
 			Region:     s.Parent,
 		})
 	}

@@ -1,0 +1,59 @@
+# Linter configuration.
+#
+# The set below is the default plus the checks this project has actually been
+# bitten by, and nothing chosen for completeness. A linter that reports things
+# nobody intends to fix trains people to skim its output, which costs more than
+# the checks are worth.
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    # Three defects in this repository were a nil slice encoding as JSON null
+    # where the schema wanted an array. nilness does not catch that one, but it
+    # catches its neighbours, and the class is worth watching from both sides.
+    - nilnil
+    # Unhandled errors on writes that matter. The ones that do not matter go
+    # through say(), which discards deliberately and says why.
+    - errcheck
+    # Dead code. Two functions had already outlived their callers by the time
+    # anyone looked.
+    - unused
+    # Shadowed variables and suspicious constructs the compiler allows.
+    - govet
+    - ineffassign
+    - staticcheck
+    # Every external dependency here is compiled into a binary somebody else
+    # runs, so a known vulnerability is not an abstract problem.
+    - gosec
+
+  settings:
+    gosec:
+      excludes:
+        # Integer conversions in the renderer come from grid indices and
+        # tree-sitter positions, both bounded by the document they came from.
+        - G115
+        # Every file this program reads is one the caller named: a source tree,
+        # a model, a document. There is no read here that should not be
+        # caller-controlled, so the check can never fire usefully and leaving it
+        # on would train people to skim gosec's output. A security review of
+        # this code examined the path handling and found no trust boundary being
+        # crossed; the MCP server is local stdio started by a plugin running as
+        # the same user. See docs/decisions.md.
+        - G304
+
+  exclusions:
+    rules:
+      # Fixtures are inputs rather than code this project maintains, and one of
+      # them is deliberately malformed so the analyzer has a failure to report.
+      - path: testdata/
+        linters: [errcheck, unused, staticcheck, gosec, govet, ineffassign]
+      # A test writes into its own temporary directory, which gosec's taint
+      # analysis reads as a path it cannot vouch for. The directory is the
+      # testing package's and is removed with the test.
+      - path: _test\.go
+        linters: [gosec]
+
+formatters:
+  enable:
+    - gofmt

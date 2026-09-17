@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/0xmhha/diagrammer/internal/analyze"
-	"github.com/0xmhha/diagrammer/internal/analyze/goast"
 	"github.com/0xmhha/diagrammer/internal/artifact"
 	"github.com/0xmhha/diagrammer/internal/compose"
 	"github.com/0xmhha/diagrammer/internal/diagram"
@@ -40,32 +39,35 @@ type GraphRequest struct {
 
 func (r *GraphRequest) Op() Op { return OpGraph }
 
-// analyzers is what this build can read.
-//
-// One language today. It is assembled rather than registered globally, so the
-// set depends on this line rather than on which packages happened to be linked,
-// and a caller can be told what it is instead of discovering it by pointing the
-// program at a repository it returns almost nothing for.
-func analyzers() *analyze.Registry {
-	return analyze.NewRegistry(goast.Analyzer{})
-}
-
 func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 	if r.Source == "" {
 		return nil, fmt.Errorf("graph needs a source directory")
 	}
 	registry := analyzers()
-	reader, ok := registry.For(graph.Go)
-	if !ok {
-		return nil, fmt.Errorf("this build has no analyzer for Go")
-	}
-	g, err := reader.Analyze(ctx, r.Source, analyze.Options{
+	opts := analyze.Options{
 		IncludeTests: r.IncludeTests,
 		MaxDepth:     r.MaxDepth,
 		Exclude:      r.Exclude,
-	})
+	}
+
+	// Every language this build reads is run over the tree and the results are
+	// merged. A tree with none of a language in it costs a walk and contributes
+	// nothing, which is cheaper than asking the caller to say what is in there.
+	var graphs []*graph.Graph
+	for _, language := range registry.Languages() {
+		reader, ok := registry.For(language)
+		if !ok {
+			continue
+		}
+		one, err := reader.Analyze(ctx, r.Source, opts)
+		if err != nil {
+			return nil, fmt.Errorf("analyze %s as %s: %w", r.Source, language, err)
+		}
+		graphs = append(graphs, one)
+	}
+	g, err := analyze.Merge(graphs...)
 	if err != nil {
-		return nil, fmt.Errorf("analyze %s: %w", r.Source, err)
+		return nil, fmt.Errorf("merge the analyzers' graphs: %w", err)
 	}
 
 	encoded, err := encode(g)
@@ -91,15 +93,24 @@ func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 	return out, nil
 }
 
-// summariseGraph names the files that went missing rather than counting them. A
-// count says something is gone; the paths say what to go and open.
+// summariseGraph names the files that would not parse rather than counting
+// them. A count says something is wrong; the paths say what to go and open.
+//
+// It does not claim those files are missing from the graph, because that
+// depends on which parser refused them and the summary cannot tell. go/ast
+// refuses a file outright and nothing of it arrives. tree-sitter recovers: it
+// reports an error and carries on, and most of the file usually still comes
+// through — one file in this repository's reference tree yielded 42
+// declarations while being reported as unparsable. A message claiming either
+// behaviour for both would be wrong half the time, and wrong in the direction
+// that matters: telling somebody their code is absent when it is there.
 func summariseGraph(out *Result, source string, g *graph.Graph) {
 	d := g.Diagnostics
 	out.say("%s: %d nodes, %d edges, %d files read", source, len(g.Nodes), len(g.Edges), d.FilesParsed)
 	if len(d.ParseFailures) == 0 {
 		return
 	}
-	out.say("%d file(s) did not parse and are missing from the graph:", len(d.ParseFailures))
+	out.say("%d file(s) did not parse cleanly; whatever could not be read is not in the graph:", len(d.ParseFailures))
 	for _, f := range d.ParseFailures {
 		if f.Line > 0 {
 			out.say("  %s:%d: %s", f.Path, f.Line, f.Message)
@@ -162,7 +173,7 @@ func (r *ComposeRequest) Run(context.Context) (*Result, error) {
 		return nil, err
 	}
 	if r.Out != "" {
-		if err := os.MkdirAll(r.Out, 0o755); err != nil {
+		if err := os.MkdirAll(r.Out, outputDirMode); err != nil {
 			return nil, fmt.Errorf("create %s: %w", r.Out, err)
 		}
 	}
@@ -311,6 +322,15 @@ func (r *RenderRequest) Run(context.Context) (*Result, error) {
 	for _, d := range page.Dropped {
 		out.say("  %s on %s: %s", d.Route, d.Level, d.Why)
 	}
+	// Drawn but unnamed. It is not a drop and is not counted as one: the
+	// relationship is on the page and its text is not, and a reader deciding
+	// whether to trust the drawing needs the difference.
+	if n := len(page.Unwritten); n > 0 {
+		out.say("%d line(s) are drawn without their text:", n)
+		for _, u := range page.Unwritten {
+			out.say("  %s on %s: %s", u.Route, u.Level, u.Text)
+		}
+	}
 	if err := deliver(out, r.Out, html); err != nil {
 		return nil, err
 	}
@@ -359,7 +379,7 @@ func encode(v any) ([]byte, error) {
 // deliver writes content to path, or hands it back when no path was named.
 func deliver(out *Result, path string, content []byte) error {
 	if path != "" {
-		if err := os.WriteFile(path, content, 0o644); err != nil {
+		if err := os.WriteFile(path, content, outputFileMode); err != nil {
 			return fmt.Errorf("write %s: %w", path, err)
 		}
 	}

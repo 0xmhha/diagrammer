@@ -58,6 +58,14 @@ const (
 	// where a value sitting on a threshold can have its verdict flipped by
 	// rounding.
 	attrCompositionPoints = "data-composition-points"
+
+	// attrLabelBounds carries the rectangle a connection's text occupies.
+	//
+	// It is written for the same reason as the points: the label rule measures
+	// the text, and how wide text is depends on the font and on the size this
+	// one label was shrunk to. Working it out again from the string would judge
+	// a rectangle the page does not have.
+	attrLabelBounds = "data-label-bounds"
 )
 
 // The artifact has two readers, and they read different things.
@@ -70,8 +78,17 @@ const (
 // weight.
 
 // ViewerContract lists what the embedded viewer reads.
+//
+// The second group is what the highlight needs: which box the pointer is over,
+// which lines touch it, and what those lines carry. A drawing says which things
+// are joined by putting a line between them, and on a page of any size that is
+// a question the reader has to answer by following the line. These let the page
+// answer it.
 func ViewerContract() []string {
-	return []string{attrLevel, attrLevelLink, attrLevelBack, attrBoxOpens}
+	return []string{
+		attrLevel, attrLevelLink, attrLevelBack, attrBoxOpens,
+		attrBoxID, attrEdgeID, attrEdgeFrom, attrEdgeTo, attrEdgeLabelFor, attrBarBox,
+	}
 }
 
 // CheckerContract lists what reading the artifact back depends on.
@@ -79,7 +96,7 @@ func CheckerContract() []string {
 	return []string{
 		attrFamily, attrLevel, attrLevelTitle, attrBoxID, attrBoxBounds, attrBoxOpens, attrRegionID,
 		attrEdgeID, attrEdgeFrom, attrEdgeTo, attrEdgeFromSide, attrEdgeToSide,
-		attrEdgeLabelFor, attrCompositionPoints,
+		attrEdgeLabelFor, attrCompositionPoints, attrLabelBounds,
 		attrBarID, attrBarBox, attrFrameID, attrFrameKind,
 	}
 }

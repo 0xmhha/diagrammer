@@ -27,6 +27,24 @@ Two things follow from the shape, and both are rules in their own right:
   the document. The checks read the emitted artifact, not the producer's
   intentions.
 
+## What the page does on its own
+
+The drawing is one half of the artifact and the viewer is the other. It moves
+between levels, and it answers "what is this one joined to" when the pointer
+rests on a box: everything not joined to it fades, and the lines that are stay.
+
+Faded rather than hidden, and nothing moves. A reader who has just found the box
+they wanted should not have the page rearrange itself underneath them, and what
+is faded is still there to be read.
+
+Two things have to hold for that walk to arrive anywhere, and no drawing rule
+cares about either. A line naming a box that is not on its page draws perfectly
+and leaves the highlight dark, in silence; so does a label naming a line that
+was left out. Both are checked over the emitted page, for every family.
+
+The attributes the walk reads are declared in `ViewerContract`, and a test holds
+that list and the viewer's own source to each other in both directions.
+
 ## Determinism
 
 The same input produces byte-identical output, every run.
@@ -79,6 +97,21 @@ The check has two halves:
 A model claiming sequence support without lifelines is refused here rather than
 three stages later.
 
+### What is drawn without its text
+
+A label with nowhere to go loses its text and keeps its line, and the page says
+which names it could not write.
+
+The two losses are not the same size. A reader of an unnamed line can still see
+that two things are joined; a reader of no line cannot. Refusing the
+relationship was the earlier behaviour and it charged the larger price for the
+smaller problem.
+
+It is kept out of the accounting deliberately. **drawn + dropped == proven**
+counts relationships, and one of these is a relationship the reader can see. The
+record is separate, on the page beside the drawing and in what the command
+prints, so that nothing goes missing quietly either way.
+
 ## Stage 3, composition
 
 Per family, and per fixture:
@@ -115,6 +148,17 @@ Also checked:
   band.
 - Every connection has both ends on the page that draws it.
 - Every box has a cell of its own, inside its level's grid.
+- The row a box sits on is its depth in the dependency graph, so a component
+  diagram reads downward: whatever nothing depends on is at the top and what it
+  rests on is beneath it. A cycle has no depth, and the edge that closes one is
+  left out of the reckoning rather than followed.
+- The column a box takes within its row follows the barycentre of its
+  neighbours in the rows above and below, so that boxes joined by a line sit
+  near each other and the run between them stays short. A long run is the thing
+  that crosses.
+- A band owns its own columns. Two bands sharing a column would each have to
+  reach across the other's boxes, and the two frames would overlap, which says
+  the two groups overlap.
 - Exactly one level has no parent. Every other is opened from a named box on its
   parent, and that box points back at it.
 
@@ -234,8 +278,20 @@ by routed lines. Seven rules, each with a drawing that breaks it:
 - **pass-through** — no route enters a box that is not one of its ends.
 - **separation** — no route runs closer than 8px to a box it is not attached to,
   where it starts to read as joined to it.
+- **label-clearance** — a connection's text keeps clear of every line but its
+  own, of every other label, and of every box. The rule measures the rectangle
+  the text occupies, not the point it hangs from: a string forty characters long
+  has a centre that clears everything and two ends that clear nothing, and
+  measuring the centre passed a page where eight of eight labels lay across
+  another line.
 - **crossing** — no proper intersection between two routes that share no end.
   Two lines arriving at the same box are not a crossing; a reader expects that.
+  This is the one rule that condemns a pair rather than a route. Every other
+  rule points at one line and says it is wrong on its own; a crossing says at
+  least one of two has to go and leaves the choice open. The renderer settles
+  the others first and then takes out the fewest routes that leave no crossing
+  behind, which on a real project is far fewer than taking out whichever route
+  of each pair sorts first. `docs/thresholds.md` has the measurements.
 - **minimum-segment** — no run between bends shorter than 16px, below which a
   turn reads as a kink.
 - **label-clearance** — a connection's text stays 10px clear of every route but

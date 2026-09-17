@@ -82,13 +82,29 @@ docs/thresholds.md.
 
 ## What this build reads
 
-Go, with `go/ast` from the standard library.
+It depends on the build, and the program says which every time `graph` runs.
 
-Python and JS/TS were settled and are not built. The runtime that was to read
-them turned out not to satisfy a constraint the release gate depends on; what
-was tested and what the ways out are is recorded in docs/decisions.md under
-**Blocked**. The interface above is what a future analyzer plugs into, and none
-of it changes because of that.
+`CGO_ENABLED=0`, which is what `make build` produces and what the release gate
+covers: **Go**, with `go/ast` from the standard library.
 
-`graph` reports which languages a build reads every time it runs, rather than
-leaving it to be inferred from what came back.
+`CGO_ENABLED=1`, which is what `make build-polyglot` produces: Go, plus
+**Python, Solidity, JavaScript and TypeScript** through tree-sitter. It needs a
+C toolchain, which is why it is a second binary and a second gate rather than
+the default. See docs/decisions.md.
+
+Go keeps `go/ast` in both builds. tree-sitter's Go grammar carries no type
+parameters on a method declaration, so a generic method does not parse, and it
+fails soft, so the method would vanish with nothing to say it was there. Using a
+grammar for Go would be a pure loss.
+
+## Adding a fifth language
+
+If it has a tree-sitter grammar, it is a row in the table in
+`internal/analyze/treesitter/language.go`: which node types are types and which
+are functions, which name an import, where the documentation lives, and how the
+language decides what is public. The walk is shared.
+
+If it does not, it is a new analyzer satisfying the interface above, and the
+list in `internal/command/analyzers_cgo.go` gains a line.
+
+Either way the first thing to measure is the unfold window, not the parser.

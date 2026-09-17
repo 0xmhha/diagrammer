@@ -23,6 +23,19 @@ type Box struct {
 	W, H  float64
 }
 
+// Rect is a plain rectangle in the diagram's pixel space.
+type Rect struct{ X, Y, W, H float64 }
+
+func (r Rect) Right() float64  { return r.X + r.W }
+func (r Rect) Bottom() float64 { return r.Y + r.H }
+
+// Overlaps reports whether two rectangles share any area. Touching along an
+// edge is not overlapping: two things drawn flush against each other are a
+// layout decision, not a collision.
+func (r Rect) Overlaps(o Rect) bool {
+	return r.X < o.Right() && r.Right() > o.X && r.Y < o.Bottom() && r.Bottom() > o.Y
+}
+
 func (b Box) Right() float64  { return b.X + b.W }
 func (b Box) Bottom() float64 { return b.Y + b.H }
 
@@ -53,6 +66,21 @@ type Route struct {
 	// it has none.
 	LabelAt   Point
 	LabelText string
+	// LabelBounds is the rectangle the text actually occupies, written by the
+	// renderer and read back rather than worked out again here.
+	//
+	// How wide a string is depends on the font the page asks for and on the
+	// size the renderer settled on for this one label, neither of which a
+	// reader of the artifact can see. A checker that guessed would be judging a
+	// rectangle nobody drew, which is the same mistake as recomputing a label's
+	// position instead of reading it.
+	LabelBounds Rect
+	// LabelSize is the size the text is written at. It is not always the same:
+	// a label is shrunk to the room its run has before it is cut.
+	LabelSize float64
+	// LabelAnchor is how the text is hung off LabelAt: centred above a line
+	// that runs across the page, or started beside one that runs down it.
+	LabelAnchor string
 }
 
 // Bar is one execution drawn on a lifeline, in the sequence family.

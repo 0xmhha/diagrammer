@@ -87,8 +87,11 @@ func parseScene(block string) (Scene, error) {
 	}
 
 	type labelAt struct {
-		text string
-		at   Point
+		text   string
+		at     Point
+		bounds Rect
+		size   float64
+		anchor string
 	}
 	labels := map[string]labelAt{}
 	var walk func(e svgElement)
@@ -101,10 +104,16 @@ func parseScene(block string) (Scene, error) {
 		case e.attr("data-edge-id") != "":
 			scene.Routes = append(scene.Routes, parseRoute(e))
 		case e.attr("data-edge-label-for") != "":
-			labels[e.attr("data-edge-label-for")] = labelAt{
+			label := labelAt{
 				text: strings.TrimSpace(e.Text),
 				at:   Point{X: number(e.attr("x")), Y: number(e.attr("y"))},
 			}
+			if b := parseBounds(e.attr("data-label-bounds")); b != nil {
+				label.bounds = Rect{X: b[0], Y: b[1], W: b[2], H: b[3]}
+			}
+			label.size = number(e.attr("font-size"))
+			label.anchor = e.attr("text-anchor")
+			labels[e.attr("data-edge-label-for")] = label
 		case e.attr("data-bar-id") != "":
 			scene.Bars = append(scene.Bars, Bar{
 				ID: e.attr("data-bar-id"), Box: e.attr("data-bar-box"),
@@ -131,6 +140,9 @@ func parseScene(block string) (Scene, error) {
 		if label, ok := labels[scene.Routes[i].ID]; ok {
 			scene.Routes[i].LabelText = label.text
 			scene.Routes[i].LabelAt = label.at
+			scene.Routes[i].LabelBounds = label.bounds
+			scene.Routes[i].LabelSize = label.size
+			scene.Routes[i].LabelAnchor = label.anchor
 		}
 	}
 	return scene, nil

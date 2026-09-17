@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"io"
 
 	"github.com/0xmhha/diagrammer/internal/command"
@@ -126,7 +125,7 @@ func deliverResult(req command.Request, stdout, stderr io.Writer) error {
 		return err
 	}
 	for _, line := range result.Summary {
-		fmt.Fprintln(stderr, line)
+		say(stderr, "%s\n", line)
 	}
 	for _, f := range result.Files {
 		if f.Path != "" {
@@ -141,7 +140,7 @@ func deliverResult(req command.Request, stdout, stderr io.Writer) error {
 
 func usageFor(w io.Writer, flags *flag.FlagSet, line string) func() {
 	return func() {
-		fmt.Fprintln(w, "usage: diagrammer "+line)
+		say(w, "usage: diagrammer %s\n", line)
 		flags.PrintDefaults()
 	}
 }

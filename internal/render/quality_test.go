@@ -3,7 +3,10 @@ package render
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"testing"
+
+	"github.com/0xmhha/diagrammer/internal/diagram"
 )
 
 // How much of a model a drawing actually shows.
@@ -67,4 +70,43 @@ func TestDrawnRatio(t *testing.T) {
 				r.name, r.ratio*100, drawnFloor*100)
 		}
 	}
+}
+
+// TestTheChannelCeilingRefusesInTheOpen holds the other end of the same
+// decision.
+//
+// Channels follow demand, so a hub no longer loses routes to a channel sized
+// for the average. That widening has a ceiling, and a ceiling nothing has ever
+// been seen to hit is indistinguishable from one that was never written.
+// hub-overflow asks for more than the ceiling allows on purpose.
+//
+// It is deliberately past the limit, so it is not in the ratio table above: the
+// floor asks whether ordinary models are drawn well, and this one is not an
+// ordinary model. What it has to show is that going past the limit is refused
+// where a reader can see it rather than quietly mangled.
+func TestTheChannelCeilingRefusesInTheOpen(t *testing.T) {
+	page, err := Build(composeFor(t, diagram.FamilyComponent, "hub-overflow"))
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+
+	lanes := 0
+	for _, d := range page.Dropped {
+		if strings.Contains(d.Why, "no lane left") {
+			lanes++
+		}
+	}
+	if lanes == 0 {
+		t.Error("nothing was refused for want of a lane, so the ceiling on channel widening never fired; " +
+			"either the fixture no longer exceeds it or the ceiling is gone")
+	}
+	if page.Accounting.Drawn+page.Accounting.Dropped != page.Accounting.Proven {
+		t.Errorf("drawn %d plus dropped %d is not proven %d",
+			page.Accounting.Drawn, page.Accounting.Dropped, page.Accounting.Proven)
+	}
+	if len(page.Dropped) != page.Accounting.Dropped {
+		t.Errorf("accounting says %d dropped, %d are recorded", page.Accounting.Dropped, len(page.Dropped))
+	}
+	t.Logf("hub-overflow: %d drawn, %d recorded, %d of them for want of a lane",
+		page.Accounting.Drawn, page.Accounting.Dropped, lanes)
 }
