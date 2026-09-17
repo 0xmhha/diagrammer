@@ -1,5 +1,7 @@
 package uml
 
+import "github.com/0xmhha/diagrammer/internal/vcs"
+
 // Family names one diagram family.
 type Family string
 
@@ -66,6 +68,10 @@ type Provenance struct {
 type SourceGraph struct {
 	Path   string `json:"path,omitempty"`
 	SHA256 string `json:"sha256,omitempty"`
+	// Revision is copied from that graph, unchanged. It is what lets a drawing
+	// name the commit it describes, and it is the only field here a reader of
+	// the finished page ever sees.
+	Revision *vcs.Revision `json:"revision,omitempty"`
 }
 
 // --- component ---------------------------------------------------------------

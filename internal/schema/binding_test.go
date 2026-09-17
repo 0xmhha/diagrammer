@@ -12,6 +12,7 @@ import (
 	"github.com/0xmhha/diagrammer/internal/graph"
 	"github.com/0xmhha/diagrammer/internal/schema"
 	"github.com/0xmhha/diagrammer/internal/uml"
+	"github.com/0xmhha/diagrammer/internal/vcs"
 )
 
 // The schemas are the contract and the Go types are a convenience over them, so
@@ -35,12 +36,14 @@ var bindings = map[schema.Name]map[string]reflect.Type{
 		"#/$defs/diagnostics":  reflect.TypeOf(graph.Diagnostics{}),
 		"#/$defs/parseFailure": reflect.TypeOf(graph.ParseFailure{}),
 		"#/$defs/diagnostics/properties/unresolvedReferences/items": reflect.TypeOf(graph.UnresolvedReference{}),
+		"#/$defs/revision": reflect.TypeOf(vcs.Revision{}),
 	},
 	schema.Codegraph: {
 		"#":                  reflect.TypeOf(uml.Model{}),
 		"#/properties/meta":  reflect.TypeOf(uml.Meta{}),
 		"#/$defs/provenance": reflect.TypeOf(uml.Provenance{}),
 		"#/$defs/provenance/properties/sourceGraph": reflect.TypeOf(uml.SourceGraph{}),
+		"#/$defs/revision":                          reflect.TypeOf(vcs.Revision{}),
 
 		"#/$defs/componentModel": reflect.TypeOf(uml.ComponentModel{}),
 		"#/$defs/component":      reflect.TypeOf(uml.Component{}),
@@ -72,6 +75,7 @@ var bindings = map[schema.Name]map[string]reflect.Type{
 		"#":                                          reflect.TypeOf(diagram.Document{}),
 		"#/properties/meta":                          reflect.TypeOf(diagram.Meta{}),
 		"#/properties/provenance":                    reflect.TypeOf(diagram.Provenance{}),
+		"#/$defs/revision":                           reflect.TypeOf(vcs.Revision{}),
 		"#/$defs/accounting":                         reflect.TypeOf(diagram.Accounting{}),
 		"#/$defs/level":                              reflect.TypeOf(diagram.Level{}),
 		"#/$defs/level/properties/grid":              reflect.TypeOf(diagram.Grid{}),

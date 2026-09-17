@@ -18,6 +18,7 @@ import (
 	"github.com/0xmhha/diagrammer/internal/schema"
 	"github.com/0xmhha/diagrammer/internal/uml"
 	"github.com/0xmhha/diagrammer/internal/validate"
+	"github.com/0xmhha/diagrammer/internal/vcs"
 )
 
 // --- stage 1 ------------------------------------------------------------------
@@ -73,6 +74,21 @@ func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 		return nil, fmt.Errorf("merge the analyzers' graphs: %w", err)
 	}
 
+	// Which commit the tree was at is written down here because this is the
+	// only stage that reads the tree. Every stage after it repeats what is
+	// recorded now, and none of them can go back and look.
+	//
+	// A tree that is not in a checkout gets no revision and that is the end of
+	// it. Failing would make an ordinary directory an error; guessing would put
+	// a commit into a document that never described one.
+	revision, known, err := vcs.Of(r.Source)
+	if err != nil {
+		return nil, fmt.Errorf("read the revision of %s: %w", r.Source, err)
+	}
+	if known {
+		g.Revision = &revision
+	}
+
 	encoded, err := encode(g)
 	if err != nil {
 		return nil, err
@@ -89,11 +105,30 @@ func (r *GraphRequest) Run(ctx context.Context) (*Result, error) {
 	// mixed repository that mentions only Go is otherwise indistinguishable
 	// from a graph of a repository that only had Go in it.
 	out.say("languages read: %s", joinLanguages(registry.Languages()))
+	sayRevision(out, g.Revision)
 	summariseGraph(out, r.Source, g)
 	if err := deliver(out, r.Out, encoded); err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// sayRevision reports the commit, or reports that there was none to read.
+//
+// Silence would be the wrong answer to a tree that is not a checkout. Somebody
+// who expected a revision in the document needs to learn here that there is not
+// going to be one, rather than by opening the finished page and finding nothing
+// where they expected a commit.
+func sayRevision(out *Result, revision *vcs.Revision) {
+	if revision == nil {
+		out.say("revision: none; this tree is not in a git checkout, so the documents will not name a commit")
+		return
+	}
+	if revision.Ref == "" {
+		out.say("revision: %s (detached)", revision.Commit)
+		return
+	}
+	out.say("revision: %s (%s)", revision.Commit, revision.Ref)
 }
 
 // summariseGraph names the files that would not parse rather than counting

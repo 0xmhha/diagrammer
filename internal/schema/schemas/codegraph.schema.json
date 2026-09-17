@@ -34,6 +34,26 @@
     "usecase": { "$ref": "#/$defs/usecaseModel" }
   },
   "$defs": {
+    "revision": {
+      "description": "The commit a source tree was checked out at. Written down once by stage 1, which read the tree, and repeated unchanged by every stage after it.\n\nIt says which commit was checked out and nothing more. It is not a claim that the files matched that commit: uncommitted changes are not detected, and a reader following it should expect to have to look around.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit"],
+      "properties": {
+        "commit": {
+          "description": "The full object name: forty hex digits where a repository hashes with SHA-1, sixty-four where it hashes with SHA-256. Abbreviations are not accepted, because what is unambiguous when abbreviated today is not tomorrow.",
+          "type": "string",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "ref": {
+          "description": "The branch HEAD pointed at, such as refs/heads/main. Absent when HEAD was detached.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        }
+      }
+    },
+
     "id": {
       "description": "Unique within its family section. Authored rather than derived, so the pattern is deliberately narrow: a model that invents ids under a predictable rule is easier to hold to a contract.",
       "type": "string",
@@ -63,7 +83,11 @@
           "additionalProperties": false,
           "properties": {
             "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
-            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "revision": {
+              "description": "Copied from that graph's own revision, unchanged. It is the one field here a reader can act on: it names the commit the drawings describe. Copy it or leave it out; a revision assembled from anywhere else is worse than none, because nothing downstream can tell a wrong commit from a right one.",
+              "$ref": "#/$defs/revision"
+            }
           }
         }
       }

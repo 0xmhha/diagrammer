@@ -18,6 +18,14 @@ const (
 	// and a page that arrived on its own has nothing else to say which it is.
 	attrFamily = "data-family"
 
+	// attrRevision carries the commit the drawn source was checked out at.
+	//
+	// It is in neither contract on purpose. The viewer does not read it and the
+	// checker does not judge it: it is for the person looking at the page, and
+	// for anything that later wants to ask a finished page which code it was
+	// made from without parsing prose.
+	attrRevision = "data-revision"
+
 	attrLevel      = "data-level"
 	attrLevelTitle = "data-level-title"
 	attrLevelLink  = "data-level-link"
@@ -68,14 +76,15 @@ const (
 	attrLabelBounds = "data-label-bounds"
 )
 
-// The artifact has two readers, and they read different things.
+// The artifact has three readers, and they read different things.
 //
 // The viewer moves between pages and needs to know which page is which and
 // which box opens which. The composition checker judges the drawing and needs
-// the geometry. Listing them apart is what lets each side be held to the
-// attributes it actually depends on: an attribute the viewer never touches is
-// not a broken viewer contract, and geometry the viewer ignores is not dead
-// weight.
+// the geometry. The third is whoever wants to know where the page came from,
+// which is neither of those and is usually a person. Listing them apart is what
+// lets each side be held to the attributes it actually depends on: an attribute
+// the viewer never touches is not a broken viewer contract, and geometry the
+// viewer ignores is not dead weight.
 
 // ViewerContract lists what the embedded viewer reads.
 //
@@ -101,12 +110,24 @@ func CheckerContract() []string {
 	}
 }
 
+// ProvenanceContract lists what the page says about where it came from rather
+// than about the drawing.
+//
+// It is a list of its own because neither of the other readers touches it. The
+// viewer shows the same thing whatever commit a page was made from, and the
+// checker judges a drawing by its geometry and not by its history. The reader
+// here is the person looking at the page, and anything that wants to ask a
+// finished page which code it describes without reading prose out of it.
+func ProvenanceContract() []string {
+	return []string{attrRevision}
+}
+
 // DOMContract is everything the renderer must write, which is the union of what
-// its two readers need.
+// its readers need.
 func DOMContract() []string {
 	seen := map[string]bool{}
 	var out []string
-	for _, list := range [][]string{ViewerContract(), CheckerContract()} {
+	for _, list := range [][]string{ViewerContract(), CheckerContract(), ProvenanceContract()} {
 		for _, name := range list {
 			if seen[name] {
 				continue

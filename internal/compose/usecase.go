@@ -233,7 +233,7 @@ func Usecase(source string, model *uml.Model) (*diagram.Document, error) {
 		SchemaVersion: 1,
 		Family:        diagram.FamilyUsecase,
 		Meta:          diagram.Meta{Title: model.Meta.Title, Subtitle: model.Meta.Subtitle},
-		Provenance:    diagram.Provenance{Model: source, GeneratedBy: generatedBy},
+		Provenance:    provenanceOf(source, model),
 		Levels:        []diagram.Level{level},
 		Accounting:    level.Accounting,
 	}, nil
