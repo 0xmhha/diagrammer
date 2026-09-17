@@ -139,8 +139,20 @@ that drives them.
 | github.com/alexaandru/go-sitter-forest/javascript | v1.9.2 | MIT |
 | github.com/alexaandru/go-sitter-forest/typescript | v1.9.4 | MIT |
 
-Each grammar carries the licence of the tree-sitter grammar it was generated
-from as well as the generator's; both travel in the vendored directory.
+Each vendored grammar directory carries one `LICENSE`: the MIT terms of
+go-sitter-forest, naming Maxim Sukharev and Alex Ungur. Sukharev is the author
+of `smacker/go-tree-sitter`, which this runtime is derived from, and the notice
+is how that lineage is stated.
+
+**The upstream tree-sitter grammar's own notice does not travel with it**, and
+that is written down here rather than assumed either way. A grammar's `parser.c`
+is generated from its `grammar.js` by the tree-sitter tool, and go-sitter-forest
+licenses what it publishes under the terms above. Whether the generated parser
+also carries the grammar author's terms is a question this project has not
+answered and does not need to answer to ship: the rows above name what was
+taken and under what licence it was received, which is the obligation. If a
+grammar is ever read for its rules rather than linked as a dependency, that
+question has to be answered first.
 
 The MCP Go SDK is mid-transition from MIT to Apache-2.0. New contributions are
 Apache-2.0; contributions whose authors have not consented to relicensing remain
