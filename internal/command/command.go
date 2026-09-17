@@ -18,6 +18,10 @@ const (
 	OpCompose Op = "compose"
 	// OpRender is stage 4: a diagram source in, a self-contained page out.
 	OpRender Op = "render"
+	// OpInstruct hands out the instruction stage 2 is performed from. It is the
+	// one capability that reads nothing and is the only way a skill learns what
+	// to return without going to look for the schema in the source.
+	OpInstruct Op = "instruct"
 )
 
 // What this program writes belongs to whoever ran it, and nobody else by
@@ -76,6 +80,7 @@ func operations() map[Op]func() Request {
 		OpValidate: func() Request { return &ValidateRequest{} },
 		OpCompose:  func() Request { return &ComposeRequest{} },
 		OpRender:   func() Request { return &RenderRequest{} },
+		OpInstruct: func() Request { return &InstructRequest{} },
 	}
 }
 

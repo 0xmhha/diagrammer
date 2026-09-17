@@ -10,6 +10,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/0xmhha/diagrammer/internal/command"
+	"github.com/0xmhha/diagrammer/internal/instruct"
+	"github.com/0xmhha/diagrammer/internal/schema"
 )
 
 // The MCP server is the second face on the same set of capabilities, and it is
@@ -24,6 +26,10 @@ import (
 
 const serverName = "diagrammer"
 
+// stage2Prompt is the name a client asks for the instruction by. It is
+// contract: a plugin binds to it.
+const stage2Prompt = "stage-2"
+
 // toolSummaries describes each tool to whatever is calling it. A model choosing
 // between tools has only this to go on, so it says what the tool is for rather
 // than what it is called.
@@ -37,6 +43,9 @@ func toolSummaries() map[command.Op]string {
 		command.OpCompose: "Turn a validated UML codegraph into diagram sources, one per family the model declares. " +
 			"Laid out but not drawn: boxes carry the cell they sit in, not a pixel position.",
 		command.OpRender: "Turn a diagram source into a self-contained HTML page.",
+		command.OpInstruct: "Return the instruction stage 2 is performed from: what a code graph holds, the schema a UML model " +
+			"must satisfy, what the gate checks beyond that schema, and how to choose what to say. " +
+			"Ask for this before reading a graph; it is built from the same schemas the gate uses, so it cannot disagree with them.",
 	}
 }
 
@@ -65,14 +74,117 @@ func runServe(args []string, _, stderr io.Writer) error {
 // type, so the argument names a plugin sees are the request's own JSON tags and
 // cannot drift from the ones the CLI fills in.
 func newServer() *mcp.Server {
-	server := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: version}, nil)
+	server := mcp.NewServer(
+		&mcp.Implementation{Name: serverName, Version: version},
+		&mcp.ServerOptions{Instructions: serverInstructions},
+	)
 	summaries := toolSummaries()
 
 	addOp[command.GraphRequest](server, command.OpGraph, summaries)
 	addOp[command.ValidateRequest](server, command.OpValidate, summaries)
 	addOp[command.ComposeRequest](server, command.OpCompose, summaries)
 	addOp[command.RenderRequest](server, command.OpRender, summaries)
+	addOp[command.InstructRequest](server, command.OpInstruct, summaries)
+
+	addStage2Prompt(server)
+	addSchemaResources(server)
 	return server
+}
+
+// serverInstructions is what a client puts in front of the model before it has
+// called anything.
+//
+// A tool's description says what that tool does. Nothing in a list of tools
+// says what the four of them are for, which order they go in, or that one whole
+// stage is the caller's own work. On the command line that is what `diagrammer`
+// with no arguments prints; over MCP this field is the only place it fits, and
+// leaving it empty is how a server ends up being used one tool at a time by
+// something that never learned what it was holding.
+const serverInstructions = `diagrammer turns a source tree into UML diagrams in four stages. You perform
+the second one.
+
+  graph     a source tree in, a code graph out
+  (you)     the code graph in, a UML model out
+  compose   the UML model in, one diagram source per family out
+  render    a diagram source in, a self-contained HTML page out
+
+Ask for the ` + "`stage-2`" + ` prompt before anything else. It carries the schema your
+model has to satisfy and what the gate checks beyond that schema, and it is
+built from the same files the gate uses, so it cannot disagree with them. The
+` + "`instruct`" + ` tool returns the same text if prompts are not available to you.
+
+Then: call ` + "`graph`" + ` on the tree, read what comes back, and write the UML model
+yourself. This server has no tool that writes it, and never calls a model.
+` + "`validate`" + ` will accept or refuse what you wrote and name every defect at once.
+` + "`compose`" + ` and ` + "`render`" + ` take it from there.
+
+The schemas are also readable as resources if you want one on its own.
+
+Every path argument is a path on the machine this server runs on, and it will
+read and write wherever the process can. Pass paths the person asked for.`
+
+// addStage2Prompt offers the stage-2 instruction as a prompt.
+//
+// It is already a tool, and it is both deliberately. A tool is a thing a model
+// decides to call; a prompt is text a client can put in front of the model
+// before it decides anything, which is what this actually is. Offering it only
+// as a tool leaves the work of knowing to ask entirely to the caller.
+func addStage2Prompt(server *mcp.Server) {
+	server.AddPrompt(&mcp.Prompt{
+		Name:        stage2Prompt,
+		Title:       "Stage 2: read a code graph, return a UML model",
+		Description: "What a code graph holds, the schema a UML model must satisfy, what the gate checks beyond that schema, and how to choose what to say.",
+	}, func(context.Context, *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		text, err := instruct.Stage2()
+		if err != nil {
+			return nil, err
+		}
+		return &mcp.GetPromptResult{
+			Description: "The instruction stage 2 is performed from.",
+			Messages: []*mcp.PromptMessage{{
+				Role:    "user",
+				Content: &mcp.TextContent{Text: text},
+			}},
+		}, nil
+	})
+}
+
+// addSchemaResources offers each embedded schema under the identifier it
+// declares as its own $id.
+//
+// The prompt carries two of them already. A resource is for the caller that
+// wants one on its own: to check a document it is holding, or to read the
+// diagram schema, which the prompt deliberately leaves out because writing one
+// is not stage 2's job.
+func addSchemaResources(server *mcp.Server) {
+	for _, name := range schema.All() {
+		server.AddResource(&mcp.Resource{
+			URI:         schema.URI(name),
+			Name:        string(name),
+			Description: schemaDescriptions()[name],
+			MIMEType:    "application/schema+json",
+		}, func(_ context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+			raw, err := schema.Raw(name)
+			if err != nil {
+				return nil, err
+			}
+			return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{
+				URI:      req.Params.URI,
+				MIMEType: "application/schema+json",
+				Text:     string(raw),
+			}}}, nil
+		})
+	}
+}
+
+// schemaDescriptions says which stage each schema belongs to, because a caller
+// choosing between three needs to know that before it reads any of them.
+func schemaDescriptions() map[schema.Name]string {
+	return map[schema.Name]string{
+		schema.Graph:     "Stage 1's output: the code graph an analyzer emits, and what graph returns.",
+		schema.Codegraph: "Stage 2's output: the UML model you return, and what validate checks.",
+		schema.Diagram:   "Stage 3's output: the diagram source compose emits and render draws. Not yours to write.",
+	}
 }
 
 // addOp registers one capability as a tool.

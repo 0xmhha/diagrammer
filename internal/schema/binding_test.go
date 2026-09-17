@@ -319,3 +319,23 @@ func contains(haystack []string, needle string) bool {
 	}
 	return false
 }
+
+// TestEveryURIIsTheSchemasOwnID holds the identifier the server hands out to
+// the one the document declares.
+//
+// A schema served under a name it does not claim is a document a reader cannot
+// tie back to the references inside it, and the two strings are built in
+// different places, so nothing else would notice them parting.
+func TestEveryURIIsTheSchemasOwnID(t *testing.T) {
+	for _, name := range schema.All() {
+		doc := parse(t, name)
+		declared, ok := doc["$id"].(string)
+		if !ok {
+			t.Errorf("%s declares no $id, so it cannot be served under one", name)
+			continue
+		}
+		if got := schema.URI(name); got != declared {
+			t.Errorf("%s is served as %q and declares itself %q", name, got, declared)
+		}
+	}
+}

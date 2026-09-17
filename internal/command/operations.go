@@ -12,6 +12,7 @@ import (
 	"github.com/0xmhha/diagrammer/internal/compose"
 	"github.com/0xmhha/diagrammer/internal/diagram"
 	"github.com/0xmhha/diagrammer/internal/graph"
+	"github.com/0xmhha/diagrammer/internal/instruct"
 	"github.com/0xmhha/diagrammer/internal/invariant"
 	"github.com/0xmhha/diagrammer/internal/render"
 	"github.com/0xmhha/diagrammer/internal/schema"
@@ -332,6 +333,39 @@ func (r *RenderRequest) Run(context.Context) (*Result, error) {
 		}
 	}
 	if err := deliver(out, r.Out, html); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// --- the stage-2 boundary, from the other side ---------------------------------
+
+// InstructRequest hands out the instruction stage 2 is performed from.
+//
+// Every other capability reads a document and writes one. This one reads
+// nothing: the instruction is built from the schemas the binary already
+// carries, so it can be asked for anywhere the binary runs and cannot disagree
+// with the gate that will judge what comes back.
+type InstructRequest struct {
+	// Out names a file to write the instruction to. Left empty, it is handed
+	// back instead, which is what a plugin asking over MCP wants.
+	Out string `json:"out,omitempty" jsonschema:"a file to write the instruction to; omit it and it is returned instead"`
+}
+
+func (r *InstructRequest) Op() Op { return OpInstruct }
+
+func (r *InstructRequest) Run(context.Context) (*Result, error) {
+	text, err := instruct.Stage2()
+	if err != nil {
+		return nil, err
+	}
+	out := &Result{}
+	if r.Out == "" {
+		out.Files = append(out.Files, OutputFile{Content: []byte(text)})
+		return out, nil
+	}
+	out.say("%s: the stage-2 instruction, %d bytes", r.Out, len(text))
+	if err := deliver(out, r.Out, []byte(text)); err != nil {
 		return nil, err
 	}
 	return out, nil

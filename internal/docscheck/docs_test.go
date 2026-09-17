@@ -1,6 +1,7 @@
 package docscheck_test
 
 import (
+	"github.com/0xmhha/diagrammer/internal/instruct"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -367,5 +368,72 @@ func TestTheLabelSizeMatchesTheStylesheet(t *testing.T) {
 	if found[1] != declared {
 		t.Errorf("the renderer measures labels at %s and the stylesheet draws them at %spx",
 			declared, found[1])
+	}
+}
+
+// The instruction stage 2 is performed from says things about this program, and
+// this program can change without it noticing. These hold the two together.
+
+// TestTheInstructionQuotesTheComposersNumbers is the guard on the one part of
+// the instruction that is not read from a schema.
+//
+// It tells a model that a level thinner than so many boxes is unfolded and that
+// an unfold stops at so many, because those decide whether the model it writes
+// comes out as pages or as one flat drawing. The composer owns both numbers.
+// The instruction cannot import the composer, so it restates them, and a
+// restatement that drifts is a model told to aim at a target that moved.
+func TestTheInstructionQuotesTheComposersNumbers(t *testing.T) {
+	composer := constantsIn(t, "internal/compose/component.go")
+	told := constantsIn(t, "internal/instruct/instruct.go")
+
+	for _, name := range []string{"minBoxesPerLevel", "expandedMaxBoxes"} {
+		want, ok := composer[name]
+		if !ok {
+			t.Errorf("internal/compose/component.go no longer declares %s", name)
+			continue
+		}
+		got, ok := told[name]
+		if !ok {
+			t.Errorf("the instruction no longer carries %s, so it cannot be held to the composer", name)
+			continue
+		}
+		if got != want {
+			t.Errorf("the instruction tells a model %s is %s; the composer uses %s", name, got, want)
+		}
+	}
+}
+
+// TestTheInstructionNamesEveryFamilyTheGateChecks catches the shape of change
+// that would hurt most: a family gains checks in the validator and the model is
+// never told about them, so it writes documents the gate refuses for reasons it
+// was never given.
+func TestTheInstructionNamesEveryFamilyTheGateChecks(t *testing.T) {
+	gate := read(t, "internal/validate/validate.go")
+	told, err := instruct.Stage2()
+	if err != nil {
+		t.Fatalf("build the instruction: %v", err)
+	}
+
+	// The validator has one check function per family, plus checkFamilies for
+	// the declaration itself.
+	pattern := regexp.MustCompile(`func check([A-Z][a-zA-Z]*)\(`)
+	found := map[string]bool{}
+	for _, match := range pattern.FindAllStringSubmatch(gate, -1) {
+		found[strings.ToLower(match[1])] = true
+	}
+	if len(found) == 0 {
+		t.Fatal("no check functions were found in the validator, so this test is watching nothing")
+	}
+
+	for name := range found {
+		// checkUsecaseEnds is a helper of checkUsecase rather than a check of
+		// its own, and naming it separately would tell a model nothing.
+		if name == "usecaseends" {
+			continue
+		}
+		if !strings.Contains(told, "**"+name+"**") {
+			t.Errorf("the validator checks %q and the instruction never names it, so a model is refused "+
+				"for a reason it was not given", name)
+		}
 	}
 }

@@ -13,9 +13,16 @@ them does not happen inside this program.
    languages with tree-sitter, which does not, so every tree is asked whether
    it parsed cleanly and a file that did not is recorded with its line.
 2. A plugin's skill analyses that graph with an LLM and returns a
-   **codegraph.json** expressed as a UML model. The binary has no subcommand for
-   this and never calls a model itself. It hands the graph out and takes the
+   **codegraph.json** expressed as a UML model. The binary does not perform this
+   stage and never calls a model itself. It hands the graph out and takes the
    model back.
+
+   What it does hand out is the instruction. `instruct` prints what a skill
+   performs this stage from: what a code graph holds, the schema a UML model
+   must satisfy, what the gate checks beyond that schema, and how to choose what
+   to say. It is built from the same embedded schemas the gate uses, so the
+   instruction given to a model and the check applied to what it returns cannot
+   disagree.
 3. **compose** turns that model into diagram-source documents, one per family:
    component, sequence, state and use case.
 4. **render** turns a document into a self-contained HTML page: positions,
@@ -52,7 +59,7 @@ scope by pointing the program at a repository and wondering why the graph came
 back nearly empty.
 
 Everything else works end to end for all four families in either build:
-`graph`, `validate`, `compose`, `render` and `serve`.
+`graph`, `validate`, `compose`, `render`, `instruct` and `serve`.
 
 ## Build
 
@@ -73,6 +80,32 @@ lacks is a defect rather than a prerequisite.
 
 Linux builds will come later, on a native runner rather than by cross
 compiling, so that the binary that ships is the binary that was tested.
+
+`make install` puts it on `PATH` through `GOBIN`, which is how a plugin on the
+same machine reaches it today.
+
+## Driving it from a plugin
+
+`diagrammer serve` speaks MCP over stdio. Point a client at the binary:
+
+```json
+{ "command": "/path/to/diagrammer", "args": ["serve"] }
+```
+
+Three things a caller can ask for before it does any work, which is the whole
+of what it needs to know:
+
+- **The server's instructions**, sent at `initialize`: what the four stages are,
+  which order they go in, and that the caller performs the second one itself.
+  A list of tools cannot say that, and a client that never learns it will use
+  the four one at a time without knowing what it is holding.
+- **The `stage-2` prompt**, which is the instruction that stage is performed
+  from. `instruct` returns the same text as a tool for a client without prompts.
+- **The three schemas as resources**, each under the identifier it declares as
+  its own `$id`, for a caller that wants one on its own.
+
+Then `graph`, your own model, `validate`, `compose`, `render`. Every path
+argument is a path on the machine the server runs on.
 
 ## The schemas are the contract
 
