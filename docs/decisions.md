@@ -269,6 +269,59 @@ and no new argument; the rest would make `compose` take a second input and ask a
 model to transcribe numbers, and it was not worth that to answer a question
 nobody had asked twice.
 
+### What a language without a file generation actually loses (after 0.4.0)
+
+This was left open as "how the unfold window behaves for a language without a
+file generation, to be decided by measurement on the fixtures rather than
+assumed". Measured, the answer is that the unfold window does not behave
+differently at all, and something else does.
+
+**Two models, the same ninety leaves, one generation apart.** One shaped like a
+Go tree, package to file to function; one shaped like a tree with no file
+generation, package straight to function.
+
+| | pages | widest page | widest drawing |
+|---|---|---|---|
+| with a file generation | 19 | 6 boxes | 1888 px |
+| without one | 4 | 30 boxes | 8608 px |
+
+**The unfold window is never consulted for the wide page.** It runs only on a
+level holding fewer than `minBoxesPerLevel`, and a page of thirty is not thin.
+`expandedMaxBoxes` bounds what an unfold may produce and nothing else, so a page
+that was never unfolded has no ceiling at all. The two ways a page fails to
+split are opposite: a thin page is offered the unfold and has leaves to give it
+nothing, and a wide page is never offered it.
+
+**What the extra generation was doing was splitting, not unfolding.** A file
+sits between a package and its functions, so a package page holds five files and
+each opens a page of six. Remove it and the package page holds thirty functions,
+because a column is spent per member and nothing anywhere folds one page into
+two.
+
+**Width is set by columns, measured at 287 to 315 px each across every fixture.**
+Box count is the wrong proxy and `expandedMaxBoxes` could not have been reused:
+a tall page of twenty-four boxes in one column is 488 px wide and perfectly
+readable.
+
+**The part that was a defect was not the width.** The stylesheet scaled every
+drawing to the width of the page, so the eight-thousand-pixel drawing was shown
+at about a sixth of its size, and every label in it went under `labelMinSize` at
+once. That is the size the fitting refuses to go below, because below it a label
+is not worth drawing. Nothing failed: the composition rules judge the drawing in
+its own units, where the labels are still the size they were fitted to, so a
+page nobody could read passed every check this project has.
+
+**So the drawing now keeps the size it was laid out at and the page scrolls to
+it.** `svgFor` writes that size, the stylesheet gives it something to overflow
+into, and a test on each side holds the other to it. A drawing that fits is
+unaffected and still stretches to the width.
+
+**Folding was not built.** Splitting a wide page into levels is a decision about
+what the diagram says, which is stage 2's, and `instruct` already tells a model
+the two numbers. Stage 3 inventing levels the model did not ask for would be
+stage 3 deciding what the drawing means. What changed is that the page is now
+legible while it is wide, rather than illegible in a way nothing reported.
+
 ### The renderer is reimplemented; the viewer is embedded (round 3)
 
 Go reimplements the renderer. The viewer ships as one frozen embedded asset.
@@ -655,12 +708,13 @@ because each would otherwise send an implementer at the wrong problem:
 
 - The per-language divergence in unfolding is **not** that Python and
   JavaScript graphs lack `file` nodes. The unfold logic never inspects node
-  kind. The mechanism is the unfold window: a level unfolds one generation at a
-  time while it holds fewer than 6 members, and stops before the next generation
-  would exceed 24. Go's hierarchy has an extra file generation that lands inside
-  that window; a language without one jumps from package straight to functions
-  and usually overshoots. A fix written against "JS lacks file nodes" fixes the
-  wrong thing.
+  kind. A fix written against "JS lacks file nodes" fixes the wrong thing.
+
+  The rest of this correction was itself wrong, and the section below has the
+  measurement. It said a language without a file generation "jumps from package
+  straight to functions and usually overshoots" the 24 an unfold may not pass.
+  It does not overshoot: the unfold is never attempted, because a wide page is
+  not a thin one and the window is only consulted for thin pages.
 - The long decimal coordinates in Archify's output predate the local branch.
   They appear in checked-in examples on its `origin/main`. The region-boundary
   work multiplied them in large artifacts rather than introducing them.
@@ -842,5 +896,8 @@ Deferred deliberately, to be settled when the work reaches them:
   Not answered: nothing publishes the archives. `make dist` produces them and
   proves them; putting them where somebody can fetch them, and whether that
   comes with notarisation, has not been decided.
-- How the unfold window behaves for a language without a file generation. To be
-  decided by measurement on the fixtures rather than assumed.
+- Whether stage 3 should fold a page that is too wide, rather than only unfold
+  one that is too thin. Measured and left undone; the section above says what
+  the measurement found and why folding is stage 2's decision rather than stage
+  3's. The page is legible while it is wide, which is what made this not
+  urgent.

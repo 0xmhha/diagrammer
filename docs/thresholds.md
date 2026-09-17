@@ -41,6 +41,41 @@ abandoned and the thin page is kept: thin is a smaller loss than illegible.
 
 Used in `internal/compose/component.go`.
 
+It bounds an unfold and nothing else, which is narrower than it reads. A page
+that was never unfolded has no ceiling: `minBoxesPerLevel` decides whether the
+window is consulted at all, so a page of thirty is simply drawn at thirty. That
+was measured after 0.4.0 and is written up in `docs/decisions.md`; the summary
+is that box count is the wrong measure of a page anyway.
+
+### A page is as wide as its columns, at about 300px each
+
+Measured across every fixture and both halves of the pair built to settle it:
+
+| drawing | boxes | grid | width |
+|---|---|---|---|
+| `wide-page` / `level:bulk` | 26 | 1x26 | 7488px |
+| `hub-overflow` / overview | 31 | 2x30 | 8608px |
+| `hub` / overview | 9 | 2x8 | 2448px |
+| `tangle` / overview | 12 | 12x1 | 488px |
+
+Width divided by column count lands between 287 and 315 for every one of them,
+and width has no relation to box count: `tangle` and `hub` are within three
+boxes of each other and differ fivefold in width.
+
+So a ceiling on how wide a page may be cannot be expressed in boxes, which is
+why `expandedMaxBoxes` was not reused for it. No such ceiling is enforced.
+
+What is enforced instead is that a drawing is never **shown** smaller than it
+was laid out at. `labelMinSize` = 9 is the size a label is fitted down to and no
+further; scaling a whole drawing to fit a narrower page puts every label under
+that floor at once, silently, and the composition rules cannot see it because
+they judge the drawing in its own units. `svgFor` writes the laid-out size, the
+stylesheet gives the drawing something to overflow into, and a page too wide to
+fit is scrolled to rather than shrunk.
+
+Used in `internal/render/svg.go` and `internal/render/viewer/viewer.css`, with a
+test on each side holding the other to it.
+
 ### The drawing's own numbers
 
 These decide whether a route may be drawn, and every one of them has a test

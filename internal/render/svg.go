@@ -16,7 +16,14 @@ func svgFor(scene artifact.Scene) string {
 	var b strings.Builder
 	b.WriteString(`<svg class="scene" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 `)
 	b.WriteString(num(scene.Width) + " " + num(scene.Height))
-	b.WriteString(`" ` + attrFamily + `="` + esc(scene.Family) + `"`)
+	// The size the scene was laid out at, declared so the stylesheet can refuse
+	// to draw it smaller. Everything in the drawing is sized against these
+	// numbers: a label is fitted down to labelMinSize and no further, because
+	// below that it is not worth drawing. Scaling the whole drawing to fit a
+	// narrower page puts every label under that floor at once, and the floor
+	// stops meaning anything. See docs/decisions.md.
+	b.WriteString(`" style="min-width:` + num(scene.Width) + `px;min-height:` + num(scene.Height) + `px"`)
+	b.WriteString(` ` + attrFamily + `="` + esc(scene.Family) + `"`)
 	b.WriteString(` ` + attrLevel + `="` + esc(scene.Level) + `" ` + attrLevelTitle + `="` + esc(scene.Title) + `">` + "\n")
 	b.WriteString(arrowDefs())
 

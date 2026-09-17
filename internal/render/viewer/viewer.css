@@ -58,7 +58,15 @@ section[hidden] { display: none; }
 .level-head .count { color: var(--muted); font-size: 13px; }
 .back { font: inherit; border: 0; background: transparent; color: var(--accent); cursor: pointer; padding: 0; }
 
-svg.scene { width: 100%; height: auto; max-height: 78vh; }
+/* A drawing is never shown smaller than it was laid out at. Every label in it
+   was fitted against those numbers and refused below labelMinSize; scaling the
+   whole thing down to fit a narrow page puts all of them under that floor at
+   once, silently, and a page nobody can read passes every check this project
+   has. So the drawing keeps its size and the page scrolls to it. Small drawings
+   still stretch to the width, which is what width: 100% does when min-width has
+   nothing to say. */
+.scene-scroll { overflow: auto; max-height: 78vh; }
+svg.scene { display: block; width: 100%; height: auto; }
 .box-frame { fill: var(--box); stroke: var(--line); stroke-width: 1.2; }
 .box[data-opens] .box-frame { stroke: var(--accent); stroke-width: 1.8; cursor: pointer; }
 .box[data-opens] { cursor: pointer; }
