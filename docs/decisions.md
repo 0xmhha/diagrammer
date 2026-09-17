@@ -163,6 +163,28 @@ requirement on whoever drives the pipeline that this program was supposed to
 meet. It is a capability rather than a document in the repository for the same
 reason the schemas are embedded rather than read from disk.
 
+**It told a model what not to over-claim and never what to attempt** (after
+0.4.0). The whole of "Choosing what to say" was about the component family:
+nesting, levels, the unfold window. The only sentence about families said to
+declare none you do not carry. A model reading that returned one family, or two,
+and was right to. Asked for this repository, the answers held a component
+diagram and sometimes a sequence one; the hand-written model of the same tree
+carries four.
+
+What the graph supports was never the constraint. This repository's graph holds
+550 call edges against 37 imports, so the sequence family is better evidenced
+than the component one, and the hand-written model reads a state machine out of
+the relationship accounting and a use case diagram out of the command surface.
+Both were there to be read the whole time.
+
+The instruction now says which families a graph can carry and what each needs
+from it, and says in the same breath not to invent one to fill the set, because
+a family made up is worse than a family missing: a reader cannot tell, and the
+drawing looks equally confident either way. Measured before and after on this
+repository, one or two families became four, twice, with a state family
+describing the real accounting lifecycle and a use case family naming the actual
+capabilities.
+
 ### The server is confined, the command line is not (after 0.2.0)
 
 `serve` takes a root and refuses any path argument outside it. The default is
