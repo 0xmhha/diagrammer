@@ -95,6 +95,22 @@ rather than a defect in the file, and the report has to be able to say so.
 
 ## Stage 2, the boundary
 
+`testdata/codegraph/diagrammer-layered.codegraph.json` is a worked example of
+what this stage produces when it is done well, and the only model here that is
+one. It describes this repository, read from this repository's own stage-1
+graph, and `diagrammer.codegraph.json` beside it is an earlier, shallower model
+of the same repository. Both are kept because the difference between them is the
+lesson. The first puts seven components on its top page and the detail a click
+below, and states twenty-six relationships across five pages. The second states
+fourteen across three. Both draw everything they state: what a hierarchy buys is
+not a higher share drawn but room to say more, because a page that opens is a
+page you can put less on.
+
+Nothing in the schema distinguishes the two. That judgement is the reason this
+stage is performed by a model rather than by a converter, and it is what
+`diagrammer instruct` spends its last section asking for.
+
+
 Stage 2 happens outside this binary, so what comes back is untrusted input.
 
 `validate` is the only gate. `compose` and `render` assume a validated model
