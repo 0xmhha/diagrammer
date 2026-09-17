@@ -634,9 +634,16 @@ and a written account of why, which is less than they wanted.
 Deferred deliberately, to be settled when the work reaches them:
 
 - Whether source evidence, which needs git, is in 0.1.0.
-- How the binary reaches the codemine plugin, and which architectures it targets.
-  The MCP server it is driven through exists; how the binary gets onto a machine
-  does not.
+- Which architectures the binary targets. macOS is built and tested; `make
+  linux` refuses on purpose, because a cross-compiled binary is not the binary
+  that was tested and the native runner to do it properly does not exist yet.
+
+  What a plugin needs once it has the binary is no longer open. The server says
+  what it is for at `initialize`, offers the stage-2 instruction as a prompt,
+  and serves each schema as a resource under its own `$id`, so a client learns
+  the pipeline from the server rather than from a document beside it. Getting
+  the binary onto the machine is `make install` today, and packaging it for one
+  it was not built on is the part that remains.
 - Error policy and exit codes for parse failures, levels that cannot be laid out,
   and output path collisions.
 - The measured speed and binary cost of the tree-sitter runtime. The published

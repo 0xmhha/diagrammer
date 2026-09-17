@@ -40,6 +40,13 @@ func All() []Name {
 	return []Name{Graph, Codegraph, Diagram}
 }
 
+// URI returns the identifier n declares as its own $id.
+//
+// It is the same string the schemas use to $ref each other, so a caller handed
+// a schema over MCP and a schema resolving a reference inside one are naming
+// the same thing. A second identifier would be a second name for one document.
+func URI(n Name) string { return baseURI + Filename(n) }
+
 // Filename returns the name of n's file within the embedded directory.
 func Filename(n Name) string {
 	return string(n) + ".schema.json"
