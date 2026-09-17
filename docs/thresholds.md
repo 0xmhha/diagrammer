@@ -366,6 +366,43 @@ carries anything, which on this repository's state diagram is 514px wide against
 With that and the model arranged as a hierarchy, three of this repository's four
 diagrams draw everything they were given.
 
+### A use case page is not a layered one, and the count now knows it
+
+The arrangement step counts the lines that would cross before there is any
+geometry to measure, and for a long time it counted only one shape of line: one
+between two rows, which meets another between the same rows when their ends are
+ordered one way at the top and the other at the bottom.
+
+A line between two boxes on **one** row is nothing like that. It drops into the
+channel below the row, runs along it and comes back, so what it occupies is an
+interval of columns. Two of those cross when their intervals interleave, and not
+when one sits inside the other, which the lanes keep apart. A line climbing from
+the row below crosses such a run when it lands strictly inside the interval.
+
+Counting the second kind with the first kind's test was an error rather than an
+approximation, and it hid where it did most damage. A use case page puts every
+association an actor makes on that actor's row, so almost every line on it is
+the shape that was not modelled. Arranging such a page to improve the count made
+it worse: this repository's own use case page went from eight of ten drawn to
+seven.
+
+With the shape modelled, the same page draws nine, and **nine is the most any
+arrangement of its columns reaches.** That is not an estimate: all two hundred
+and forty arrangements were tried.
+
+| | before | after |
+|---|---|---|
+| usecase / diagrammer's own model | 8/10 | 9/10 |
+| every committed fixture | 99/100 | **100/100** |
+| six real projects | 127/159 | 127/159 |
+
+**The tenth line is reachable and is not worth what it costs.** Searching row
+assignments as well as column ones finds an arrangement that draws all ten, and
+it works by moving a use case off the row of the actor that reaches it. That row
+is the page's meaning: it is what makes a use case diagram read as "this actor
+does these things". A line is worth less than that, and the page records the one
+it could not draw.
+
 What the layout scored before the placement work, and after:
 
 | | before | after |

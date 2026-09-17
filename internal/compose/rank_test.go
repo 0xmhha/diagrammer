@@ -167,3 +167,70 @@ func TestARowSpreadsAcrossItsBand(t *testing.T) {
 		seen[cell] = id
 	}
 }
+
+// Two lines on one row are nothing like two lines between two rows, and telling
+// them apart is what the count exists to do.
+//
+// A line between rows meets another between the same rows when their ends are
+// ordered one way at the top and the other at the bottom. A line between two
+// boxes on **one** row drops into the channel below it, runs along, and comes
+// back: what it occupies is an interval of columns. Two of those cross when
+// their intervals interleave, and not when one sits inside the other, which the
+// lanes keep apart.
+//
+// Counting the second with the first's test was a real error rather than an
+// approximation. On a use case page, where an actor's associations all sit on
+// one row, it modelled almost nothing that was there.
+
+func columnsAt(cells map[string][2]int) (map[string]int, map[string]int) {
+	rank := map[string]int{}
+	position := map[string]int{}
+	for id, cell := range cells {
+		rank[id], position[id] = cell[0], cell[1]
+	}
+	return rank, position
+}
+
+func TestTwoLinesOnOneRowCrossWhenTheyInterleave(t *testing.T) {
+	// Four boxes in a row: a b c d.
+	rank, position := columnsAt(map[string][2]int{
+		"a": {0, 0}, "b": {0, 1}, "c": {0, 2}, "d": {0, 3},
+	})
+
+	for _, c := range []struct {
+		name string
+		x, y [2]string
+		want bool
+	}{
+		{"interleaved: a-c and b-d", [2]string{"a", "c"}, [2]string{"b", "d"}, true},
+		{"nested: a-d and b-c", [2]string{"a", "d"}, [2]string{"b", "c"}, false},
+		{"apart: a-b and c-d", [2]string{"a", "b"}, [2]string{"c", "d"}, false},
+		{"written the other way round", [2]string{"c", "a"}, [2]string{"d", "b"}, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := cross(c.x, c.y, rank, position); got != c.want {
+				t.Errorf("cross(%v, %v) = %v, want %v", c.x, c.y, got, c.want)
+			}
+		})
+	}
+}
+
+func TestALineFromAnotherRowCrossesARunItLandsInside(t *testing.T) {
+	// a b c on row 0, and d below b.
+	rank, position := columnsAt(map[string][2]int{
+		"a": {0, 0}, "b": {0, 1}, "c": {0, 2}, "d": {1, 1}, "e": {1, 3},
+	})
+
+	// b sits strictly inside a-c, so the line that climbs to it crosses the run.
+	if !cross([2]string{"a", "c"}, [2]string{"d", "b"}, rank, position) {
+		t.Error("a line arriving inside a same-row run does not cross it")
+	}
+	// e is outside a-c, so that one does not.
+	if cross([2]string{"a", "c"}, [2]string{"d", "e"}, rank, position) {
+		t.Error("a line that never enters the run's columns crosses it")
+	}
+	// Sharing a box is not a crossing, whichever shape the two lines are.
+	if cross([2]string{"a", "c"}, [2]string{"d", "c"}, rank, position) {
+		t.Error("two lines meeting at a box they both touch count as crossing")
+	}
+}

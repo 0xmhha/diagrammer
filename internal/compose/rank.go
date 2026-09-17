@@ -358,27 +358,93 @@ func columnsOf(ordered []string, rank map[string]int, bandOf func(string) string
 	return out
 }
 
-// crossingProxy counts pairs of lines whose ends are ordered one way at the top
-// and the other way at the bottom, which is what a crossing looks like before
-// there is any geometry to measure.
+// crossingProxy counts the pairs of lines that would cross, from the cells
+// alone.
+//
+// Two shapes have to be told apart, and the first version of this told them
+// apart badly. A line between two rows meets another between the same two rows
+// when their ends are ordered one way at the top and the other at the bottom,
+// which is the classic test. A line between two boxes on **one** row is nothing
+// like that: it drops into the channel below the row, runs along it and comes
+// back, so what it occupies is an interval of columns, and two of them cross
+// when their intervals interleave rather than when one contains the other.
+//
+// Counting the second kind with the first kind's test was a real error, not an
+// approximation. On a use case page, where an actor's associations all sit on
+// one row, it modelled almost nothing that was there, and arranging the page to
+// improve it made the page worse.
 func crossingProxy(ordered []string, rank map[string]int, bandOf func(string) string, edges [][2]string) int {
 	position := columnsOf(ordered, rank, bandOf)
 	n := 0
 	for i := range edges {
 		for j := i + 1; j < len(edges); j++ {
-			a, b := edges[i], edges[j]
-			if a[0] == b[0] || a[0] == b[1] || a[1] == b[0] || a[1] == b[1] {
-				continue
-			}
-			top := position[a[0]] - position[b[0]]
-			bottom := position[a[1]] - position[b[1]]
-			if top == 0 || bottom == 0 {
-				continue // one pair of ends shares a column, so nothing crosses
-			}
-			if (top > 0) != (bottom > 0) {
+			if cross(edges[i], edges[j], rank, position) {
 				n++
 			}
 		}
 	}
 	return n
+}
+
+// cross reports whether two lines would meet, given where their ends sit.
+func cross(a, b [2]string, rank, position map[string]int) bool {
+	if a[0] == b[0] || a[0] == b[1] || a[1] == b[0] || a[1] == b[1] {
+		return false // two lines meeting at a box they both touch is expected
+	}
+	aFlat, aRow := flat(a, rank)
+	bFlat, bRow := flat(b, rank)
+
+	switch {
+	case aFlat && bFlat:
+		if aRow != bRow {
+			return false // different rows, different channels
+		}
+		return interleave(span(a, position), span(b, position))
+	case aFlat:
+		return spans(b, rank, aRow) && within(span(a, position), position[endOn(b, rank, aRow)])
+	case bFlat:
+		return spans(a, rank, bRow) && within(span(b, position), position[endOn(a, rank, bRow)])
+	default:
+		top := position[a[0]] - position[b[0]]
+		bottom := position[a[1]] - position[b[1]]
+		if top == 0 || bottom == 0 {
+			return false // one pair of ends shares a column, so nothing crosses
+		}
+		return (top > 0) != (bottom > 0)
+	}
+}
+
+// flat reports whether both ends of a line are on one row, and which.
+func flat(e [2]string, rank map[string]int) (bool, int) {
+	return rank[e[0]] == rank[e[1]], rank[e[0]]
+}
+
+// spans reports whether a line has an end on the given row.
+func spans(e [2]string, rank map[string]int, row int) bool {
+	return rank[e[0]] == row || rank[e[1]] == row
+}
+
+// endOn is the end of a line that sits on the given row.
+func endOn(e [2]string, rank map[string]int, row int) string {
+	if rank[e[0]] == row {
+		return e[0]
+	}
+	return e[1]
+}
+
+func span(e [2]string, position map[string]int) [2]int {
+	lo, hi := position[e[0]], position[e[1]]
+	if lo > hi {
+		lo, hi = hi, lo
+	}
+	return [2]int{lo, hi}
+}
+
+func within(s [2]int, at int) bool { return at > s[0] && at < s[1] }
+
+// interleave reports whether two column intervals overlap partially. One
+// entirely inside the other is two lines nested in the same channel, which the
+// lanes keep apart; one end of each inside the other is a crossing.
+func interleave(a, b [2]int) bool {
+	return (within(a, b[0]) && !within(a, b[1])) || (within(a, b[1]) && !within(a, b[0]))
 }

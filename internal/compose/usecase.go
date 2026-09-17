@@ -120,47 +120,72 @@ func Usecase(source string, model *uml.Model) (*diagram.Document, error) {
 		sort.Strings(rows[r])
 	}
 
-	// The first column is reserved for the actors, which is what puts them
-	// outside the system band rather than merely near it.
-	widest := 0
-	for _, ids := range rows {
-		if len(ids) > widest {
-			widest = len(ids)
+	// Two bands: the actors own the first column, which is what puts them
+	// outside the system rather than merely near it, and the use cases own the
+	// rest.
+	//
+	// Order within a row was alphabetical, which is an order the page cannot
+	// use. A use case sat where its name put it, so a line from an actor to it
+	// ran however far the alphabet decided, and a long run in a shared channel
+	// is what crosses. The rows are already meaningful — a use case sits on the
+	// row of the actor that reaches it — so only the columns needed arranging,
+	// by the same barycentre sweep the other families use.
+	const actorBand = ""
+	rank := map[string]int{}
+	band := map[string]string{}
+	ordered := make([]string, 0, len(actors)+len(m.Usecases))
+	for i, a := range actors {
+		rank[a.ID], band[a.ID] = i, actorBand
+		ordered = append(ordered, a.ID)
+	}
+	for row := range max(len(rows), max(len(actors), 1)) {
+		for _, id := range rows[row] {
+			rank[id], band[id] = row, m.System.ID
+			ordered = append(ordered, id)
 		}
 	}
-	if widest < 1 {
-		widest = 1
+	bandOf := func(id string) string { return band[id] }
+
+	adjacency := make([][2]string, 0, len(m.Associations)+len(m.Includes)+len(m.Extends))
+	for _, a := range m.Associations {
+		adjacency = append(adjacency, [2]string{a.Actor, a.Usecase})
 	}
-	grid := diagram.Grid{
-		Rows: max(len(rows), max(len(actors), 1)),
-		Cols: widest + 1,
+	for _, inc := range m.Includes {
+		adjacency = append(adjacency, [2]string{inc.From, inc.To})
 	}
+	for _, ext := range m.Extends {
+		adjacency = append(adjacency, [2]string{ext.From, ext.To})
+	}
+	ordered = orderWithin(ordered, rank, bandOf, adjacency)
+	placed, grid := cellsByRank(ordered, rank, bandOf)
 
 	boxes := make([]diagram.Box, 0, len(actors)+len(m.Usecases))
-	for i, a := range actors {
+	for _, a := range actors {
 		kind := a.Kind
 		if kind == "" {
 			kind = uml.ActorPrimary
 		}
+		cell := placed[a.ID]
 		boxes = append(boxes, diagram.Box{
 			ID:         a.ID,
 			Label:      a.Name,
 			Stereotype: string(kind),
-			Row:        i,
-			Col:        0,
+			Row:        cell[0],
+			Col:        cell[1],
 		})
 	}
-	for row := range grid.Rows {
-		for col, id := range rows[row] {
-			u := byID[id]
-			boxes = append(boxes, diagram.Box{
-				ID:     u.ID,
-				Label:  u.Name,
-				Row:    row,
-				Col:    1 + col,
-				Region: m.System.ID,
-			})
+	for _, u := range m.Usecases {
+		cell, ok := placed[u.ID]
+		if !ok {
+			continue
 		}
+		boxes = append(boxes, diagram.Box{
+			ID:     u.ID,
+			Label:  u.Name,
+			Row:    cell[0],
+			Col:    cell[1],
+			Region: m.System.ID,
+		})
 	}
 	sort.Slice(boxes, func(i, j int) bool { return boxes[i].ID < boxes[j].ID })
 
