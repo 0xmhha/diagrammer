@@ -109,8 +109,12 @@
     }
 
     function focus(id) {
-      var near = {};
-      var lit = {};
+      // Object.create(null) rather than {}: a box id is any text the model
+      // chose, and "toString", "constructor" and "__proto__" are all legal
+      // ones. A plain object inherits those, so a box called toString would
+      // have read as joined to everything.
+      var near = Object.create(null);
+      var lit = Object.create(null);
       near[id] = true;
       edges.forEach(function (edge) {
         var from = edge.getAttribute("data-edge-from");

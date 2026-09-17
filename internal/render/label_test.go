@@ -18,27 +18,46 @@ import (
 // measured the label as its centre point, and the centre of a long string
 // clears everything.
 func TestTextIsFittedToTheRoomItHas(t *testing.T) {
-	page := buildFixture(t, "order-service")
-	scenes, err := artifact.Parse([]byte(page.HTML()))
-	if err != nil {
-		t.Fatalf("read back the artifact: %v", err)
-	}
-	for i := range scenes {
-		for _, r := range scenes[i].Routes {
-			if r.LabelText == "" {
-				continue
+	// Every family, because each builds its own scene. The sequence ladder
+	// places its labels itself, having a rung for each, and for a while it
+	// placed them without measuring them: the page said the text was 0px wide
+	// and occupied nothing while the stylesheet drew it at eleven. Running this
+	// on one family is what let that through.
+	for _, f := range families() {
+		t.Run(string(f.Family)+" from "+f.Fixture, func(t *testing.T) {
+			page, err := Build(composeFor(t, f.Family, f.Fixture))
+			if err != nil {
+				t.Fatalf("render: %v", err)
 			}
-			if r.LabelBounds.W == 0 {
-				t.Errorf("%s carries text with no measured width, so nothing can check where it sits", r.ID)
+			scenes, err := artifact.Parse([]byte(page.HTML()))
+			if err != nil {
+				t.Fatalf("read back the artifact: %v", err)
 			}
-			if r.LabelSize <= 0 {
-				t.Errorf("%s carries text with no size, so its width cannot be reproduced", r.ID)
+			for i := range scenes {
+				for _, r := range scenes[i].Routes {
+					if r.LabelText == "" {
+						continue
+					}
+					if r.LabelSize <= 0 {
+						t.Errorf("%s carries text with no size, so its width cannot be reproduced", r.ID)
+						continue
+					}
+					if r.LabelBounds.W == 0 {
+						t.Errorf("%s carries text with no measured width, so nothing can check where it sits", r.ID)
+					}
+					if want := textWidth(r.LabelText, r.LabelSize); abs64(r.LabelBounds.W-want) > 0.5 {
+						t.Errorf("%s says its text is %.1fpx wide; %q at %.1fpx is %.1fpx",
+							r.ID, r.LabelBounds.W, r.LabelText, r.LabelSize, want)
+					}
+					// Fitted means fitted: text wider than the page is text
+					// nobody can read, whatever the rectangle says.
+					if r.LabelBounds.X < 0 || r.LabelBounds.Right() > scenes[i].Width {
+						t.Errorf("%s writes its text from %.0f to %.0f, outside a page %.0f wide",
+							r.ID, r.LabelBounds.X, r.LabelBounds.Right(), scenes[i].Width)
+					}
+				}
 			}
-			if want := textWidth(r.LabelText, r.LabelSize); abs64(r.LabelBounds.W-want) > 0.5 {
-				t.Errorf("%s says its text is %.1fpx wide; %q at %.1fpx is %.1fpx",
-					r.ID, r.LabelBounds.W, r.LabelText, r.LabelSize, want)
-			}
-		}
+		})
 	}
 }
 
