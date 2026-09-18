@@ -14,6 +14,7 @@ import (
 	"github.com/0xmhha/diagrammer/internal/graph"
 	"github.com/0xmhha/diagrammer/internal/instruct"
 	"github.com/0xmhha/diagrammer/internal/invariant"
+	"github.com/0xmhha/diagrammer/internal/mermaid"
 	"github.com/0xmhha/diagrammer/internal/render"
 	"github.com/0xmhha/diagrammer/internal/schema"
 	"github.com/0xmhha/diagrammer/internal/uml"
@@ -385,6 +386,71 @@ func familiesToCompose(model *uml.Model, requested string) ([]uml.Family, error)
 		}
 	}
 	return nil, fmt.Errorf("the model does not declare the %q family; it declares %s", requested, joinFamilies(model.Families))
+}
+
+// --- stage 3, as text ---------------------------------------------------------
+
+// MermaidRequest writes a diagram source as Mermaid.
+//
+// It reads the same document render reads and is the other thing that can be
+// done with one. A page is bound by a grid and records what the grid cannot
+// hold; Mermaid lays itself out, so the text carries every relationship the
+// document proved. That makes it the shape to hand a README, or a tool that
+// redraws diagrams in a design of its own.
+type MermaidRequest struct {
+	// Document is the diagram source to write.
+	Document string `json:"document" jsonschema:"the diagram source to write as Mermaid"`
+	// Out names the Markdown file to write.
+	Out string `json:"out,omitempty" jsonschema:"the Markdown file to write, one fenced Mermaid block per level"`
+}
+
+func (r *MermaidRequest) Op() Op { return OpMermaid }
+
+func (r *MermaidRequest) Paths() []string { return []string{r.Document, r.Out} }
+
+func (r *MermaidRequest) Run(context.Context) (*Result, error) {
+	if r.Document == "" {
+		return nil, fmt.Errorf("mermaid needs a diagram source path")
+	}
+	doc, err := readDocument(r.Document)
+	if err != nil {
+		return nil, err
+	}
+	text, err := mermaid.Document(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &Result{}
+	acc := text.Accounting
+	out.say("%s: %d level(s), %d proven, %d carried", r.Document, text.Levels, acc.Proven, acc.Carried)
+	if acc.Recorded > 0 {
+		out.say("  %d of those the page had recorded rather than drawn; the text has room for them", acc.Recorded)
+	}
+	if acc.Omitted > 0 {
+		out.say("  %d recorded message(s) named but not placed: a message with no order has no place in a sequence", acc.Omitted)
+	}
+	if err := deliver(out, r.Out, text.Markdown); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// readDocument loads a stage-3 document and holds it to its schema first, for
+// the same reason render does: this command may be handed one from anywhere.
+func readDocument(path string) (*diagram.Document, error) {
+	raw, err := os.ReadFile(path) // #nosec G304 -- the caller named this file
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	if err := schema.Validate(schema.Diagram, raw); err != nil {
+		return nil, fmt.Errorf("%s does not satisfy the diagram schema: %w", path, err)
+	}
+	var doc diagram.Document
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", path, err)
+	}
+	return &doc, nil
 }
 
 // --- stage 4 ------------------------------------------------------------------

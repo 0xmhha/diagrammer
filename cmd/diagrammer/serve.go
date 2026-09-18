@@ -43,6 +43,8 @@ func toolSummaries() map[command.Op]string {
 		command.OpCompose: "Turn a validated UML codegraph into diagram sources, one per family the model declares. " +
 			"Laid out but not drawn: boxes carry the cell they sit in, not a pixel position.",
 		command.OpRender: "Turn a diagram source into a self-contained HTML page.",
+		command.OpMermaid: "Write a diagram source as Mermaid text, one fenced block per level, for a README or a tool that " +
+			"redraws. Unlike the page it is not bound by a grid, so it carries every relationship the document proved.",
 		command.OpInstruct: "Return the instruction stage 2 is performed from: what a code graph holds, the schema a UML model " +
 			"must satisfy, what the gate checks beyond that schema, and how to choose what to say. " +
 			"Ask for this before reading a graph; it is built from the same schemas the gate uses, so it cannot disagree with them.",
@@ -94,6 +96,7 @@ func newServer(root aRoot) *mcp.Server {
 	addOp[command.ComposeRequest](server, command.OpCompose, summaries, root)
 	addOp[command.RenderRequest](server, command.OpRender, summaries, root)
 	addOp[command.InstructRequest](server, command.OpInstruct, summaries, root)
+	addOp[command.MermaidRequest](server, command.OpMermaid, summaries, root)
 
 	addStage2Prompt(server)
 	addSchemaResources(server)
@@ -116,6 +119,8 @@ the second one.
   (you)     the code graph in, a UML model out
   compose   the UML model in, one diagram source per family out
   render    a diagram source in, a self-contained HTML page out
+  mermaid   the same diagram source in, Mermaid text out, for a README or a
+            tool that redraws
 
 Ask for the ` + "`stage-2`" + ` prompt before anything else. It carries the schema your
 model has to satisfy and what the gate checks beyond that schema, and it is
@@ -125,7 +130,9 @@ built from the same files the gate uses, so it cannot disagree with them. The
 Then: call ` + "`graph`" + ` on the tree, read what comes back, and write the UML model
 yourself. This server has no tool that writes it, and never calls a model.
 ` + "`validate`" + ` will accept or refuse what you wrote and name every defect at once.
-` + "`compose`" + ` and ` + "`render`" + ` take it from there.
+` + "`compose`" + ` and ` + "`render`" + ` take it from there. ` + "`mermaid`" + ` is the other way out of a
+diagram source: text rather than a page, carrying every relationship the
+document proved, one fenced block per level.
 
 The schemas are also readable as resources if you want one on its own.
 
