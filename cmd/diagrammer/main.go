@@ -34,6 +34,7 @@ func commands() []subcommand {
 		{"compose", "turn a UML codegraph into diagram-source documents", runCompose},
 		{"render", "turn a diagram-source document into a self-contained page", runRender},
 		{"mermaid", "write a diagram-source document as Mermaid, one block per level", runMermaid},
+		{"svg", "write a diagram-source document's drawings as SVG files, framed to a size", runSVG},
 		{"instruct", "print the instruction stage 2 is performed from", runInstruct},
 		{"serve", "expose the same capabilities as a local MCP server", runServe},
 		{"version", "print the version and build details", runVersion},

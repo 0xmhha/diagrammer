@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/0xmhha/diagrammer/internal/command"
+	"github.com/0xmhha/diagrammer/internal/render"
 )
 
 // The CLI is one of two faces on the same set of capabilities. It owns flag
@@ -111,7 +112,8 @@ func buildRenderRequest(args []string, stderr io.Writer) (*command.RenderRequest
 	flags := flag.NewFlagSet("render", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.StringVar(&req.Out, "o", "", "write the page here instead of standard output")
-	flags.Usage = usageFor(stderr, flags, "render <doc.json> -o out.html")
+	flags.StringVar(&req.Level, "level", "", "draw one level on its own, by id; the default draws every level")
+	flags.Usage = usageFor(stderr, flags, "render <doc.json> -o out.html [-level id]")
 
 	doc, err := parseOperand(flags, args, "diagram source path")
 	if err != nil {
@@ -135,6 +137,31 @@ func buildMermaidRequest(args []string, stderr io.Writer) (*command.MermaidReque
 	flags.SetOutput(stderr)
 	flags.StringVar(&req.Out, "o", "", "write the Markdown here instead of standard output")
 	flags.Usage = usageFor(stderr, flags, "mermaid <doc.json> -o out.md")
+
+	doc, err := parseOperand(flags, args, "diagram source path")
+	if err != nil {
+		return nil, err
+	}
+	req.Document = doc
+	return req, nil
+}
+
+func runSVG(args []string, stdout, stderr io.Writer) error {
+	req, err := buildSVGRequest(args, stderr)
+	if err != nil {
+		return err
+	}
+	return deliverResult(req, stdout, stderr)
+}
+
+func buildSVGRequest(args []string, stderr io.Writer) (*command.SVGRequest, error) {
+	req := &command.SVGRequest{}
+	flags := flag.NewFlagSet("svg", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	flags.StringVar(&req.Out, "o", "", "write one SVG per level into this directory instead of standard output")
+	flags.StringVar(&req.Level, "level", "", "write one level on its own, by id; the default writes every level")
+	flags.StringVar(&req.Size, "size", "", "the frame to deliver in; the default is fit, the drawing's own size")
+	flags.Usage = usageFor(stderr, flags, "svg <doc.json> -o <dir> [-level id] [-size "+render.SortedSizes()+"]")
 
 	doc, err := parseOperand(flags, args, "diagram source path")
 	if err != nil {

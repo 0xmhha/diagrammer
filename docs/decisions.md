@@ -102,6 +102,8 @@ change, not an edit.
     diagrammer compose  <codegraph.json> -o <dir> stage 3
     diagrammer render   <doc.json> -o out.html    stage 4
     diagrammer mermaid  <doc.json> -o out.md      stage 3, as text
+    diagrammer svg      <doc.json> -o <dir>       stage 4, as files, framed to a size
+    diagrammer render   <doc.json> -level <id>    one level on its own; svg takes it too
     diagrammer instruct [-o prompt.md]            what stage 2 is performed from
     diagrammer serve    [-root dir]               the same, as a local MCP server
     diagrammer version
@@ -548,6 +550,46 @@ stylesheet with its comments stripped and holds every stroke, the accent's
 placement, each role's face and every corner radius. `TestEveryDrawingAnnouncesItself`
 holds the markup. A rule that erodes one commit at a time is exactly the kind a
 test is for.
+
+### A drawing has a frame when it leaves the page (after 0.5.0)
+
+A page has no frame. The drawing is laid out at its own size and the page
+scrolls to it, which is the rule that keeps every label above the floor the
+fitting holds. A slide has a frame, and so does a document, a social card and a
+printed page, and none of them is the size the drawing happens to be. `svg`
+writes the page's drawing as a file of its own, one per level, framed to a size
+named for where it is going.
+
+**The same drawing, derived rather than redrawn.** The file wraps the exact
+body the page wraps, `sceneBody`, so the two cannot draw differently. Its style
+is the page's stylesheet reduced to what a drawing needs on its own, tokens
+resolved to their light values, with nothing about hovering, opening or
+scrolling, none of which a file can do. It is read out of `viewer.css` at
+build time rather than written a second time, and a test holds that nothing in
+it still says `var(` and that every class the drawing uses has a rule.
+
+**A frame that scales says so.** A frame smaller than the drawing scales it
+down and every label with it, under the floor the page holds. The page never
+does this; the file does it because the destination has one size, and the one
+thing about the file a reader cannot see is how far. So the command reports the
+scale and what the smallest label came to, in the frame's own units, beside
+each file it writes.
+
+**Every frame's sides are multiples of four,** which are the sizes a slide and
+a page actually have, and `fit` is the drawing's own size with no frame at all,
+for a vector hand-off.
+
+**One level on its own.** `-level` on `render` and `svg` draws one level as a
+document in its own right: the overview alone is a summary, and a page deep in
+the tree alone is a detail. The level is cut out of the document before either
+writer sees it, which is the only way a box that opened a page not present can
+be made to open nothing rather than point at a page the reader will never find.
+Its accounting is untouched: what it proved and drew does not change because
+it is alone.
+
+**Not built: PNG.** Rasterising needs a renderer this program does not carry,
+and it starts no external process. A `make` step that ran one would sit where
+calling a model sits today: glue, outside the binary, opt-in.
 
 ### The renderer is reimplemented; the viewer is embedded (round 3)
 

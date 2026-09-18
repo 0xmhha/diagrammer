@@ -539,9 +539,11 @@ dist-check:
 # was impossible, not a better way to do the thing that already worked.
 #
 # Every page comes with a Markdown file beside it holding the same document as
-# Mermaid, one block per level. That is the shape a README embeds and a
-# redrawing tool such as diagram-design reads; it is written from the same
-# document as the page, so the two cannot disagree about what was proved.
+# Mermaid, one block per level, and a directory of standalone SVG files, one
+# per level, under svg/. The Markdown is the shape a README embeds and a
+# redrawing tool reads; the SVG is the shape a slide or a document takes. Both
+# are written from the same document as the page, so none of the three can
+# disagree about what was proved.
 #
 # OUT= puts the work somewhere else. POLYGLOT=1 uses the four-language build,
 # which is usually what you want for a tree that is not all Go.
@@ -654,6 +656,7 @@ diagram: $(DIAGRAM_DEP)
 		family=$$(basename "$$doc" .diagram.json); \
 		$(DIAGRAM_BIN) render "$$doc" -o "$$out/$$family.html"; \
 		$(DIAGRAM_BIN) mermaid "$$doc" -o "$$out/$$family.md"; \
+		$(DIAGRAM_BIN) svg "$$doc" -o "$$out/svg/$$family" >/dev/null; \
 		drawn=$$((drawn + 1)); \
 	done; \
 	if [ "$$drawn" -eq 0 ]; then \
@@ -661,7 +664,7 @@ diagram: $(DIAGRAM_DEP)
 		exit 1; \
 	fi; \
 	echo; \
-	echo "$$drawn page(s), each with a Mermaid text beside it:"; \
+	echo "$$drawn page(s), each with a Mermaid text beside it and its drawings under svg/:"; \
 	for page in "$$out"/*.html; do echo "  $$page"; done
 
 ## install: put the binary on PATH via GOBIN

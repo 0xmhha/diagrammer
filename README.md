@@ -71,7 +71,28 @@ A use case diagram has no Mermaid grammar of its own and is written as a
 flowchart, with actors as stadiums and include and extend as dashed arrows
 carrying their stereotype. That is an approximation and the text says so.
 
-`make diagram` writes the Markdown beside every page.
+`svg` is the third way out, for wherever a page cannot go:
+
+```
+diagrammer svg out/component.diagram.json -o out/svg -size slide-16x9
+diagrammer render out/component.diagram.json -o overview.html -level overview
+```
+
+One file per level, the same drawing the page holds, with its styles resolved so
+no page is needed around it and its title and description carried for a screen
+reader. `-size` frames it for a slide, a document, a social card or a printed
+page; the default, `fit`, is the drawing's own size. A frame smaller than the
+drawing scales it down, which the page never does, and the command says how far
+and what the smallest label came to, because that is the one thing about the
+file a reader cannot see.
+
+`-level` on `render` and `svg` draws one level on its own: the overview alone
+is a summary, and a page deep in the tree alone is a detail. Both writers get
+the level as a document of its own, so a box that opened a page not present
+opens nothing rather than pointing at a page the reader will never find.
+
+`make diagram` writes the Markdown beside every page and the SVG files under
+`svg/`.
 
 ## How much of the tree the drawing describes
 
@@ -125,7 +146,7 @@ scope by pointing the program at a repository and wondering why the graph came
 back nearly empty.
 
 Everything else works end to end for all four families in either build:
-`graph`, `validate`, `compose`, `render`, `mermaid`, `instruct` and `serve`.
+`graph`, `validate`, `compose`, `render`, `mermaid`, `svg`, `instruct` and `serve`.
 
 ## Build
 

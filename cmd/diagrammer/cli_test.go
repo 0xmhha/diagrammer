@@ -45,7 +45,7 @@ func TestEveryRequestFieldHasAFlag(t *testing.T) {
 			},
 		}, {
 			op:   command.OpRender,
-			args: []string{"doc.json", "-o", "out.html"},
+			args: []string{"doc.json", "-o", "out.html", "-level", "overview"},
 			build: func(args []string, w io.Writer) (any, error) {
 				return buildRenderRequest(args, w)
 			},
@@ -60,6 +60,12 @@ func TestEveryRequestFieldHasAFlag(t *testing.T) {
 			args: []string{"doc.json", "-o", "out.md"},
 			build: func(args []string, w io.Writer) (any, error) {
 				return buildMermaidRequest(args, w)
+			},
+		}, {
+			op:   command.OpSVG,
+			args: []string{"doc.json", "-o", "out", "-level", "overview", "-size", "slide-16x9"},
+			build: func(args []string, w io.Writer) (any, error) {
+				return buildSVGRequest(args, w)
 			},
 		},
 	}

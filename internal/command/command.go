@@ -25,6 +25,9 @@ const (
 	// OpMermaid is the second way out of stage 3: a diagram source as Mermaid
 	// text rather than as a page, for a README or a tool that redraws.
 	OpMermaid Op = "mermaid"
+	// OpSVG is the third: the page's drawing as a file of its own, framed for
+	// a slide, a document or a print, for wherever a page cannot go.
+	OpSVG Op = "svg"
 )
 
 // What this program writes belongs to whoever ran it, and nobody else by
@@ -97,6 +100,7 @@ func operations() map[Op]func() Request {
 		OpRender:   func() Request { return &RenderRequest{} },
 		OpInstruct: func() Request { return &InstructRequest{} },
 		OpMermaid:  func() Request { return &MermaidRequest{} },
+		OpSVG:      func() Request { return &SVGRequest{} },
 	}
 }
 
