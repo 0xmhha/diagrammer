@@ -22,6 +22,9 @@ const (
 	// one capability that reads nothing and is the only way a skill learns what
 	// to return without going to look for the schema in the source.
 	OpInstruct Op = "instruct"
+	// OpMermaid is the second way out of stage 3: a diagram source as Mermaid
+	// text rather than as a page, for a README or a tool that redraws.
+	OpMermaid Op = "mermaid"
 )
 
 // What this program writes belongs to whoever ran it, and nobody else by
@@ -93,6 +96,7 @@ func operations() map[Op]func() Request {
 		OpCompose:  func() Request { return &ComposeRequest{} },
 		OpRender:   func() Request { return &RenderRequest{} },
 		OpInstruct: func() Request { return &InstructRequest{} },
+		OpMermaid:  func() Request { return &MermaidRequest{} },
 	}
 }
 

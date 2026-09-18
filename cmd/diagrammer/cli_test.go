@@ -55,6 +55,12 @@ func TestEveryRequestFieldHasAFlag(t *testing.T) {
 			build: func(args []string, w io.Writer) (any, error) {
 				return buildInstructRequest(args, w)
 			},
+		}, {
+			op:   command.OpMermaid,
+			args: []string{"doc.json", "-o", "out.md"},
+			build: func(args []string, w io.Writer) (any, error) {
+				return buildMermaidRequest(args, w)
+			},
 		},
 	}
 

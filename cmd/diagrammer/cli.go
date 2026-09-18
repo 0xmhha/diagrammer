@@ -121,6 +121,29 @@ func buildRenderRequest(args []string, stderr io.Writer) (*command.RenderRequest
 	return req, nil
 }
 
+func runMermaid(args []string, stdout, stderr io.Writer) error {
+	req, err := buildMermaidRequest(args, stderr)
+	if err != nil {
+		return err
+	}
+	return deliverResult(req, stdout, stderr)
+}
+
+func buildMermaidRequest(args []string, stderr io.Writer) (*command.MermaidRequest, error) {
+	req := &command.MermaidRequest{}
+	flags := flag.NewFlagSet("mermaid", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	flags.StringVar(&req.Out, "o", "", "write the Markdown here instead of standard output")
+	flags.Usage = usageFor(stderr, flags, "mermaid <doc.json> -o out.md")
+
+	doc, err := parseOperand(flags, args, "diagram source path")
+	if err != nil {
+		return nil, err
+	}
+	req.Document = doc
+	return req, nil
+}
+
 // deliverResult runs a request and puts its output where each part belongs.
 // runInstruct prints what stage 2 is performed from.
 //

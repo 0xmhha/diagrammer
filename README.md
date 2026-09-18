@@ -43,6 +43,33 @@ them does not happen inside this program.
 `validate` guards the boundary between stages 2 and 3, and `serve` exposes the
 same capabilities as a local MCP server so any plugin can drive them.
 
+## Taking a diagram somewhere else
+
+`render` is one way out of stage 3. `mermaid` is the other:
+
+```
+diagrammer mermaid out/component.diagram.json -o component.md
+```
+
+One Markdown file, one fenced Mermaid block per level, from the same document
+the page was drawn from. That is the shape a README, Notion or Obsidian embeds
+without a build step, and the shape a redrawing tool such as
+[diagram-design](https://github.com/cathrynlavery/diagram-design) reads with its
+Mermaid importer, so a diagram this program proved can be redrawn in a design
+of somebody else's choosing.
+
+The text is not bound by a grid, so it carries every relationship the document
+proved, including the ones the page had to record rather than draw, and says
+so beside them. The one exception is a recorded message in a sequence diagram:
+order is its meaning and a recorded message has none, so it is named in a
+comment rather than placed. The command's summary counts all of this.
+
+A use case diagram has no Mermaid grammar of its own and is written as a
+flowchart, with actors as stadiums and include and extend as dashed arrows
+carrying their stereotype. That is an approximation and the text says so.
+
+`make diagram` writes the Markdown beside every page.
+
 ## How much of the tree the drawing describes
 
 Everything a model returns is judgement. A name is what it chose to call
@@ -95,7 +122,7 @@ scope by pointing the program at a repository and wondering why the graph came
 back nearly empty.
 
 Everything else works end to end for all four families in either build:
-`graph`, `validate`, `compose`, `render`, `instruct` and `serve`.
+`graph`, `validate`, `compose`, `render`, `mermaid`, `instruct` and `serve`.
 
 ## Build
 

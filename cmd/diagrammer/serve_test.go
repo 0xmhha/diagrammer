@@ -145,6 +145,7 @@ func TestToolArgumentsMatchTheRequests(t *testing.T) {
 		command.OpCompose:  command.ComposeRequest{},
 		command.OpRender:   command.RenderRequest{},
 		command.OpInstruct: command.InstructRequest{},
+		command.OpMermaid:  command.MermaidRequest{},
 	}
 	if len(cases) != len(command.Ops()) {
 		t.Fatalf("this table covers %d operations, the registry declares %d", len(cases), len(command.Ops()))

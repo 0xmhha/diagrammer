@@ -101,6 +101,7 @@ change, not an edit.
     diagrammer validate <codegraph.json>          stage 2 boundary
     diagrammer compose  <codegraph.json> -o <dir> stage 3
     diagrammer render   <doc.json> -o out.html    stage 4
+    diagrammer mermaid  <doc.json> -o out.md      stage 3, as text
     diagrammer instruct [-o prompt.md]            what stage 2 is performed from
     diagrammer serve    [-root dir]               the same, as a local MCP server
     diagrammer version
@@ -446,6 +447,62 @@ This is also the shape the deferred source-evidence question needs. Line numbers
 were refused because a model transcribing them would produce numbers nothing
 downstream could check. An id is not a transcription, and it is checked; what a
 node's file and line are is then a lookup rather than a claim.
+
+### A document has a second way out, as Mermaid (after 0.5.0)
+
+`render` draws a page from a stage-3 document. `mermaid` writes the same
+document as text, one fenced block per level, and is a peer of it rather than a
+feature of it: both read the document, neither reads the other.
+
+**Why Mermaid and not a format of this program's own.** Because the places a
+diagram is taken to already read it. A README on GitHub, a Notion or Obsidian
+page, and a redrawing tool such as diagram-design all take a fenced Mermaid
+block and none of them would take anything invented here. diagram-design in
+particular was the occasion: it redraws Mermaid in an editorial design system of
+its own, at a chosen size and level of detail, and its `faithful` ceiling is 24
+nodes, which is this program's own page ceiling. A level here is a diagram
+there, and the two were built to the same number without knowing it.
+
+**The text carries what the page could not.** A page is bound by a grid and
+records a relationship it cannot route. Mermaid lays itself out and has no
+reason to leave a line off, so the text carries every relationship the document
+proved, and marks the ones the page recorded so a reader can tell them apart.
+The accounting keeps the same shape as everywhere else: carried plus omitted
+equals proven, on every level, and the command prints it.
+
+The one omission is a recorded message in a sequence diagram. Its order is its
+meaning and a recorded message has none, so placing it would be inventing an
+order. It is named in a comment and counted as omitted. No fixture records a
+message; a test constructs one so the path is not a rule nobody has seen fire.
+
+**Ids are rewritten, totally and deterministically.** Stage-3 ids carry dots
+and colons, 107 of the 198 in the fixtures, and Mermaid reads both as syntax.
+Every id becomes an identifier; a keyword such as `end`, which closes a
+subgraph, gains an underscore; and a collision is resolved in sorted order with
+an id that was already acceptable keeping its own name. Two runs over one
+document produce one text.
+
+**What each family loses.** Nothing, for component and state: subgraphs are
+bands, `[*]` is a pseudostate, a composite is a block. A sequence diagram
+loses the `strict` and `seq` fragment kinds, which Mermaid does not have and
+which are written as `opt` with the kind in the guard and a comment saying so.
+A use case diagram has no grammar of its own anywhere in Mermaid and is
+written as a flowchart with stadiums for actors and dashed arrows for include
+and extend, carrying the stereotype as their label. That is an approximation,
+the README says so, and diagram-design would route it to its architecture type
+rather than a use case one, because it has none either.
+
+**Measured, not assumed.** Every family of two fixtures was written and handed
+to diagram-design's own extractor, `mermaid_extract.py`, with `--diagram all`.
+All eight were accepted; the five-level component document came back as five
+diagrams with the node and edge counts the document has. That is the importer
+on the other side saying yes, which is the only claim about interoperability
+worth making.
+
+**Not built: an importer of our own.** diagram-design's other two inputs are
+draw.io and Excalidraw, and this program could write either. It writes neither,
+because nothing this program produces is improved by passing through a drawing
+tool, and one text format the destinations already share is what was asked for.
 
 ### The renderer is reimplemented; the viewer is embedded (round 3)
 
