@@ -199,11 +199,14 @@ func declarationsByFile(g *graph.Graph) map[string]int {
 type ValidateRequest struct {
 	// Model is the codegraph.json to check.
 	Model string `json:"model" jsonschema:"the codegraph.json to check"`
+	// Graph is the stage-1 graph the model says it came from. Named, it turns
+	// the model's accountsFor claims from prose into arithmetic.
+	Graph string `json:"graph,omitempty" jsonschema:"the stage-1 graph the model came from; checks what the model claims to stand for"`
 }
 
 func (r *ValidateRequest) Op() Op { return OpValidate }
 
-func (r *ValidateRequest) Paths() []string { return []string{r.Model} }
+func (r *ValidateRequest) Paths() []string { return []string{r.Model, r.Graph} }
 
 func (r *ValidateRequest) Run(context.Context) (*Result, error) {
 	model, _, err := readModel(r.Model)
@@ -213,7 +216,51 @@ func (r *ValidateRequest) Run(context.Context) (*Result, error) {
 	out := &Result{}
 	out.say("%s: valid, %d %s (%s)", r.Model, len(model.Families),
 		plural(len(model.Families), "family", "families"), joinFamilies(model.Families))
+
+	if r.Graph == "" {
+		return out, nil
+	}
+	g, err := readGraph(r.Graph)
+	if err != nil {
+		return nil, err
+	}
+	// An id the graph does not have is a defect and stops the command; areas
+	// nobody stood for are reported and do not. A model is a map rather than a
+	// census and is allowed to leave things out, but not to leave them out
+	// without saying so.
+	coverage, err := validate.Against(model, g)
+	if err != nil {
+		return nil, err
+	}
+	out.say("%s", coverage)
+	// Naming the gaps is only worth anything once something was claimed. A
+	// model that stated nothing has every area unaccounted for, and listing
+	// them all would read as a long list of failures rather than as one
+	// sentence saying the question was never answered.
+	if coverage.Stated > 0 {
+		for _, area := range coverage.Unclaimed {
+			out.say("  no component stands for %s", area)
+		}
+	}
 	return out, nil
+}
+
+// readGraph loads a stage-1 graph and holds it to its own schema first, so a
+// graph that is not one fails as itself rather than as a coverage result
+// nobody can explain.
+func readGraph(path string) (*graph.Graph, error) {
+	raw, err := os.ReadFile(path) // #nosec G304 -- the caller named this file
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	if err := schema.Validate(schema.Graph, raw); err != nil {
+		return nil, fmt.Errorf("%s does not satisfy the graph schema: %w", path, err)
+	}
+	var g graph.Graph
+	if err := json.Unmarshal(raw, &g); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", path, err)
+	}
+	return &g, nil
 }
 
 // --- stage 3 ------------------------------------------------------------------

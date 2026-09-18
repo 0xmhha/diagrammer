@@ -33,7 +33,7 @@ func TestEveryRequestFieldHasAFlag(t *testing.T) {
 			},
 		}, {
 			op:   command.OpValidate,
-			args: []string{"model.json"},
+			args: []string{"model.json", "-graph", "graph.json"},
 			build: func(args []string, w io.Writer) (any, error) {
 				return buildValidateRequest(args, w)
 			},

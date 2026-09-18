@@ -488,7 +488,11 @@ dist-check:
 #     AI=1 is this with AI_CMD filled in.
 #
 # Whatever answers goes through `validate` before anything is drawn, so a model
-# that came back wrong is refused here rather than three stages later. What was
+# that came back wrong is refused here rather than three stages later, and then
+# through it a second time against the graph, which reports how much of the tree
+# any component actually stood for. The second pass does not refuse anything: a
+# model is a map rather than a census and may leave things out. It may not leave
+# them out without saying so. What was
 # asked is left in OUT/stage-2.prompt, so a bad answer can be read next to the
 # question that produced it.
 #
@@ -605,6 +609,8 @@ diagram: $(DIAGRAM_DEP)
 			rm -f "$$model.part"; \
 			if [ -s "$$model" ] && $(DIAGRAM_BIN) validate "$$model" >/dev/null 2>&1; then \
 				echo "stage 2: wrote $$model"; \
+				$(DIAGRAM_BIN) validate "$$model" -graph "$$out/graph.json" \
+					2>&1 | grep -v ': valid,' || true; \
 				break; \
 			fi; \
 			if [ "$$try" -ge "$(AI_TRIES)" ]; then \
