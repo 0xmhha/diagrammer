@@ -121,6 +121,13 @@ tree, to whoever runs that model. `AI_CMD` is the command, so pointing it at
 something else changes nothing here. Whatever comes back goes through
 `validate` before anything is drawn.
 
+A graph small enough to send is sent. One too big is not: the model is pointed
+at the file and reads it with its own tools, so nothing large enters a prompt
+and no size limit applies. A 9.2 MB graph of 15,660 nodes draws in about three
+minutes that way. Sending is kept for everything that fits because it takes
+seconds rather than minutes; reading is how the thing that used to be
+impossible became possible, not a better way to do what already worked.
+
 It is a make target rather than a subcommand on purpose. A subcommand that
 drove a model would put stage 2 back inside the binary, and keeping it out is
 the decision the whole pipeline is shaped by. A Makefile is glue, and glue is

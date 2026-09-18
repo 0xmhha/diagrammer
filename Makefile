@@ -41,15 +41,34 @@ OUT         ?= out/diagram
 # whoever runs that model. AI_CMD is what gets run, so pointing this at a
 # different tool needs no change here.
 AI_CMD      ?= claude -p --output-format text
+# The same tool, allowed to read. A graph too big to send is read by the model
+# out of the directory the run is working in, so the command needs file access
+# and nothing else does. It is a separate variable because granting a model a
+# shell is not something to do on every run for the sake of one.
+AI_TOOL_CMD ?= claude -p --output-format text --allowed-tools Read Grep Bash Write
 # How many times to ask before giving up. A model is not reliable run to run:
 # asked for one small fixture six times it returned a fenced document, a null
 # where the schema wants a string, and a note over its length limit, each once.
 # None of those is a reason to stop, and all of them are caught by `validate`
 # rather than guessed at, so asking again is both safe and usually enough.
 AI_TRIES    ?= 3
+# A graph larger than this is not sent; the model is pointed at the file and
+# reads it instead. Measured: a 1.13 MB graph is answered and a 2.82 MB one is
+# refused outright, so the cut is well below the refusal and well above the
+# 349 KB this repository produces. See the diagram target.
+AI_INLINE_KB ?= 1200
+# What is asked for past the instruction itself. Every sentence was put here by
+# a run that failed without it: the answer came fenced, then with a null where
+# the schema wants a string, then with a note over the length limit the schema
+# states and the instruction already carried.
+AI_TAIL     := Return the codegraph.json document and nothing else. Leave an optional field out rather than setting it to null. Keep provenance.note under 1000 characters, which is the limit the schema states and the one most often broken.
 ifeq ($(AI),1)
-MODEL_CMD   := $(AI_CMD)
+MODEL_CMD      := $(AI_CMD)
+MODEL_TOOL_CMD := $(AI_TOOL_CMD)
 endif
+# Somebody who named their own MODEL_CMD gets it in both modes: they chose a
+# tool, and this is not the place to substitute a different one behind them.
+MODEL_TOOL_CMD ?= $(MODEL_CMD)
 
 # Whether MODEL_CMD was given is decided here rather than in the recipe. A
 # command line holds quotes, and `[ -n "$(MODEL_CMD)" ]` hands those quotes to
@@ -458,8 +477,9 @@ dist-check:
 #   make diagram SRC=../some/project AI=1
 #     performs stage 2 by calling a model, and is the only one of these that
 #     draws a tree in one command. Opt-in, because it spends money and hands the
-#     graph, doc comments and all, to whoever runs that model. Slow: close to
-#     two minutes on a four-file fixture.
+#     graph, doc comments and all, to whoever runs that model. A graph small
+#     enough is sent; one too big is read by the model instead, which is slower
+#     and has no size limit.
 #
 #   make diagram SRC=../some/project MODEL_CMD='your-own-runner'
 #     the same path with something else on the other end. The command is handed
@@ -502,12 +522,17 @@ dist-check:
 # error, so the message went into the file holding the model and was deleted with
 # it, and the failure arrived with no reason attached.
 #
-# How big is too big depends on the model, so nothing here guesses: the prompt's
-# size is printed and the tool on the other end gets to answer. Measured against
-# the default: this repository, 63 files and a 349 KB graph, is drawn in about
-# 107 seconds; a 1.1 MB graph still answers; a 2.8 MB graph of 292 files is
-# refused, in twelve seconds and at no cost. The instruction is 33 KB of any
-# prompt, so the graph is the part that varies.
+# A graph past AI_INLINE_KB is not sent at all. The model is pointed at the file
+# and reads it with its own tools, out of the directory the run is working in, so
+# nothing large ever enters a prompt and the limit stops applying. Measured
+# against the default: a 1.13 MB graph is answered when sent, a 2.82 MB one is
+# refused outright, and the whole of a 9.2 MB tree is drawn in about three
+# minutes when read rather than sent. The instruction is 33 KB of any prompt, so
+# the graph is the part that varies.
+#
+# Sending is still what happens when it fits, because it is far faster: seconds
+# against minutes on a small tree. Reading is the way to do the one thing that
+# was impossible, not a better way to do the thing that already worked.
 #
 # OUT= puts the work somewhere else. POLYGLOT=1 uses the four-language build,
 # which is usually what you want for a tree that is not all Go.
@@ -528,19 +553,45 @@ diagram: $(DIAGRAM_DEP)
 	model="$(MODEL)"; \
 	if [ -z "$$model" ] && [ -n "$(HAS_MODEL_CMD)" ]; then \
 		model="$$out/model.codegraph.json"; \
-		{ cat "$$out/stage-2.md"; \
-		  printf '\n\n## The code graph\n\n'; \
-		  cat "$$out/graph.json"; \
-		  printf '\n\nReturn the codegraph.json document and nothing else. Leave an '; \
-		  printf 'optional field out rather than setting it to null. Keep '; \
-		  printf 'provenance.note under 1000 characters, which is the limit the '; \
-		  printf 'schema above states and the one most often broken.\n'; \
-		} > "$$out/stage-2.prompt"; \
+		graphkb=$$(($$(wc -c < "$$out/graph.json") / 1024)); \
+		if [ "$$graphkb" -le "$(AI_INLINE_KB)" ]; then \
+			reading=""; \
+			{ cat "$$out/stage-2.md"; \
+			  printf '\n\n## The code graph\n\n'; \
+			  cat "$$out/graph.json"; \
+			  printf '\n\n%s\n' '$(AI_TAIL)'; \
+			} > "$$out/stage-2.prompt"; \
+		else \
+			reading=" by reading it"; \
+			{ cat "$$out/stage-2.md"; \
+			  printf '\n\n## Where the code graph is\n\n'; \
+			  printf 'Not in this prompt. It is graph.json in this directory, %s KB of it, ' "$$graphkb"; \
+			  printf 'which is more than can be handed to you whole.\n\n'; \
+			  printf 'Read it with your tools. It is one JSON document with a nodes array '; \
+			  printf 'and an edges array; every node carries an id, a kind of group, '; \
+			  printf 'package, file, type or func, a parent, and often a doc comment. '; \
+			  printf 'Sample it however you like, but what you return describes the whole '; \
+			  printf 'tree, so find out what is in all of it before deciding what the '; \
+			  printf 'parts are.\n\n'; \
+			  printf 'Write the document to model.codegraph.json in this directory. Put '; \
+			  printf 'nothing on your standard output but the path you wrote.\n\n'; \
+			  printf '%s\n' '$(AI_TAIL)'; \
+			} > "$$out/stage-2.prompt"; \
+		fi; \
 		size=$$(($$(wc -c < "$$out/stage-2.prompt") / 1024)); \
 		try=1; \
 		while :; do \
-			echo "stage 2: asking $(firstword $(MODEL_CMD)) with a $$size KB prompt, attempt $$try of $(AI_TRIES)"; \
-			if ! $(MODEL_CMD) < "$$out/stage-2.prompt" > "$$model.part" 2> "$$out/stage-2.err"; then \
+			echo "stage 2: asking $(firstword $(MODEL_CMD)) about a $$graphkb KB graph$$reading, attempt $$try of $(AI_TRIES)"; \
+			rm -f "$$model"; \
+			fail=0; \
+			if [ -z "$$reading" ]; then \
+				( cd "$$out" && $(MODEL_CMD) < stage-2.prompt ) \
+					> "$$model.part" 2> "$$out/stage-2.err" || fail=$$?; \
+			else \
+				( cd "$$out" && $(MODEL_TOOL_CMD) < stage-2.prompt ) \
+					> "$$model.part" 2> "$$out/stage-2.err" || fail=$$?; \
+			fi; \
+			if [ "$$fail" -ne 0 ]; then \
 				echo "stage 2: the model command failed. What it said:"; \
 				cat "$$out/stage-2.err" "$$model.part" 2>/dev/null \
 					| grep -v '^[[:space:]]*$$' | head -5 | sed 's/^/  /'; \
@@ -548,7 +599,9 @@ diagram: $(DIAGRAM_DEP)
 				exit 1; \
 			fi; \
 			rm -f "$$out/stage-2.err"; \
-			sed '/^```/d' "$$model.part" | sed -n '/^{/,$$p' > "$$model"; \
+			if [ ! -s "$$model" ]; then \
+				sed '/^```/d' "$$model.part" | sed -n '/^{/,$$p' > "$$model"; \
+			fi; \
 			rm -f "$$model.part"; \
 			if [ -s "$$model" ] && $(DIAGRAM_BIN) validate "$$model" >/dev/null 2>&1; then \
 				echo "stage 2: wrote $$model"; \
