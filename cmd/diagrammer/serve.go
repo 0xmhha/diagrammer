@@ -45,6 +45,8 @@ func toolSummaries() map[command.Op]string {
 		command.OpRender: "Turn a diagram source into a self-contained HTML page.",
 		command.OpMermaid: "Write a diagram source as Mermaid text, one fenced block per level, for a README or a tool that " +
 			"redraws. Unlike the page it is not bound by a grid, so it carries every relationship the document proved.",
+		command.OpSVG: "Write a diagram source's drawings as standalone SVG files, one per level, framed to a size a slide, " +
+			"a document or a print has. The same drawing the page holds, with nothing to move between levels.",
 		command.OpInstruct: "Return the instruction stage 2 is performed from: what a code graph holds, the schema a UML model " +
 			"must satisfy, what the gate checks beyond that schema, and how to choose what to say. " +
 			"Ask for this before reading a graph; it is built from the same schemas the gate uses, so it cannot disagree with them.",
@@ -97,6 +99,7 @@ func newServer(root aRoot) *mcp.Server {
 	addOp[command.RenderRequest](server, command.OpRender, summaries, root)
 	addOp[command.InstructRequest](server, command.OpInstruct, summaries, root)
 	addOp[command.MermaidRequest](server, command.OpMermaid, summaries, root)
+	addOp[command.SVGRequest](server, command.OpSVG, summaries, root)
 
 	addStage2Prompt(server)
 	addSchemaResources(server)
@@ -121,6 +124,8 @@ the second one.
   render    a diagram source in, a self-contained HTML page out
   mermaid   the same diagram source in, Mermaid text out, for a README or a
             tool that redraws
+  svg       the same diagram source in, one SVG file per level out, framed
+            for a slide, a document or a print
 
 Ask for the ` + "`stage-2`" + ` prompt before anything else. It carries the schema your
 model has to satisfy and what the gate checks beyond that schema, and it is
@@ -132,7 +137,8 @@ yourself. This server has no tool that writes it, and never calls a model.
 ` + "`validate`" + ` will accept or refuse what you wrote and name every defect at once.
 ` + "`compose`" + ` and ` + "`render`" + ` take it from there. ` + "`mermaid`" + ` is the other way out of a
 diagram source: text rather than a page, carrying every relationship the
-document proved, one fenced block per level.
+document proved, one fenced block per level. ` + "`svg`" + ` is the third: the page's
+drawing as a file, framed to a size the destination has.
 
 The schemas are also readable as resources if you want one on its own.
 

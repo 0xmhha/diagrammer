@@ -388,6 +388,98 @@ func familiesToCompose(model *uml.Model, requested string) ([]uml.Family, error)
 	return nil, fmt.Errorf("the model does not declare the %q family; it declares %s", requested, joinFamilies(model.Families))
 }
 
+// --- stage 4, as a file ---------------------------------------------------------
+
+// SVGRequest writes a diagram source's drawings as files of their own.
+//
+// A page carries the drawing and the means to move between levels; a slide, a
+// document or a print carries a picture and nothing else. This writes that
+// picture: the same drawing the page holds, one file per level, framed at a
+// size the destination has rather than the size the drawing happens to be.
+type SVGRequest struct {
+	// Document is the diagram source to draw.
+	Document string `json:"document" jsonschema:"the diagram source to draw"`
+	// Out names the directory to write the files into, one per level.
+	Out string `json:"out,omitempty" jsonschema:"the directory to write one SVG per level into; omit it and the files are returned instead"`
+	// Level names one level to write on its own. Empty writes them all.
+	Level string `json:"level,omitempty" jsonschema:"write one level on its own, by id; empty writes every level"`
+	// Size names the frame. Empty is fit: the drawing's own size.
+	Size string `json:"size,omitempty" jsonschema:"the frame to deliver in: fit (the default), doc-inline, doc-wide, slide-16x9, slide-4x3, social-og, social-square, print-a4-landscape, print-letter-landscape"`
+}
+
+func (r *SVGRequest) Op() Op { return OpSVG }
+
+func (r *SVGRequest) Paths() []string { return []string{r.Document, r.Out} }
+
+func (r *SVGRequest) Run(context.Context) (*Result, error) {
+	if r.Document == "" {
+		return nil, fmt.Errorf("svg needs a diagram source path")
+	}
+	size := render.Fit
+	if r.Size != "" {
+		named, ok := render.SizeNamed(r.Size)
+		if !ok {
+			return nil, fmt.Errorf("no frame called %q; the frames are %s", r.Size, render.SortedSizes())
+		}
+		size = named
+	}
+	doc, err := readDocument(r.Document)
+	if err != nil {
+		return nil, err
+	}
+	if r.Level != "" {
+		only, err := doc.Only(r.Level)
+		if err != nil {
+			return nil, err
+		}
+		doc = only
+	}
+	page, err := render.Build(doc)
+	if err != nil {
+		return nil, err
+	}
+	if r.Out != "" {
+		if err := os.MkdirAll(r.Out, outputDirMode); err != nil {
+			return nil, fmt.Errorf("create %s: %w", r.Out, err)
+		}
+	}
+
+	out := &Result{}
+	for _, scene := range page.Scenes {
+		svg, framed := render.Standalone(scene, size)
+		target := ""
+		if r.Out != "" {
+			target = filepath.Join(r.Out, render.SVGFileName(scene.Level))
+		}
+		name := target
+		if name == "" {
+			name = scene.Level
+		}
+		if framed.Scale == 1 {
+			out.say("%s: %s, %sx%s", name, scene.Title, num(framed.W), num(framed.H))
+		} else {
+			// A frame the drawing had to be scaled into is the one thing about
+			// the file the reader cannot see. The page never scales a drawing;
+			// this file does it because the destination has one size, and it
+			// says how far and what the smallest label came to.
+			out.say("%s: %s, %sx%s, drawn at %.2f of its size; the smallest label is %.1f where the page holds %d",
+				name, scene.Title, num(framed.W), num(framed.H), framed.Scale, framed.SmallestLabel, render.LabelFloor)
+		}
+		if err := deliver(out, target, []byte(svg)); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+// num prints a size the way the drawing does, without a trailing .0.
+func num(v float64) string {
+	if v == float64(int64(v)) {
+		return fmt.Sprintf("%d", int64(v))
+	}
+	return fmt.Sprintf("%g", v)
+}
+
 // --- stage 3, as text ---------------------------------------------------------
 
 // MermaidRequest writes a diagram source as Mermaid.
@@ -461,6 +553,8 @@ type RenderRequest struct {
 	Document string `json:"document" jsonschema:"the diagram source to render"`
 	// Out names the HTML file to write.
 	Out string `json:"out,omitempty" jsonschema:"the HTML file to write"`
+	// Level names one level to draw on its own. Empty draws them all.
+	Level string `json:"level,omitempty" jsonschema:"draw one level on its own, by id; empty draws every level"`
 }
 
 func (r *RenderRequest) Op() Op { return OpRender }
@@ -484,6 +578,13 @@ func (r *RenderRequest) Run(context.Context) (*Result, error) {
 	var doc diagram.Document
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		return nil, fmt.Errorf("parse %s: %w", r.Document, err)
+	}
+	if r.Level != "" {
+		only, err := doc.Only(r.Level)
+		if err != nil {
+			return nil, err
+		}
+		doc = *only
 	}
 
 	page, err := render.Build(&doc)

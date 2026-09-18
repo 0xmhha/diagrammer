@@ -33,6 +33,17 @@ func svgFor(scene artifact.Scene) string {
 	b.WriteString(` role="img" aria-labelledby="` + titleID + ` ` + descID + `">` + "\n")
 	b.WriteString(`  <title id="` + titleID + `">` + esc(scene.Title) + "</title>\n")
 	b.WriteString(`  <desc id="` + descID + `">` + esc(describe(scene)) + "</desc>\n")
+	b.WriteString(sceneBody(scene))
+	b.WriteString("</svg>")
+	return b.String()
+}
+
+// sceneBody is the drawing itself: the defs, then bands, lines, boxes and
+// labels in that order. It is what the page wraps in a scene and what a
+// standalone file wraps in a frame, and it is one function so the two cannot
+// draw differently.
+func sceneBody(scene artifact.Scene) string {
+	var b strings.Builder
 	b.WriteString(arrowDefs())
 
 	for _, r := range scene.Regions {
@@ -126,7 +137,6 @@ func svgFor(scene artifact.Scene) string {
 			esc(r.LabelText) + `</text>` + "\n")
 	}
 
-	b.WriteString("</svg>")
 	return b.String()
 }
 
