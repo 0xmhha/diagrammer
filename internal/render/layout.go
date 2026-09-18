@@ -14,7 +14,7 @@ import (
 const (
 	boxMinWidth  = 168
 	boxMaxWidth  = 280
-	boxHeight    = 68
+	boxHeight    = 72
 	labelSize    = 14
 	labelMinSize = 9
 	subLabelSize = 10
@@ -40,7 +40,7 @@ const (
 	channelSlack = 3
 	// laneGap keeps two routes sharing a channel far enough apart to read as
 	// two lines rather than one thick one.
-	laneGap = 14
+	laneGap = 16
 	margin  = 48
 
 	// stub is how far a route travels straight out of a box before it turns.
@@ -51,7 +51,7 @@ const (
 	// markerSize is how wide a pseudostate is drawn. A start and an end are
 	// points in a state machine rather than places it rests, and drawing them
 	// the size of a state would say otherwise.
-	markerSize = 26
+	markerSize = 24
 )
 
 // isMarker reports whether a box is drawn as a dot rather than as a shape with
@@ -236,6 +236,13 @@ func layOut(family diagram.Family, level diagram.Level) ([]placedBox, []placedRe
 		}
 	}
 
+	// A column is as wide as its widest label wants, rounded up to the grid.
+	// Eight rather than four, so that the centre of the box, where a line
+	// leaves it, lands on four as well.
+	for c := range colWidth {
+		colWidth[c] = gridUp(colWidth[c], 8)
+	}
+
 	gapW, gapH := channelSizes(level, cols, rows)
 	g := &grid{
 		colX: make([]float64, cols),
@@ -298,7 +305,10 @@ func layOutRegions(level diagram.Level, boxes []placedBox) []placedRegion {
 	if len(level.Regions) == 0 {
 		return nil
 	}
-	const pad = 18
+	// Both on the grid: the frame sits pad outside the boxes it holds, and its
+	// label needs a strip above them. 18 and 14 were the earlier values, and
+	// they were what the grid test found once every box was on it.
+	const pad, labelStrip = 20, 16
 	out := make([]placedRegion, 0, len(level.Regions))
 	for _, r := range level.Regions {
 		var framed []placedBox
@@ -316,7 +326,7 @@ func layOutRegions(level diagram.Level, boxes []placedBox) []placedRegion {
 		}
 		out = append(out, placedRegion{
 			Region: r,
-			rect:   rect{X: box.X - pad, Y: box.Y - pad - 14, W: box.W + pad*2, H: box.H + pad*2 + 14},
+			rect:   rect{X: box.X - pad, Y: box.Y - pad - labelStrip, W: box.W + pad*2, H: box.H + pad*2 + labelStrip},
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
@@ -337,4 +347,9 @@ func clamp(v, n int) int {
 		return n - 1
 	}
 	return v
+}
+
+// gridUp rounds v up to the next multiple of step.
+func gridUp(v float64, step float64) float64 {
+	return math.Ceil(v/step) * step
 }

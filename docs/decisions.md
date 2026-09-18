@@ -685,6 +685,20 @@ its target rather than always downward, and box-edge positions come from one
 allocator rather than two, which had been handing two routes the same place on
 the same box.
 
+### The grid was measured before it was taken (after 0.5.0)
+
+The one rule from the editorial comparison that was not taken with the skin was
+the four-pixel grid, because the lane gap it would move is a threshold with a
+measurement behind it and the fear was that moving it would cost routes. So it
+was measured: every box, band and line point on every fixture, before and after,
+with the drawn and recorded counts beside them. `docs/thresholds.md` has the
+table. Drawn did not move; recorded went down by two; every coordinate is on
+the grid; and two tests hold it, one on the constants and one on the drawings.
+
+The lesson is the same one the unfold window taught. A number with a
+measurement behind it is not a number that cannot change; it is a number whose
+change begins with the same measurement.
+
 ### Floating point (round 4)
 
 The premise of this round was withdrawn; its measurements were not.

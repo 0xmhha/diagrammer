@@ -15,7 +15,7 @@ import (
 // room to route a line, and that is what the component family's record is for,
 // but a ladder has a rung for every message and no reason to refuse one.
 const (
-	lifelineWidth = 156
+	lifelineWidth = 160
 	headHeight    = 52
 	lifelineGap   = 64
 	// A message to the lifeline it came from is drawn as a loop out and back,
@@ -24,7 +24,7 @@ const (
 	selfLoopDrop  = 18
 	// rungHeight is the vertical space one message gets. It has to hold the
 	// arrow and the label above it without the two runs touching.
-	rungHeight = 58
+	rungHeight = 60
 	// firstRung is how far below the heads the first message sits, so an
 	// activation starting at the top has somewhere to begin.
 	firstRung = 56

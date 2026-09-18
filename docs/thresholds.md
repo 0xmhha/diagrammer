@@ -95,11 +95,13 @@ defended rather than merely recorded.
 - **`borderRun` = 24px.** How far a route may travel alongside a band's border
   before it reads as tracing the border rather than crossing it. Shorter runs
   are the unavoidable consequence of a route passing close by.
-- **`channelX` = 112px, `channelY` = 96px, `laneGap` = 14px, `stub` = 20px.**
+- **`channelX` = 112px, `channelY` = 96px, `laneGap` = 16px, `stub` = 20px.**
   A channel holds `(size - 2*stub) / laneGap` lanes, and a `stub` of clearance at
   each edge is what keeps the turn into the outermost lane longer than
   `minSegment`. These four are one decision rather than four: changing any of
   them without the others makes the router produce routes its own rules refuse.
+  `laneGap` was 14 until the grid below; 16 is the nearest multiple of four
+  above it, and the measurement there is what says the change cost nothing.
 - **`channelSlack` = 3.** How many lanes a channel holds beyond the routes that
   want it. Counting the routes and stopping there gives every route a lane and
   the wrong one: a route is not looking for any free lane but for one that
@@ -333,6 +335,52 @@ detour across the page. Rows are now dependency depth and columns belong to the
 bands, which is what makes a page read downward and a region frame a block
 rather than a scatter. This is what archify's `rankMembers` does, arrived at the
 same way: by looking at a page of ours beside a page of theirs.
+
+### Every coordinate is on a four-pixel grid
+
+The rule that separates a schematic from a wiring diagram, taken from an
+editorial design system and measured here before it was applied. A drawing's
+geometry is carried on the page as attributes, so how much of it sat off the
+grid could be counted rather than guessed, over every fixture of every family:
+30 drawings, 216 boxes, 1,408 points that lines pass through.
+
+| | boxes off | widths off | line points off | drawn | recorded |
+|---|---|---|---|---|---|
+| before | 59 | 20 | 716 (51%) | 219 | 43 |
+| `laneGap` 16, widths up to 8, `boxHeight` 72, `markerSize` 24 | 0 | 0 | 112 (8%) | 219 | 41 |
+| and the ladder: `lifelineWidth` 160, `rungHeight` 60 | 0 | 0 | **0** | 219 | 41 |
+
+Three things were wrong and each is now held by `TestTheConstantsAreOnTheGrid`
+and `TestEveryDrawingIsOnTheGrid`:
+
+- **A column was as wide as its label.** `textWidth + padding` lands anywhere.
+  It is rounded up to a multiple of eight now, not four, because a line leaves a
+  box from its centre and half of a multiple of four is not on the grid. The
+  same reason moves `boxHeight` from 68 to 72 and `markerSize` from 26 to 24:
+  a size something is centred in is a multiple of eight.
+- **`laneGap` was 14.** Every lane past the first sat two pixels off, which is
+  where most of the 716 came from. The fear was that 16 costs capacity, since a
+  channel holds `(size - 2*stub) / laneGap` lanes; it does not, because a
+  channel is widened to `2*stub + n*laneGap` for the lanes it needs, and that
+  is now always a multiple of eight too. Drawn is 219 before and after. Recorded
+  went from 43 to 41: two relationships that a channel two pixels narrower had
+  refused now fit.
+- **The sequence ladder had its own constants,** and the 112 that remained
+  after the grid families were on were all three sequence pages. A lifeline 156
+  wide has its centre at 78; 160 puts it at 80. A rung every 58 lands every
+  other message off the grid; 60 does not.
+- **A band's frame sat 18 outside its boxes with a 14-pixel strip for its
+  label.** The measurement above did not count bands, and every one was two
+  pixels off; the test on the drawings counts them and said so. 20 and 16 now.
+
+That last one is worth keeping as a caution. The measurement was of what the
+page carries as attributes, and it carried boxes and lines and not bands; the
+test reads the scene and reads everything. A measurement finds what it was
+pointed at, and a test holds what it was told to.
+
+The total width of every drawing grew by 0.4 per cent. Nothing else moved: the
+composition rules pass on every fixture as before, and the pages are
+byte-identical across runs as before.
 
 ### A route picks the way that crosses the least
 
