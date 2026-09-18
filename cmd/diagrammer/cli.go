@@ -62,7 +62,9 @@ func buildValidateRequest(args []string, stderr io.Writer) (*command.ValidateReq
 	req := &command.ValidateRequest{}
 	flags := flag.NewFlagSet("validate", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	flags.Usage = usageFor(stderr, flags, "validate <codegraph.json>")
+	flags.StringVar(&req.Graph, "graph", "",
+		"the stage-1 graph the model came from; checks what the model claims to stand for")
+	flags.Usage = usageFor(stderr, flags, "validate <codegraph.json> [-graph graph.json]")
 
 	model, err := parseOperand(flags, args, "codegraph.json path")
 	if err != nil {

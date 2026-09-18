@@ -148,6 +148,22 @@ that from a graph that really had only that much in it.
 because a reader cannot tell the difference and the drawing will look just as
 confident either way.
 
+**Say which graph nodes each component stands for.** Put their ids in
+` + "`accountsFor`" + `. Naming a package accounts for everything beneath it, so
+this is a handful of ids on each component rather than a transcription: where it
+came from, not what is inside it.
+
+It is the only thing you return that can be checked rather than believed.
+Everything else is your judgement: a name is what you chose to call something, a
+description is prose, the nesting is a reading. An id is in the graph or it is
+not, and what sits beneath it is already recorded there. So this is what lets
+somebody ask whether the model looked at the whole tree and get an answer in
+numbers. A model without it is not suspected of anything; it simply cannot be
+asked.
+
+Leaving an area out is allowed and is often right, because a map is not a
+census. Leaving it out silently is the thing this prevents.
+
 **A top level is a map, not a census.** Somebody opening a diagram of a project
 they do not know wants to see what the parts are and which way they lean, and
 then to open the one they came for. Fifteen packages with every relationship

@@ -401,6 +401,52 @@ and it is the one to use for anything whose drawing should not move under it.
 This is the same reason `provenance.origin` distinguishes `model` from
 `modelReviewed`. A model nobody has read is a draft, and the field says so.
 
+### The one claim in a model that can be checked (after 0.4.0)
+
+A graph too big to send is read by the model itself, which answered a question
+nobody could answer before and raised one nobody had needed to ask: if the model
+chooses what to read, how does anybody know it read all of it?
+
+Measured by hand the first time, by looking for each area's name in the returned
+model. That worked and it is the wrong instrument. It is optimistic in the one
+direction that matters: a word that happens to appear reads as an area covered,
+so the check says yes when it does not know.
+
+**Everything a model returns is judgement except one thing.** A name is what it
+chose to call something, a description is prose, and the nesting is a reading of
+the code. None of that can be held to the tree. A graph node id can: it is in
+the graph or it is not, and what sits beneath it is a fact the graph already
+recorded.
+
+So a component now says which graph nodes it stands for, in `accountsFor`, and
+`validate --graph` does arithmetic instead of pattern matching. Naming a package
+accounts for everything beneath it, which is what keeps this a handful of ids on
+each component rather than a transcription of the tree.
+
+**An invented id is refused and a missing area is reported,** and the split
+matters. A claim about a node that is not there is wrong in a way a program can
+see, so it stops the command. An area nobody stood for is not wrong at all: a
+model is a map rather than a census and leaving things out is often the right
+call. What it may not do is leave them out silently.
+
+**Saying nothing and covering nothing are kept apart.** A model without the
+field has not failed to cover the tree, it has not been asked, and every model
+written before this is one of those. Reporting them as zero would be a number
+that means the opposite of how it reads.
+
+**The root is not counted.** A component claiming it would account for
+everything by saying nothing.
+
+Measured on the whole of another project, 15,660 nodes read rather than sent:
+15,659 of 15,659 accounted for, every area claimed by some component. The worry
+that motivated splitting the graph into pieces turns out to be answerable
+without splitting it.
+
+This is also the shape the deferred source-evidence question needs. Line numbers
+were refused because a model transcribing them would produce numbers nothing
+downstream could check. An id is not a transcription, and it is checked; what a
+node's file and line are is then a lookup rather than a claim.
+
 ### The renderer is reimplemented; the viewer is embedded (round 3)
 
 Go reimplements the renderer. The viewer ships as one frozen embedded asset.

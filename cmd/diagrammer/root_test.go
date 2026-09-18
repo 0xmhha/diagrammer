@@ -109,7 +109,9 @@ func TestEveryPathAnOperationTakesIsChecked(t *testing.T) {
 	// field whose name reads like a path. If this finds one Paths does not
 	// return, either the field is not a path or Paths forgot it, and both are
 	// worth stopping for.
-	pathish := map[string]bool{"Source": true, "Model": true, "Document": true, "Out": true}
+	pathish := map[string]bool{
+		"Source": true, "Model": true, "Document": true, "Out": true, "Graph": true,
+	}
 
 	for _, op := range command.Ops() {
 		req, err := command.New(op)

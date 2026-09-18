@@ -115,6 +115,13 @@ type Component struct {
 	// is unreadable. Choosing the decomposition is the model's job, because it
 	// is a judgement about meaning rather than a fact about the code.
 	Parent string `json:"parent,omitempty"`
+	// AccountsFor names the stage-1 graph nodes this component stands for.
+	//
+	// It is the only claim in a model that can be checked against something
+	// rather than taken on trust: an id is in the graph or it is not. Naming a
+	// package accounts for everything beneath it, so this stays a handful of
+	// ids rather than becoming a transcription of the tree.
+	AccountsFor []string `json:"accountsFor,omitempty"`
 	// Ports carry both directions: the provided interfaces are the ports of
 	// kind provided and the required ones are the rest. There is no second way
 	// to say the same thing.
