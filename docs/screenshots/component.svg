@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1048 534" width="1048" height="534" role="img" aria-labelledby="diagram-level-analysis-title diagram-level-analysis-desc">
+  <title id="diagram-level-analysis-title">analysis</title>
+  <desc id="diagram-level-analysis-desc">component diagram, analysis: 4 boxes and 3 relationships drawn</desc>
+  <style>
+    /* Boxes: paper fill, ink hairline. A box that opens a page says so with a
+   dotted underline on its name rather than with the accent, because six
+   openers on one page would be six accents and the accent would mean nothing. */
+.box-frame { fill: #fbfbfa; stroke: #1b1b1a; stroke-width: 1; }
+    .box-label { fill: #1b1b1a; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 13px; font-weight: 600; text-anchor: middle; }
+    /* Lines: muted hairlines. A label on a line is technical and is set in mono. */
+.edge { fill: none; stroke: #62625f; stroke-width: 1; }
+    .edge marker, #arrow path { fill: #62625f; }
+    .edge-label { fill: #62625f; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; text-anchor: middle; }
+    /* A band is a zone: a quieter paper, a solid hairline, and a mono uppercase
+   label in the corner. */
+.region-frame { fill: #f2f2ef; stroke: #cfcfca; stroke-width: 1; }
+    .region-label { fill: #8a8a86; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; }
+    /* The sequence ladder and the state furniture, to the same rules. */
+.lifeline { stroke: #cfcfca; stroke-width: 1; stroke-dasharray: 4 4; }
+    .activation { fill: #f2f2ef; stroke: #62625f; stroke-width: 0.8; }
+    .fragment-frame { fill: none; stroke: #cfcfca; stroke-width: 1; }
+    .fragment-label { fill: #8a8a86; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+    .marker-filled { fill: #1b1b1a; }
+    .marker-ring { fill: none; stroke: #1b1b1a; stroke-width: 1; }
+    .figure { fill: none; stroke: #1b1b1a; stroke-width: 1; }
+    .figure circle, circle.figure { fill: #fbfbfa; }
+  </style>
+  <g transform="translate(0 0) scale(1)">
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+  <path class="edge" data-edge-id="rel:analyze.r.graph:graph" data-edge-from="analyze" data-edge-to="graph" data-edge-from-side="bottom" data-edge-to-side="top" data-composition-points="244,212 244,322" d="M 244 212 L 244 322" marker-end="url(#arrow)"/>
+  <path class="edge" data-edge-id="rel:goast.r.graph:graph" data-edge-from="goast" data-edge-to="graph" data-edge-from-side="bottom" data-edge-to-side="top" data-composition-points="468,212 468,267 258,267 258,322" d="M 468 212 L 468 267 L 258 267 L 258 322" marker-end="url(#arrow)"/>
+  <path class="edge" data-edge-id="rel:treesitter.r.graph:graph" data-edge-from="treesitter" data-edge-to="graph" data-edge-from-side="bottom" data-edge-to-side="top" data-composition-points="748,212 748,253 272,253 272,322" d="M 748 212 L 748 253 L 272 253 L 272 322" marker-end="url(#arrow)"/>
+  <g class="box" data-box-id="analyze" data-box-bounds="160,144,168,68">
+    <rect class="box-frame" x="160" y="144" width="168" height="68" rx="8"/>
+    <text class="box-label" x="244" y="183">analyze</text>
+  </g>
+  <g class="box" data-box-id="goast" data-box-bounds="440,144,168,68">
+    <rect class="box-frame" x="440" y="144" width="168" height="68" rx="8"/>
+    <text class="box-label" x="524" y="183">goast</text>
+  </g>
+  <g class="box" data-box-id="graph" data-box-bounds="160,322,168,68">
+    <rect class="box-frame" x="160" y="322" width="168" height="68" rx="8"/>
+    <text class="box-label" x="244" y="361">graph</text>
+  </g>
+  <g class="box" data-box-id="treesitter" data-box-bounds="720,144,168,68">
+    <rect class="box-frame" x="720" y="144" width="168" height="68" rx="8"/>
+    <text class="box-label" x="804" y="183">treesitter</text>
+  </g>
+  </g>
+</svg>

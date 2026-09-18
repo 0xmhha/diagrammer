@@ -74,6 +74,16 @@ is what correctness requires, is copying. When that lands it takes a notices
 row; deriving an equivalent table from Unicode data instead is the only way to
 avoid one, and it will not produce the same widths.
 
+## The same rules for any project read for ideas
+
+Archify was the first project this one learned from and is the one the rules
+above were written against. They are not about Archify. diagram-design was the
+second, read for its drawing rules and its frame sizes, and it got the same
+treatment: rules and behaviour were taken freely, the one table of facts that
+was copied has a row in `THIRD_PARTY_NOTICES.md` with the licence beside it,
+and no file of theirs is here. A third project would get the same three
+questions: what was learned, what was taken, and what would need a row.
+
 ## Where the record lives
 
 Three places, each for a different reader:
