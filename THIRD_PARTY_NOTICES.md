@@ -99,6 +99,66 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## diagram-design
+
+The page's drawing rules and the frames a standalone SVG is delivered in were
+taken from [diagram-design](https://github.com/cathrynlavery/diagram-design),
+an editorial design system for diagrams distributed under the MIT license.
+diagram-design is a skill that has a model draw HTML by hand; diagrammer draws
+by program and took the rules, not the tool.
+
+This section was added after the material it records, which the rule at the top
+of this file says not to do. It is here now, and the lapse is noted rather than
+tidied away.
+
+### What was learned rather than taken
+
+Hairline strokes, one accent reserved for what the reader is looking at, three
+font roles by what a text is, no shadows, corners under ten, every coordinate
+on a four-pixel grid, and a drawing that announces itself to a screen reader
+with a role, a title and a description. These are rules, which are not
+copyrightable, and each was written into `viewer.css` and `svg.go` from its
+statement rather than from any file of theirs. `docs/decisions.md` records
+which were taken and which were measured and left.
+
+### What was taken
+
+| Material | Taken from | Where it is | Status |
+|---|---|---|---|
+| Nine frame presets: the names `doc-inline`, `doc-wide`, `slide-16x9`, `slide-4x3`, `social-og`, `social-square`, `print-a4-landscape`, `print-letter-landscape`, `fit`, and their dimensions | `references/output-spec.md` | `internal/render/standalone.go` | Recorded. A table of standard slide and page sizes under short descriptive names is a statement of fact rather than a substantial portion of software, and the notice below is kept regardless. |
+
+### What was not taken
+
+No HTML, CSS, JavaScript, reference text, example, icon or font. The three
+faces diagram-design loads from Google Fonts are not used, because a page here
+opens from a file with no network; the three *roles* are taken and filled with
+system font stacks. Its `self_check.py` was run against a page of ours for
+information and is not in this repository or its gate.
+
+```
+MIT License
+
+Copyright (c) 2025 Cathryn Lavery
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Go modules vendored into this repository
 
 These are in the repository, under `vendor/`, as well as compiled into the

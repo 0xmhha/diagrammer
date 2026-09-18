@@ -95,7 +95,7 @@ tar -cf - -C $(DIST_DIR) --uid 0 --gid 0 --uname '' --gname '' \
 endef
 
 .DEFAULT_GOAL := build
-.PHONY: build build-polyglot test test-cgo race cover fmt fmt-check vet lint tidy clean install run linux check verify verify-cgo fixtures vendor-check dist dist-check diagram
+.PHONY: build build-polyglot test test-cgo race cover fmt fmt-check vet lint tidy clean install run linux check verify verify-cgo fixtures vendor-check dist dist-check diagram screenshots
 
 ## build: compile the binary for this machine
 #
@@ -666,6 +666,23 @@ diagram: $(DIAGRAM_DEP)
 	echo; \
 	echo "$$drawn page(s), each with a Mermaid text beside it and its drawings under svg/:"; \
 	for page in "$$out"/*.html; do echo "  $$page"; done
+
+## screenshots: regenerate the drawings the README shows
+#
+# Two standalone SVG files drawn from committed fixtures, so they are
+# regenerated rather than remembered: the same document produces the same
+# bytes, and a change to the renderer changes the picture on the front page in
+# the same commit that changed it. Nothing here is a screenshot of a screen.
+screenshots: build
+	@work=$$(mktemp -d); trap 'rm -rf "$$work"' EXIT; \
+	mkdir -p docs/screenshots; \
+	$(BIN_DIR)/$(BINARY) compose testdata/codegraph/order-service.codegraph.json -family sequence -o "$$work/os" >/dev/null; \
+	$(BIN_DIR)/$(BINARY) svg "$$work/os/sequence.diagram.json" -o "$$work/os-svg" >/dev/null; \
+	cp "$$work/os-svg/overview.svg" docs/screenshots/sequence.svg; \
+	$(BIN_DIR)/$(BINARY) compose testdata/codegraph/diagrammer-layered.codegraph.json -family component -o "$$work/dl" >/dev/null; \
+	$(BIN_DIR)/$(BINARY) svg "$$work/dl/component.diagram.json" -level level:analysis -o "$$work/dl-svg" >/dev/null; \
+	cp "$$work/dl-svg/level-analysis.svg" docs/screenshots/component.svg; \
+	echo "wrote docs/screenshots/sequence.svg and docs/screenshots/component.svg"
 
 ## install: put the binary on PATH via GOBIN
 install:

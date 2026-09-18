@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 928 504" width="928" height="504" role="img" aria-labelledby="diagram-overview-title diagram-overview-desc">
+  <title id="diagram-overview-title">Order Service</title>
+  <desc id="diagram-overview-desc">sequence diagram, Order Service: 4 boxes and 5 relationships drawn</desc>
+  <style>
+    /* Boxes: paper fill, ink hairline. A box that opens a page says so with a
+   dotted underline on its name rather than with the accent, because six
+   openers on one page would be six accents and the accent would mean nothing. */
+.box-frame { fill: #fbfbfa; stroke: #1b1b1a; stroke-width: 1; }
+    .box-label { fill: #1b1b1a; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 13px; font-weight: 600; text-anchor: middle; }
+    /* Lines: muted hairlines. A label on a line is technical and is set in mono. */
+.edge { fill: none; stroke: #62625f; stroke-width: 1; }
+    .edge marker, #arrow path { fill: #62625f; }
+    .edge-label { fill: #62625f; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; text-anchor: middle; }
+    /* A band is a zone: a quieter paper, a solid hairline, and a mono uppercase
+   label in the corner. */
+.region-frame { fill: #f2f2ef; stroke: #cfcfca; stroke-width: 1; }
+    .region-label { fill: #8a8a86; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; }
+    /* The sequence ladder and the state furniture, to the same rules. */
+.lifeline { stroke: #cfcfca; stroke-width: 1; stroke-dasharray: 4 4; }
+    .activation { fill: #f2f2ef; stroke: #62625f; stroke-width: 0.8; }
+    .fragment-frame { fill: none; stroke: #cfcfca; stroke-width: 1; }
+    .fragment-label { fill: #8a8a86; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+    .marker-filled { fill: #1b1b1a; }
+    .marker-ring { fill: none; stroke: #1b1b1a; stroke-width: 1; }
+    .figure { fill: none; stroke: #1b1b1a; stroke-width: 1; }
+    .figure circle, circle.figure { fill: #fbfbfa; }
+  </style>
+  <g transform="translate(0 0) scale(1)">
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+  <path class="edge" data-edge-id="m.accepted" data-edge-from="ll.api" data-edge-to="ll.customer" data-edge-from-side="left" data-edge-to-side="right" data-composition-points="352,396 128,396" d="M 352 396 L 128 396" marker-end="url(#arrow)"/>
+  <path class="edge" data-edge-id="m.notify" data-edge-from="ll.api" data-edge-to="ll.notifier" data-edge-from-side="right" data-edge-to-side="left" data-composition-points="352,336 800,336" d="M 352 336 L 800 336" marker-end="url(#arrow)"/>
+  <path class="edge" data-edge-id="m.place" data-edge-from="ll.customer" data-edge-to="ll.api" data-edge-from-side="right" data-edge-to-side="left" data-composition-points="128,156 352,156" d="M 128 156 L 352 156" marker-end="url(#arrow)"/>
+  <path class="edge" data-edge-id="m.save" data-edge-from="ll.api" data-edge-to="ll.store" data-edge-from-side="right" data-edge-to-side="left" data-composition-points="352,216 576,216" d="M 352 216 L 576 216" marker-end="url(#arrow)"/>
+  <path class="edge" data-edge-id="m.saved" data-edge-from="ll.store" data-edge-to="ll.api" data-edge-from-side="left" data-edge-to-side="right" data-composition-points="576,276 352,276" d="M 576 276 L 352 276" marker-end="url(#arrow)"/>
+  <line class="lifeline" x1="352" y1="100" x2="352" y2="480"/>
+  <line class="lifeline" x1="128" y1="100" x2="128" y2="480"/>
+  <line class="lifeline" x1="800" y1="100" x2="800" y2="480"/>
+  <line class="lifeline" x1="576" y1="100" x2="576" y2="480"/>
+  <rect class="activation" data-bar-id="act.api" data-bar-box="ll.api" x="346" y="156" width="12" height="260"/>
+  <rect class="activation" data-bar-id="act.store" data-bar-box="ll.store" x="570" y="216" width="12" height="80"/>
+  <g class="box" data-box-id="ll.api" data-box-bounds="272,48,160,52">
+    <rect class="box-frame" x="272" y="48" width="160" height="52" rx="8"/>
+    <text class="box-label" x="352" y="79">Order API</text>
+  </g>
+  <g class="box" data-box-id="ll.customer" data-box-bounds="48,48,160,52">
+    <rect class="box-frame" x="48" y="48" width="160" height="52" rx="8"/>
+    <text class="box-label" x="128" y="79">Customer</text>
+  </g>
+  <g class="box" data-box-id="ll.notifier" data-box-bounds="720,48,160,52">
+    <rect class="box-frame" x="720" y="48" width="160" height="52" rx="8"/>
+    <text class="box-label" x="800" y="79">Notifier</text>
+  </g>
+  <g class="box" data-box-id="ll.store" data-box-bounds="496,48,160,52">
+    <rect class="box-frame" x="496" y="48" width="160" height="52" rx="8"/>
+    <text class="box-label" x="576" y="79">Order Store</text>
+  </g>
+  <g class="fragment" data-frame-id="frag.notify" data-frame-kind="opt">
+    <rect class="fragment-frame" x="332" y="302" width="488" height="54"/>
+    <text class="fragment-label" x="340" y="318">opt [customer opted in]</text>
+  </g>
+  <text class="edge-label" data-edge-label-for="m.accepted" x="240" y="396" dy="-6" text-anchor="middle" font-size="11" data-label-bounds="216.9,376.8,46.199999999999996,13.2">orderID</text>
+  <text class="edge-label" data-edge-label-for="m.notify" x="576" y="336" dy="-6" text-anchor="middle" font-size="11" data-label-bounds="500.1,316.8,151.79999999999998,13.2">notify(orderID, Placed)</text>
+  <text class="edge-label" data-edge-label-for="m.place" x="240" y="156" dy="-6" text-anchor="middle" font-size="11" data-label-bounds="183.9,136.8,112.2,13.2">placeOrder(order)</text>
+  <text class="edge-label" data-edge-label-for="m.save" x="464" y="216" dy="-6" text-anchor="middle" font-size="11" data-label-bounds="427.7,196.8,72.6,13.2">save(order)</text>
+  <text class="edge-label" data-edge-label-for="m.saved" x="464" y="276" dy="-6" text-anchor="middle" font-size="11" data-label-bounds="440.9,256.8,46.199999999999996,13.2">orderID</text>
+  </g>
+</svg>
