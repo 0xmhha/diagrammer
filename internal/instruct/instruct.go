@@ -158,11 +158,22 @@ drill-down pages. Without it a component diagram is one flat page whatever its
 size. Group by what a reader would go looking for, which is usually not the
 directory tree: stages of a pipeline, or the parts of a subsystem.
 
-**Watch the two numbers stage 3 acts on.** A level with fewer than %d boxes is
+**Watch the two numbers stage 3 acts on.** A level with fewer than %[1]d boxes is
 unfolded: its members are replaced by their children and each unfolded component
 is drawn as a band around them instead of a box. That is how a band appears, and
-it is worth aiming for. An unfold that would push a page past %d boxes does not
+it is worth aiming for. An unfold that would push a page past %[2]d boxes does not
 happen, and the page stays thin instead.
+
+**A thin top level costs you every page below it.** That unfold is good news
+deep in the tree and bad news on the first page. The top level is a level like
+any other: put fewer than %[1]d components there and it unfolds, they become
+bands, and their children take their place as boxes. Whatever those children
+open still opens. If they open nothing, every level you built has collapsed into
+one page with nothing to click, and the reader gets a list after all.
+
+So the top level is the one place to count. Two components with ten beneath them
+is one page of ten boxes and nowhere to go. Put at least %[1]d there, and give
+them enough beneath to be worth opening.
 
 **A page with too much on it loses relationships.** Stage 4 records every one it
 cannot draw, so nothing goes missing silently, but a page that records a third
