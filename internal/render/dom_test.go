@@ -17,7 +17,31 @@ import (
 // contract is extracted from the two sides rather than written down a third
 // time, and the test fails on any disagreement.
 
-var attributePattern = regexp.MustCompile(`data-[a-z0-9-]+`)
+// An attribute is a name in attribute position, which is after whitespace and
+// before an equals sign. Matching the bare prefix anywhere would take a
+// drawing's description, or an id such as diagram-level-data-title, for an
+// attribute that nobody declared.
+var attributePattern = regexp.MustCompile(`\s(data-[a-z0-9-]+)=`)
+
+// The viewer reads attributes by naming them in strings, `[data-level]` and
+// the like, where there is no equals sign to find. What it mentions is what it
+// reads, so the bare name is the right thing to look for there and the wrong
+// thing to look for in a page.
+var mentionPattern = regexp.MustCompile(`data-[a-z0-9-]+`)
+
+// attributesMentionedIn lists every attribute name a script refers to.
+func attributesMentionedIn(source string) []string {
+	seen := map[string]bool{}
+	for _, match := range mentionPattern.FindAllString(source, -1) {
+		seen[match] = true
+	}
+	out := make([]string, 0, len(seen))
+	for name := range seen {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
 
 // TestViewerContractMatchesTheViewer holds the declared viewer contract and the
 // viewer to each other, in both directions. An attribute the viewer reads and
@@ -29,7 +53,7 @@ func TestViewerContractMatchesTheViewer(t *testing.T) {
 		declared[name] = true
 	}
 	read := map[string]bool{}
-	for _, name := range attributesIn(viewerJS) {
+	for _, name := range attributesMentionedIn(viewerJS) {
 		read[name] = true
 		if !declared[name] {
 			t.Errorf("the viewer reads %q, which is not in ViewerContract", name)
@@ -97,8 +121,8 @@ func attributesAcrossEveryFamily(t *testing.T) []string {
 
 func attributesIn(source string) []string {
 	seen := map[string]bool{}
-	for _, match := range attributePattern.FindAllString(source, -1) {
-		seen[match] = true
+	for _, match := range attributePattern.FindAllStringSubmatch(source, -1) {
+		seen[match[1]] = true
 	}
 	out := make([]string, 0, len(seen))
 	for name := range seen {

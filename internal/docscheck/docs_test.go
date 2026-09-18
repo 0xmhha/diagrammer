@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -446,6 +447,100 @@ func TestTheStylesheetDoesNotShrinkADrawing(t *testing.T) {
 	// stylesheet would keep passing after the Go side stopped writing one.
 	if !strings.Contains(read(t, "internal/render/svg.go"), "min-width:") {
 		t.Error("svgFor no longer declares the size the scene was laid out at")
+	}
+}
+
+// TestTheStylesheetKeepsTheEditorialRules holds the page to the handful of
+// rules it is drawn by. Each is the kind that erodes one commit at a time: a
+// stroke thickened to make something stand out, a second accent for a second
+// thing, a shadow to lift a box. None of them fails anything on its own, and a
+// page drawn by all of them is the generic one this set of rules exists to not
+// produce.
+func TestTheStylesheetKeepsTheEditorialRules(t *testing.T) {
+	// The rules are about what the stylesheet does, not what its comments say
+	// it does, and the comments say "no shadows" in as many words.
+	css := regexp.MustCompile(`(?s)/\*.*?\*/`).ReplaceAllString(read(t, "internal/render/viewer/viewer.css"), "")
+
+	// No shadows, no filters. Depth is not information.
+	for _, word := range []string{"shadow", "filter:", "filter("} {
+		if strings.Contains(css, word) {
+			t.Errorf("viewer.css uses %q; the page is drawn without depth", word)
+		}
+	}
+
+	// Every stroke at rest is a hairline. Only the focal element, under
+	// .focusing, may go above 1, and then not past 1.5.
+	rule := regexp.MustCompile(`(?s)([^{}]+)\{([^}]*)\}`)
+	width := regexp.MustCompile(`stroke-width:\s*([0-9.]+)`)
+	accents := 0
+	for _, m := range rule.FindAllStringSubmatch(css, -1) {
+		selector, body := strings.TrimSpace(m[1]), m[2]
+		focal := strings.Contains(selector, ".focusing")
+		for _, w := range width.FindAllStringSubmatch(body, -1) {
+			value, err := strconv.ParseFloat(w[1], 64)
+			if err != nil {
+				t.Fatalf("parse stroke-width %q: %v", w[1], err)
+			}
+			limit := 1.0
+			if focal {
+				limit = 1.5
+			}
+			if value > limit {
+				t.Errorf("%s has stroke-width %s, over the %v a %s stroke may have",
+					selector, w[1], limit, map[bool]string{true: "focal", false: "resting"}[focal])
+			}
+		}
+		// One accent, and only where the reader is looking.
+		if strings.Contains(body, "var(--accent") {
+			accents++
+			if !focal && !strings.HasPrefix(selector, ":root") {
+				t.Errorf("%s uses the accent at rest; it is reserved for what is under the pointer", selector)
+			}
+		}
+	}
+	if accents == 0 {
+		t.Fatal("the accent is never used, so this test is watching nothing")
+	}
+
+	// Three font roles, by what a text is. A title is serif, a name is sans,
+	// anything technical is mono.
+	for selector, role := range map[string]string{
+		"h1":            "--font-serif",
+		".box-label":    "--font-sans",
+		".edge-label":   "--font-mono",
+		".region-label": "--font-mono",
+		".eyebrow":      "--font-mono",
+	} {
+		block := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(selector) + `\s*\{[^}]*\}`).FindString(css)
+		if block == "" {
+			t.Errorf("viewer.css no longer styles %s", selector)
+			continue
+		}
+		if !strings.Contains(block, "var("+role+")") {
+			t.Errorf("%s is not set in %s", selector, role)
+		}
+	}
+
+	// Corners stay under 10, which is where a box stops being a box.
+	svg := read(t, "internal/render/svg.go")
+	for _, m := range regexp.MustCompile(`rx="([0-9]+)"`).FindAllStringSubmatch(svg, -1) {
+		if r, _ := strconv.Atoi(m[1]); r > 10 {
+			t.Errorf("svg.go draws a corner of radius %s; the limit is 10", m[1])
+		}
+	}
+}
+
+// TestEveryDrawingAnnouncesItself holds what a screen reader is given in place
+// of the geometry: a role, a title first, and a description, wired together.
+func TestEveryDrawingAnnouncesItself(t *testing.T) {
+	svg := read(t, "internal/render/svg.go")
+	for _, want := range []string{`role="img"`, `aria-labelledby=`, `<title id=`, `<desc id=`} {
+		if !strings.Contains(svg, want) {
+			t.Errorf("svg.go no longer writes %s", want)
+		}
+	}
+	if strings.Index(svg, "<title id=") > strings.Index(svg, "arrowDefs()") {
+		t.Error("the title is written after the defs, and a title that is not the first child is not announced everywhere")
 	}
 }
 
