@@ -43,6 +43,31 @@ them does not happen inside this program.
 `validate` guards the boundary between stages 2 and 3, and `serve` exposes the
 same capabilities as a local MCP server so any plugin can drive them.
 
+## How much of the tree the drawing describes
+
+Everything a model returns is judgement. A name is what it chose to call
+something, a description is prose, and the nesting is a reading of the code.
+None of that can be held to the tree it came from.
+
+One thing can. A component records the graph nodes it stands for, and a node id
+is in the graph or it is not:
+
+```
+diagrammer validate model.codegraph.json -graph graph.json
+coverage: 15659 of 15659 nodes (100%), every area accounted for
+```
+
+Naming a package accounts for everything beneath it, so this is a handful of ids
+on each component rather than a transcription of the tree.
+
+An id the graph does not have is refused, because it is wrong in a way a program
+can see. An area no component stood for is reported and nothing more: a model is
+a map rather than a census, and leaving things out is often the right call. What
+it may not do is leave them out without saying so. A model that records no ids
+is reported as not having said, which is not the same as having covered nothing.
+
+`make diagram` runs this after every model it accepts.
+
 Neither surface has a capability the other lacks, and that is arranged to be
 checkable rather than merely intended: both are built from one registry of
 operations, and tests assert they cover the same set, that every argument a
