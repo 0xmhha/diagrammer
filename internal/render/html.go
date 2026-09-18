@@ -52,7 +52,9 @@ func (p *Page) HTML() string {
 	b.WriteString("<title>" + esc(p.Title) + "</title>\n")
 	b.WriteString("<style>\n" + viewerCSS + "</style>\n</head>\n<body>\n")
 
-	b.WriteString("<header>\n<h1>" + esc(p.Title) + "</h1>\n")
+	b.WriteString("<header>\n")
+	b.WriteString(`<p class="eyebrow">` + esc(string(p.Family)) + " diagram · diagrammer</p>\n")
+	b.WriteString("<h1>" + esc(p.Title) + "</h1>\n")
 	if p.Subtitle != "" {
 		b.WriteString("<p class=\"subtitle\">" + esc(p.Subtitle) + "</p>\n")
 	}

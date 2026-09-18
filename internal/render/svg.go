@@ -1,6 +1,7 @@
 package render
 
 import (
+	"fmt"
 	"html"
 	"strings"
 
@@ -24,7 +25,14 @@ func svgFor(scene artifact.Scene) string {
 	// stops meaning anything. See docs/decisions.md.
 	b.WriteString(`" style="min-width:` + num(scene.Width) + `px;min-height:` + num(scene.Height) + `px"`)
 	b.WriteString(` ` + attrFamily + `="` + esc(scene.Family) + `"`)
-	b.WriteString(` ` + attrLevel + `="` + esc(scene.Level) + `" ` + attrLevelTitle + `="` + esc(scene.Title) + `">` + "\n")
+	b.WriteString(` ` + attrLevel + `="` + esc(scene.Level) + `" ` + attrLevelTitle + `="` + esc(scene.Title) + `"`)
+	// A drawing announces itself. role=img with a title and a description is
+	// what a screen reader announces in place of the geometry, and the title
+	// has to be the first child for that to work everywhere it is tried.
+	titleID, descID := sceneIDs(scene.Level)
+	b.WriteString(` role="img" aria-labelledby="` + titleID + ` ` + descID + `">` + "\n")
+	b.WriteString(`  <title id="` + titleID + `">` + esc(scene.Title) + "</title>\n")
+	b.WriteString(`  <desc id="` + descID + `">` + esc(describe(scene)) + "</desc>\n")
 	b.WriteString(arrowDefs())
 
 	for _, r := range scene.Regions {
@@ -230,3 +238,31 @@ func boundsValue(x, y, w, h float64) string {
 }
 
 func esc(s string) string { return html.EscapeString(s) }
+
+// sceneIDs names the title and the description of one drawing, uniquely on
+// the page. A level id is any text; an HTML id is not, so it is reduced to the
+// characters every reader of an id accepts, and prefixed so it can be told from
+// an id something else on the page chose.
+func sceneIDs(level string) (title, desc string) {
+	slug := idSlug(level)
+	return "diagram-" + slug + "-title", "diagram-" + slug + "-desc"
+}
+
+func idSlug(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('-')
+		}
+	}
+	return b.String()
+}
+
+// describe is what a reader who cannot see the drawing is told about it.
+func describe(scene artifact.Scene) string {
+	return fmt.Sprintf("%s diagram, %s: %d boxes and %d relationships drawn",
+		scene.Family, scene.Title, len(scene.Boxes), len(scene.Routes))
+}

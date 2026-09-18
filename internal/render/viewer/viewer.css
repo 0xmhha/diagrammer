@@ -1,24 +1,41 @@
+/* The page is drawn to a handful of rules, and every one of them has a test
+   in internal/docscheck holding the stylesheet to it. Read the rules there;
+   the values here are what they permit.
+
+   One accent, and only where the reader is looking: it appears under
+   .focusing and nowhere else, so a page at rest has none of it. Hairlines:
+   every stroke at rest is 1 or under, and only the focal element goes above.
+   No shadows. Three font roles, by what a text is rather than by how it should
+   feel: serif for the title, sans for a name, mono for anything technical. */
+
 :root {
   color-scheme: light dark;
   --paper: #fbfbfa;
+  --paper-2: #f2f2ef;
   --ink: #1b1b1a;
-  --muted: #6b6b68;
-  --line: #d6d6d2;
-  --box: #ffffff;
-  --edge: #5c6470;
-  --band: rgba(120, 130, 150, 0.07);
+  --muted: #62625f;
+  --soft: #8a8a86;
+  --rule: rgba(27, 27, 26, 0.14);
+  --rule-solid: #cfcfca;
   --accent: #2f6f4f;
+  --accent-tint: rgba(47, 111, 79, 0.08);
+  --link: #2e5aa8;
+  --font-serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --paper: #16171a;
+    --paper-2: #1e1f23;
     --ink: #e8e8e6;
-    --muted: #9a9a96;
-    --line: #34363b;
-    --box: #1f2126;
-    --edge: #98a2b3;
-    --band: rgba(150, 165, 190, 0.1);
+    --muted: #a3a39f;
+    --soft: #7c7c78;
+    --rule: rgba(232, 232, 230, 0.14);
+    --rule-solid: #3a3b40;
     --accent: #6fbf95;
+    --accent-tint: rgba(111, 191, 149, 0.10);
+    --link: #6a95d8;
   }
 }
 
@@ -27,36 +44,46 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 14px/1.5 var(--font-sans);
 }
-header {
-  padding: 20px 24px 12px;
-  border-bottom: 1px solid var(--line);
-}
-h1 { margin: 0; font-size: 18px; font-weight: 620; }
-.subtitle { margin: 4px 0 0; color: var(--muted); }
-.revision { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
-.revision code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; user-select: all; }
 
-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 24px; border-bottom: 1px solid var(--line); }
+/* The header reads like a page rather than a panel: a mono eyebrow saying
+   what kind of thing this is, a serif title, and the rest quiet under it. */
+header { padding: 24px 24px 16px; border-bottom: 1px solid var(--rule); }
+.eyebrow {
+  margin: 0 0 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1 { margin: 0; font-family: var(--font-serif); font-size: 26px; font-weight: 400; letter-spacing: -0.01em; line-height: 1.15; }
+.subtitle { margin: 6px 0 0; color: var(--muted); }
+.revision { margin: 6px 0 0; color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+.revision code { font-family: inherit; user-select: all; }
+
+nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 24px; border-bottom: 1px solid var(--rule); }
 nav button {
   font: inherit;
+  font-size: 13px;
   padding: 4px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--rule-solid);
   border-radius: 999px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
 }
-nav button[aria-current="true"] { color: var(--paper); background: var(--accent); border-color: var(--accent); }
-nav button:hover { color: var(--ink); }
+nav button[aria-current="true"] { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+nav button:hover { color: var(--ink); border-color: var(--ink); }
 
 main { padding: 16px 24px 40px; }
 section[hidden] { display: none; }
 .level-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
 .level-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
-.level-head .count { color: var(--muted); font-size: 13px; }
-.back { font: inherit; border: 0; background: transparent; color: var(--accent); cursor: pointer; padding: 0; }
+.level-head .count { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+.back { font: inherit; border: 0; background: transparent; color: var(--link); cursor: pointer; padding: 0; }
 
 /* A drawing is never shown smaller than it was laid out at. Every label in it
    was fitted against those numbers and refused below labelMinSize; scaling the
@@ -67,42 +94,55 @@ section[hidden] { display: none; }
    nothing to say. */
 .scene-scroll { overflow: auto; max-height: 78vh; }
 svg.scene { display: block; width: 100%; height: auto; }
-.box-frame { fill: var(--box); stroke: var(--line); stroke-width: 1.2; }
-.box[data-opens] .box-frame { stroke: var(--accent); stroke-width: 1.8; cursor: pointer; }
+
+/* Boxes: paper fill, ink hairline. A box that opens a page says so with a
+   dotted underline on its name rather than with the accent, because six
+   openers on one page would be six accents and the accent would mean nothing. */
+.box-frame { fill: var(--paper); stroke: var(--ink); stroke-width: 1; }
 .box[data-opens] { cursor: pointer; }
-.box-label { fill: var(--ink); font-size: 13px; text-anchor: middle; font-family: inherit; }
-.edge { fill: none; stroke: var(--edge); stroke-width: 1.4; }
-.edge marker, #arrow path { fill: var(--edge); }
-.edge-label { fill: var(--muted); font-size: 11px; text-anchor: middle; font-family: inherit; }
-.region-frame { fill: var(--band); stroke: var(--line); stroke-dasharray: 4 4; }
-.region-label { fill: var(--muted); font-size: 11px; font-family: inherit; }
+.box[data-opens] .box-label { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+.box-label { fill: var(--ink); font-family: var(--font-sans); font-size: 13px; font-weight: 600; text-anchor: middle; }
+
+/* Lines: muted hairlines. A label on a line is technical and is set in mono. */
+.edge { fill: none; stroke: var(--muted); stroke-width: 1; }
+.edge marker, #arrow path { fill: var(--muted); }
+.edge-label { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; text-anchor: middle; }
+
+/* A band is a zone: a quieter paper, a solid hairline, and a mono uppercase
+   label in the corner. */
+.region-frame { fill: var(--paper-2); stroke: var(--rule-solid); stroke-width: 1; }
+.region-label { fill: var(--soft); font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; }
 
 /* Hovering a box fades what it is not joined to. Opacity only: nothing is
-   hidden and nothing moves, so the page stays where the reader last saw it. */
+   hidden and nothing moves, so the page stays where the reader last saw it.
+   This is the one place the accent appears: on the box under the pointer and
+   the lines that touch it, which is the one or two things the reader is
+   looking at. */
 svg.scene .box, svg.scene .edge, svg.scene .edge-label, svg.scene .activation { transition: opacity 120ms ease-out; }
 svg.scene.focusing .box,
 svg.scene.focusing .edge,
 svg.scene.focusing .edge-label,
 svg.scene.focusing .activation { opacity: 0.14; }
 svg.scene.focusing .related { opacity: 1; }
-svg.scene.focusing .related.edge { stroke: var(--accent); stroke-width: 2; }
+svg.scene.focusing .related.edge { stroke: var(--accent); stroke-width: 1.5; }
 svg.scene.focusing .related.edge marker, svg.scene.focusing .related.edge path { fill: var(--accent); }
-svg.scene.focusing .origin .box-frame { stroke: var(--accent); stroke-width: 2.2; }
+svg.scene.focusing .origin .box-frame { fill: var(--accent-tint); stroke: var(--accent); stroke-width: 1.5; }
 @media (prefers-reduced-motion: reduce) {
   svg.scene .box, svg.scene .edge, svg.scene .edge-label, svg.scene .activation { transition: none; }
 }
 
-.record { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 14px; }
-.record h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.record { margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.record h3 { margin: 0 0 6px; font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .record p { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
 .record ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
-.record code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
+.record code { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
 
-.lifeline { stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 5 5; }
-.activation { fill: var(--box); stroke: var(--edge); stroke-width: 1.1; }
-.fragment-frame { fill: none; stroke: var(--line); stroke-width: 1.2; }
-.fragment-label { fill: var(--muted); font-size: 11px; font-family: inherit; }
+/* The sequence ladder and the state furniture, to the same rules. */
+.lifeline { stroke: var(--rule-solid); stroke-width: 1; stroke-dasharray: 4 4; }
+.activation { fill: var(--paper-2); stroke: var(--muted); stroke-width: 0.8; }
+.fragment-frame { fill: none; stroke: var(--rule-solid); stroke-width: 1; }
+.fragment-label { fill: var(--soft); font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
 .marker-filled { fill: var(--ink); }
-.marker-ring { fill: none; stroke: var(--ink); stroke-width: 1.6; }
-.figure { fill: none; stroke: var(--ink); stroke-width: 1.6; }
-.figure circle, circle.figure { fill: var(--box); }
+.marker-ring { fill: none; stroke: var(--ink); stroke-width: 1; }
+.figure { fill: none; stroke: var(--ink); stroke-width: 1; }
+.figure circle, circle.figure { fill: var(--paper); }

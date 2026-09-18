@@ -503,6 +503,51 @@ worth making.
 draw.io and Excalidraw, and this program could write either. It writes neither,
 because nothing this program produces is improved by passing through a drawing
 tool, and one text format the destinations already share is what was asked for.
+### The page is drawn to a handful of rules (after 0.5.0)
+
+The pages were compared with those of an editorial diagram tool, and the gap
+was measured item by item before anything was changed. Half of it was already
+closed: the token roles, the absence of shadows, the corner radius, the
+splitting of a large model into levels and the bands that zone a page were all
+there. What remained was strokes at 1.2 to 2.2 where a hairline is 1, one sans
+face doing every job, the accent on every box that opened a page, and drawings
+that said nothing to a screen reader.
+
+**The rules, not the tool.** What that tool provides is a model drawing HTML by
+hand to a design system, and the system is the part worth having. A model in
+stage 4 would cost the determinism the whole pipeline rests on, and the
+measurements of stage 2 say what that would mean: the same input drawn twice
+differently. The rules cost nothing to keep and a test each to hold.
+
+- **Hairlines.** Every stroke at rest is 1 or under; only what is under the
+  pointer goes to 1.5.
+- **One accent, and only where the reader is looking.** It appears under
+  `.focusing` and in the token block and nowhere else. A box that opens a page
+  used to take the accent, which on a page of six openers was six accents and
+  no signal; it says so with a dotted underline on its name now.
+- **Three font roles, by what a text is.** Serif for the title, sans for a
+  name, mono for anything technical: a line's label, a zone's label, the
+  eyebrow, the record. The families are system stacks and not the tool's own,
+  because the page opens offline and a web font would put a network request in
+  a file that has never needed one. A brand face is one token away.
+- **No shadows, corners under 10.** Both already true, both now held.
+- **A drawing announces itself.** `role="img"`, a title first, a description,
+  wired with `aria-labelledby`. The tool's own self-check, run on a page before
+  and after for information, failed all five of its accessibility checks before
+  and passes them after; what it still fails is specific to its motion
+  template.
+
+**What was not taken.** The four-pixel grid, because the lane gap it would
+move sets a channel's capacity and moving it drops relationships; that is a
+threshold with a measurement behind it and a change to it starts with a new
+one. And the nine-box density rule, because the levels already are that rule:
+a page here is what that tool calls an overview plus detail.
+
+**Held, not remembered.** `TestTheStylesheetKeepsTheEditorialRules` reads the
+stylesheet with its comments stripped and holds every stroke, the accent's
+placement, each role's face and every corner radius. `TestEveryDrawingAnnouncesItself`
+holds the markup. A rule that erodes one commit at a time is exactly the kind a
+test is for.
 
 ### The renderer is reimplemented; the viewer is embedded (round 3)
 

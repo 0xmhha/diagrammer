@@ -32,7 +32,10 @@ them does not happen inside this program.
    component, sequence, state and use case.
 4. **render** turns a document into a self-contained HTML page: positions,
    routed lines and an embedded viewer that moves between levels and, when the
-   pointer rests on a box, fades everything that box is not joined to. A
+   pointer rests on a box, fades everything that box is not joined to. The
+   page is drawn to a handful of editorial rules, each held by a test:
+   hairlines, one accent and only under the pointer, three font roles, no
+   shadows, and a drawing that announces itself to a screen reader. A
    relationship the geometry cannot hold is recorded on the page beside the
    drawing rather than dropped in silence, and the commit the drawing was made
    from is named in the header, so a reader knows which version of the code they
